@@ -1,0 +1,120 @@
+@extends('layouts.app')
+
+@section('title', 'Админка — Товары')
+
+@section('content')
+
+<div class="flex items-center justify-between mb-6">
+
+    <h1 class="text-3xl font-bold">
+        Админка — Товары
+    </h1>
+
+</div>
+
+<div class="bg-white border rounded overflow-hidden">
+
+    <table class="w-full border-collapse">
+
+        <thead class="bg-gray-100">
+
+            <tr>
+
+                <th class="border p-3 text-left">
+                    ID
+                </th>
+
+                <th class="border p-3 text-left">
+                    Название
+                </th>
+
+                <th class="border p-3 text-left">
+                    SKU
+                </th>
+
+                <th class="border p-3 text-left">
+                    Цена
+                </th>
+
+                <th class="border p-3 text-left">
+                    Остаток
+                </th>
+
+                <th class="border p-3 text-left">
+                    Статус
+                </th>
+
+                <th class="border p-3 text-left">
+                    Действия
+                </th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            @foreach($products as $product)
+
+                <tr class="hover:bg-gray-50">
+
+                    <td class="border p-3">
+                        {{ $product->id }}
+                    </td>
+
+                    <td class="border p-3">
+                        {{ $product->name }}
+                    </td>
+
+                    <td class="border p-3">
+                        {{ $product->sku }}
+                    </td>
+
+                    <td class="border p-3">
+                        {{ $product->price }} BYN
+                    </td>
+
+                    <td class="border p-3">
+                        {{ $product->stock }}
+                    </td>
+
+                    <td class="border p-3">
+
+                        @if($product->is_active)
+
+                            <span class="text-green-700">
+                                Active
+                            </span>
+
+                        @else
+
+                            <span class="text-red-700">
+                                Disabled
+                            </span>
+
+                        @endif
+
+                    </td>
+
+                    <td class="border p-3">
+
+                        <a
+                            href="/admin/product/{{ $product->id }}"
+                            class="underline"
+                        >
+                            Edit
+                        </a>
+
+                    </td>
+
+                </tr>
+
+            @endforeach
+
+        </tbody>
+
+    </table>
+
+</div>
+
+@endsection
