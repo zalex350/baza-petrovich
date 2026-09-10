@@ -15,6 +15,18 @@
         Каталог
     </a>
 
+    <form action="{{ route('search.index') }}" method="GET" style="display:flex; gap:8px; align-items:center;">
+        <input
+            type="text"
+            name="q"
+            placeholder="Поиск товаров..."
+            value="{{ request('q') }}"
+            style="padding:6px 12px; border:1px solid #ccc; border-radius:4px; font-size:14px;">
+        <button type="submit" style="padding:6px 16px; background:#333; color:white; border:none; border-radius:4px; cursor:pointer;">
+            Найти
+        </button>
+    </form>
+
     @auth
 
         <a href="/order">

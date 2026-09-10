@@ -11,3 +11,4 @@ require __DIR__.'/catalog.php';
 require __DIR__.'/cart.php';
 require __DIR__.'/orders.php';
 require __DIR__.'/admin.php';
+require __DIR__.'/search.php';
