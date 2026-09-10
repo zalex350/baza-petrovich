@@ -3,7 +3,6 @@
 use Illuminate\Support\Facades\Route;
 use App\Models\Order;
 use App\Http\Controllers\OrderController;
-use App\Http\Controllers\OrdersController;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,12 +14,12 @@ Route::middleware('auth')->group(function () {
 
     Route::get(
         '/orders',
-        [OrdersController::class, 'index']
+        [OrderController::class, 'index']
     );
 
     Route::get(
         '/order/{id}',
-        [OrdersController::class, 'show']
+        [OrderController::class, 'show']
     );
     Route::post(
         '/order/{id}/delete',
