@@ -6,9 +6,14 @@ use App\Http\Controllers\HomeController;
 
 Route::get('/', [HomeController::class, 'index']);
 
+Route::get('/dashboard', function () {
+    return redirect('/catalog');
+})->middleware(['auth'])->name('dashboard');
+
 require __DIR__.'/auth.php';
 require __DIR__.'/catalog.php';
 require __DIR__.'/cart.php';
 require __DIR__.'/orders.php';
 require __DIR__.'/admin.php';
 require __DIR__.'/search.php';
+require __DIR__.'/profile.php';
