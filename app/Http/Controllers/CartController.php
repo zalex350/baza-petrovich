@@ -138,6 +138,16 @@ class CartController extends Controller
 
         }
 
+        $total = 0;
+
+        foreach ($order->items as $item) {
+
+            $total += $item->quantity * $item->price;
+
+        }
+
+        $order->total = $total;
+
         $order->status = Order::STATUS_NEW;
         $order->save();
 
