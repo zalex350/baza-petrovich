@@ -26,4 +26,9 @@ Route::middleware('auth')->group(function () {
         [OrderController::class, 'delete']
     );
 
+    Route::post(
+        '/order/{id}/reorder',
+        [OrderController::class, 'reorder']
+    );
+
 });

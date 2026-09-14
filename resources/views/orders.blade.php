@@ -49,7 +49,7 @@
 
                 </div>
 
-                <div class="mt-4">
+                <div class="mt-4 flex flex-wrap gap-4">
 
                     <a
                         href="/order/{{ $order->id }}"
@@ -57,10 +57,26 @@
                     >
                         Открыть заказ
                     </a>
+
+                    <form
+                        method="POST"
+                        action="/order/{{ $order->id }}/reorder"
+                    >
+
+                        @csrf
+
+                        <button
+                            type="submit"
+                            class="text-blue-600 underline"
+                        >
+                            Повторить заказ
+                        </button>
+
+                    </form>
+
                     <form
                         method="POST"
                         action="/order/{{ $order->id }}/delete"
-                        class="mt-3"
                     >
 
                         @csrf

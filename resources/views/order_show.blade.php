@@ -59,10 +59,30 @@
 
 </div>
 
-<div class="mt-8 text-2xl font-bold">
+<div class="mt-8 flex items-center justify-between">
 
-    Итого:
-    {{ $order->total }} BYN
+    <div class="text-2xl font-bold">
+
+        Итого:
+        {{ $order->total }} BYN
+
+    </div>
+
+    <form
+        method="POST"
+        action="/order/{{ $order->id }}/reorder"
+    >
+
+        @csrf
+
+        <button
+            type="submit"
+            class="rounded-xl bg-slate-800 hover:bg-slate-700 text-white px-5 py-2.5 transition"
+        >
+            Повторить заказ
+        </button>
+
+    </form>
 
 </div>
 
