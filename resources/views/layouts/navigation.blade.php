@@ -83,6 +83,13 @@
                         Мои заказы
                     </a>
 
+                    <a
+                        href="{{ route('profile.edit') }}"
+                        class="text-slate-700 hover:text-blue-600"
+                    >
+                        Профиль
+                    </a>
+
                     @if(auth()->user()->role === 'admin')
 
                         <span class="text-slate-300">
