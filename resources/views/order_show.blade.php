@@ -22,40 +22,70 @@
 
 </div>
 
-<div class="space-y-4">
+<div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
 
-    @foreach($order->items as $item)
+    <table class="w-full text-left">
 
-        <div class="bg-white border rounded p-5">
+        <thead class="bg-slate-50 border-b border-slate-200">
 
-            <h3 class="text-xl font-semibold mb-3">
-                {{ $item->product->name }}
-            </h3>
+            <tr>
 
-            <div class="space-y-2">
+                <th class="px-4 py-3 text-sm font-semibold text-slate-600">
+                    Товар
+                </th>
 
-                <p>
-                    Цена:
-                    {{ $item->price }} BYN
-                </p>
+                <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
+                    Цена
+                </th>
 
-                <p>
-                    Количество:
-                    {{ $item->quantity }}
-                </p>
+                <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
+                    Количество
+                </th>
 
-                <p>
-                    Сумма:
-                    <strong>
+                <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
+                    Сумма
+                </th>
+
+            </tr>
+
+        </thead>
+
+        <tbody class="divide-y divide-slate-200">
+
+            @foreach($order->items as $item)
+
+                <tr>
+
+                    <td class="px-4 py-3">
+
+                        <a
+                            href="{{ route('product.show', $item->product->id) }}"
+                            class="font-medium text-slate-800 hover:text-blue-600 transition"
+                        >
+                            {{ $item->product->name }}
+                        </a>
+
+                    </td>
+
+                    <td class="px-4 py-3 text-right text-slate-700">
+                        {{ $item->price }} BYN
+                    </td>
+
+                    <td class="px-4 py-3 text-right text-slate-700">
+                        {{ $item->quantity }}
+                    </td>
+
+                    <td class="px-4 py-3 text-right font-semibold text-slate-800">
                         {{ $item->price * $item->quantity }} BYN
-                    </strong>
-                </p>
+                    </td>
 
-            </div>
+                </tr>
 
-        </div>
+            @endforeach
 
-    @endforeach
+        </tbody>
+
+    </table>
 
 </div>
 
