@@ -28,154 +28,162 @@
 
 @else
 
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
 
-        @foreach($products as $product)
+        <table class="w-full text-left">
 
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl transition duration-300 overflow-hidden flex flex-col">
+            <thead class="bg-slate-50 border-b border-slate-200">
 
-                <a href="{{ route('product.show', $product->id) }}">
+                <tr>
 
-                    <div class="aspect-square bg-slate-100 flex items-center justify-center">
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
+                        Фото
+                    </th>
 
-                        @if($product->image)
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
+                        Товар
+                    </th>
 
-                            <img
-                                src="{{ asset('storage/'.$product->image) }}"
-                                alt="{{ $product->name }}"
-                                class="w-full h-full object-contain p-6">
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
+                        Артикул
+                    </th>
 
-                        @else
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
+                        Бренд
+                    </th>
 
-                            <div class="text-center">
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
+                        Цена
+                    </th>
 
-                                <div class="text-6xl mb-4">
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
+                        Наличие
+                    </th>
+
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
+                    </th>
+
+                </tr>
+
+            </thead>
+
+            <tbody class="divide-y divide-slate-200">
+
+                @foreach($products as $product)
+
+                    <tr>
+
+                        <td class="px-4 py-3">
+
+                            @if($product->image)
+
+                                <img
+                                    src="{{ asset('storage/'.$product->image) }}"
+                                    alt="{{ $product->name }}"
+                                    class="w-12 h-12 object-contain rounded border border-slate-200">
+
+                            @else
+
+                                <div class="w-12 h-12 bg-slate-100 flex items-center justify-center rounded border border-slate-200 text-2xl">
                                     🚰
                                 </div>
 
-                                <div class="text-sm text-slate-500">
-                                    Фото появится позже
-                                </div>
+                            @endif
 
-                            </div>
+                        </td>
 
-                        @endif
-
-                    </div>
-
-                </a>
-
-                <div class="p-5 flex flex-col flex-grow">
-
-                    @if($product->brand)
-
-                        <div class="text-xs uppercase tracking-widest text-slate-400 mb-2">
-
-                            {{ $product->brand }}
-
-                        </div>
-
-                    @endif
-
-                    <h2 class="text-lg font-semibold leading-6 min-h-[56px]">
-
-                        <a href="{{ route('product.show', $product->id) }}" class="hover:text-blue-600 transition">
-                            {{ $product->name }}
-                        </a>
-
-                    </h2>
-
-                    @if($product->sku)
-
-                        <div class="text-sm text-slate-400 mt-2">
-
-                            Артикул: {{ $product->sku }}
-
-                        </div>
-
-                    @endif
-
-                    <div class="mt-5">
-
-                        @auth
-
-                            <div class="text-3xl font-bold text-slate-800">
-
-                                {{ number_format($product->price,2) }} BYN
-
-                            </div>
-
-                        @else
-
-                            <div class="text-slate-500">
-
-                                Цена доступна после входа
-
-                            </div>
-
-                        @endauth
-
-                    </div>
-
-                    <div class="mt-3">
-
-                        @if($product->stock > 0)
-
-                            <span class="inline-flex rounded-full bg-green-100 text-green-700 px-3 py-1 text-sm">
-
-                                В наличии ({{ $product->stock }})
-
-                            </span>
-
-                        @else
-
-                            <span class="inline-flex rounded-full bg-red-100 text-red-700 px-3 py-1 text-sm">
-
-                                Нет в наличии
-
-                            </span>
-
-                        @endif
-
-                    </div>
-
-                    <div class="mt-auto pt-6">
-
-                        @auth
-
-                            <form action="/order/add/{{ $product->id }}" method="POST">
-
-                                @csrf
-
-                                <button
-                                    type="submit"
-                                    class="block w-full rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-center py-3 transition">
-
-                                    В корзину
-
-                                </button>
-
-                            </form>
-
-                        @else
+                        <td class="px-4 py-3">
 
                             <a
                                 href="{{ route('product.show', $product->id) }}"
-                                class="block w-full rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-center py-3 transition">
-
-                                Подробнее
-
+                                class="font-medium text-slate-800 hover:text-blue-600 transition"
+                            >
+                                {{ $product->name }}
                             </a>
 
-                        @endauth
+                        </td>
 
-                    </div>
+                        <td class="px-4 py-3 text-sm text-slate-400">
+                            {{ $product->sku }}
+                        </td>
 
-                </div>
+                        <td class="px-4 py-3 text-sm text-slate-500">
+                            {{ $product->brand }}
+                        </td>
 
-            </div>
+                        <td class="px-4 py-3 text-right">
 
-        @endforeach
+                            @auth
+
+                                <span class="font-semibold text-slate-800">
+                                    {{ number_format($product->price, 2) }} BYN
+                                </span>
+
+                            @else
+
+                                <span class="text-sm text-slate-500">
+                                    Цена доступна после входа
+                                </span>
+
+                            @endauth
+
+                        </td>
+
+                        <td class="px-4 py-3">
+
+                            @if($product->stock > 0)
+
+                                <span class="inline-flex rounded-full bg-green-100 text-green-700 px-3 py-1 text-sm">
+                                    В наличии ({{ $product->stock }})
+                                </span>
+
+                            @else
+
+                                <span class="inline-flex rounded-full bg-red-100 text-red-700 px-3 py-1 text-sm">
+                                    Нет в наличии
+                                </span>
+
+                            @endif
+
+                        </td>
+
+                        <td class="px-4 py-3">
+
+                            @auth
+
+                                <form action="/order/add/{{ $product->id }}" method="POST" class="inline">
+
+                                    @csrf
+
+                                    <button
+                                        type="submit"
+                                        class="rounded-lg bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 text-sm transition"
+                                    >
+                                        В корзину
+                                    </button>
+
+                                </form>
+
+                            @else
+
+                                <a
+                                    href="{{ route('product.show', $product->id) }}"
+                                    class="inline-block rounded-lg bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 text-sm transition"
+                                >
+                                    Подробнее
+                                </a>
+
+                            @endauth
+
+                        </td>
+
+                    </tr>
+
+                @endforeach
+
+            </tbody>
+
+        </table>
 
     </div>
 
