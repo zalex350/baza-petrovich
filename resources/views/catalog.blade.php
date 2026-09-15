@@ -6,7 +6,14 @@
 
 <div class="mb-10">
 
-    <h1 class="text-4xl font-bold text-slate-800">
+    <a
+        href="{{ route('catalog.index') }}"
+        class="text-sm text-slate-500 hover:text-blue-600"
+    >
+        ← Все категории
+    </a>
+
+    <h1 class="text-4xl font-bold text-slate-800 mt-4">
         {{ $category->name }}
     </h1>
 

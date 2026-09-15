@@ -12,6 +12,11 @@ use App\Http\Controllers\ProductController;
 */
 
 Route::get(
+    '/catalog',
+    [CatalogController::class, 'index']
+)->name('catalog.index');
+
+Route::get(
     '/catalog/{slug}',
     [CatalogController::class, 'show']
 )->name('catalog.show');

@@ -7,6 +7,19 @@ use App\Models\Product;
 
 class CatalogController extends Controller
 {
+    public function index()
+    {
+        $parents = Category::whereNull('parent_id')
+            ->with(['children' => function ($q) {
+                $q->withCount(['products' => fn($q2) => $q2->where('is_active', 1)])
+                  ->orderBy('name');
+            }])
+            ->orderBy('name')
+            ->get();
+
+        return view('catalog_index', compact('parents'));
+    }
+
     public function show($slug)
     {
         $category = Category::where(

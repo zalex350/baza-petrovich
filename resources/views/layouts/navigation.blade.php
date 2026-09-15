@@ -18,7 +18,7 @@
                 <div class="hidden lg:flex items-center gap-8 text-sm font-medium">
 
                     <a
-                        href="/catalog/smesiteli"
+                        href="{{ route('catalog.index') }}"
                         class="{{ request()->is('catalog*') ? 'text-blue-600' : 'text-slate-700 hover:text-blue-600' }}"
                     >
                         Каталог
