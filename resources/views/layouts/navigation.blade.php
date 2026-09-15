@@ -53,19 +53,22 @@
 
             <div class="flex items-center gap-6 text-sm">
 
-                <form action="{{ route('search.index') }}" method="GET" class="flex items-center gap-2">
-                    <input
-                        type="text"
-                        name="q"
-                        value="{{ request('q') }}"
-                        placeholder="Поиск..."
-                        class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <button
-                        type="submit"
-                        class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm transition">
-                        Найти
-                    </button>
-                </form>
+                <div class="relative">
+                    <form action="{{ route('search.index') }}" method="GET" class="flex items-center gap-2">
+                        <input
+                            type="text"
+                            name="q"
+                            value="{{ request('q') }}"
+                            placeholder="Поиск..."
+                            class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <button
+                            type="submit"
+                            class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm transition">
+                            Найти
+                        </button>
+                    </form>
+                    <div id="search-suggestions" class="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-[min(56rem,88vw)] bg-white rounded-xl border border-slate-200 shadow-lg hidden z-50 max-h-96 overflow-y-auto"></div>
+                </div>
 
                 @auth
 

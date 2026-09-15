@@ -10,6 +10,11 @@ use App\Http\Controllers\SearchController;
 */
 
 Route::get(
+    '/search/suggest',
+    [SearchController::class, 'suggest']
+)->name('search.suggest');
+
+Route::get(
     '/search',
     [SearchController::class, 'index']
 )->name('search.index');
