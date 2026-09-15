@@ -9,7 +9,8 @@ class Order extends Model
     protected $fillable = [
         'user_id',
         'status',
-        'total'
+        'total',
+        'is_paid'
     ];
 
     public function items()
@@ -29,7 +30,7 @@ class Order extends Model
 
     public const STATUS_DRAFT = 'draft';
     public const STATUS_NEW = 'new';
-    public const STATUS_PAID = 'paid';
+    public const STATUS_PROCESSING = 'processing';
     public const STATUS_SHIPPED = 'shipped';
     const STATUS_DELETED = 'deleted';
 }

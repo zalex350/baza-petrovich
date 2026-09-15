@@ -72,6 +72,11 @@
 
                         <td class="border p-3">
                             {{ $order->status }}
+                            @if($order->is_paid)
+                                <span class="inline-flex rounded-full bg-green-100 text-green-700 px-2 py-0.5 text-xs ml-2">
+                                    Оплачен
+                                </span>
+                            @endif
                         </td>
 
                         <td class="border p-3">

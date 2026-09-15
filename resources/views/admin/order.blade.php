@@ -62,10 +62,10 @@
             </option>
 
             <option
-                value="paid"
-                @selected($order->status === 'paid')
+                value="processing"
+                @selected($order->status === 'processing')
             >
-                Paid
+                Processing
             </option>
 
             <option
@@ -76,6 +76,16 @@
             </option>
 
         </select>
+
+        <label class="flex items-center gap-2">
+            <input
+                type="checkbox"
+                name="is_paid"
+                value="1"
+                @checked($order->is_paid)
+            >
+            Оплачен
+        </label>
 
         <button
             type="submit"

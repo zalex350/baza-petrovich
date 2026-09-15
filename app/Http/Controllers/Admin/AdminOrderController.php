@@ -33,6 +33,8 @@ class AdminOrderController extends Controller
 
         $order->status = request('status');
 
+        $order->is_paid = request()->boolean('is_paid');
+
         $order->save();
 
         return back()->with(

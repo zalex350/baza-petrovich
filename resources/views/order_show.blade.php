@@ -15,6 +15,15 @@
         <strong>{{ $order->status }}</strong>
     </p>
 
+    <p class="mb-2">
+        Оплата:
+        @if($order->is_paid)
+            <span class="text-green-600 font-medium">Оплачен</span>
+        @else
+            <span class="text-slate-500">Не оплачен</span>
+        @endif
+    </p>
+
     <p>
         Дата:
         {{ $order->created_at }}
