@@ -9,13 +9,17 @@ class OrderController extends Controller
 {
     public function index()
     {
-        $orders = Order::where('user_id', auth()->id())
-            ->where('status', '!=', Order::STATUS_DRAFT)
-            ->where('status', '!=', Order::STATUS_DELETED)
+        $activeOrders = Order::where('user_id', auth()->id())
+            ->whereIn('status', [Order::STATUS_NEW, Order::STATUS_PROCESSING])
             ->latest()
             ->get();
 
-        return view('orders', compact('orders'));
+        $archivedOrders = Order::where('user_id', auth()->id())
+            ->where('status', Order::STATUS_SHIPPED)
+            ->latest()
+            ->get();
+
+        return view('orders', compact('activeOrders', 'archivedOrders'));
     }
 
     public function show($id)

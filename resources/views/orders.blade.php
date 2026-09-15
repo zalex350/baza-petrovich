@@ -8,7 +8,7 @@
     Мои заказы
 </h1>
 
-@if(!$orders->count())
+@if(!$activeOrders->count() && !$archivedOrders->count())
 
     <div class="bg-white border rounded p-6">
 
@@ -20,156 +20,47 @@
 
 @else
 
-    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+    {{-- Активные заказы --}}
 
-        <table class="w-full text-left">
+    <div class="mb-10">
 
-            <thead class="bg-slate-50 border-b border-slate-200">
+        <h2 class="text-2xl font-bold mb-4">
+            Активные заказы
+        </h2>
 
-                <tr>
+        @if(!$activeOrders->count())
 
-                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
-                        № заказа
-                    </th>
+            <div class="bg-white border rounded p-6">
 
-                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
-                        Дата
-                    </th>
+                <p>
+                    Нет активных заказов
+                </p>
 
-                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
-                        Статус
-                    </th>
+            </div>
 
-                    <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
-                        Сумма
-                    </th>
+        @else
 
-                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
-                    </th>
+            @include('partials.orders_table', ['orders' => $activeOrders, 'showDelete' => true])
 
-                </tr>
-
-            </thead>
-
-            <tbody class="divide-y divide-slate-200">
-
-                @foreach($orders as $order)
-
-                    <tr>
-
-                        <td class="px-4 py-3 font-medium text-slate-800">
-                            #{{ $order->id }}
-                        </td>
-
-                        <td class="px-4 py-3 text-slate-700">
-                            {{ $order->created_at->format('d.m.Y') }}
-                        </td>
-
-                        <td class="px-4 py-3">
-
-                            <div class="flex items-center gap-2">
-
-                                @if($order->status === 'new')
-
-                                    <span class="inline-flex rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-sm">
-                                        Новый
-                                    </span>
-
-                                @elseif($order->status === 'processing')
-
-                                    <span class="inline-flex rounded-full bg-yellow-100 text-yellow-700 px-3 py-1 text-sm">
-                                        В обработке
-                                    </span>
-
-                                @elseif($order->status === 'shipped')
-
-                                    <span class="inline-flex rounded-full bg-purple-100 text-purple-700 px-3 py-1 text-sm">
-                                        Отправлен
-                                    </span>
-
-                                @else
-
-                                    <span class="inline-flex rounded-full bg-slate-100 text-slate-700 px-3 py-1 text-sm">
-                                        {{ $order->status }}
-                                    </span>
-
-                                @endif
-
-                                @if($order->is_paid)
-
-                                    <span class="inline-flex rounded-full bg-green-100 text-green-700 px-2 py-0.5 text-xs">
-                                        Оплачен
-                                    </span>
-
-                                @endif
-
-                            </div>
-
-                        </td>
-
-                        <td class="px-4 py-3 text-right font-semibold text-slate-800">
-                            {{ $order->total }} BYN
-                        </td>
-
-                        <td class="px-4 py-3">
-
-                            <div class="flex items-center gap-3">
-
-                                <a
-                                    href="/order/{{ $order->id }}"
-                                    class="text-slate-700 hover:text-blue-600 text-sm underline"
-                                >
-                                    Открыть
-                                </a>
-
-                                <form
-                                    method="POST"
-                                    action="/order/{{ $order->id }}/reorder"
-                                    class="inline"
-                                >
-
-                                    @csrf
-
-                                    <button
-                                        type="submit"
-                                        class="text-blue-600 hover:text-blue-700 text-sm underline"
-                                    >
-                                        Повторить
-                                    </button>
-
-                                </form>
-
-                                <form
-                                    method="POST"
-                                    action="/order/{{ $order->id }}/delete"
-                                    class="inline"
-                                >
-
-                                    @csrf
-
-                                    <button
-                                        type="submit"
-                                        class="text-red-600 hover:text-red-700 text-sm underline"
-                                        onclick="return confirm('Удалить заказ?')"
-                                    >
-                                        Удалить
-                                    </button>
-
-                                </form>
-
-                            </div>
-
-                        </td>
-
-                    </tr>
-
-                @endforeach
-
-            </tbody>
-
-        </table>
+        @endif
 
     </div>
+
+    {{-- Архив --}}
+
+    @if($archivedOrders->count())
+
+        <div>
+
+            <h2 class="text-2xl font-bold mb-4">
+                Архив
+            </h2>
+
+            @include('partials.orders_table', ['orders' => $archivedOrders, 'showDelete' => false])
+
+        </div>
+
+    @endif
 
 @endif
 
