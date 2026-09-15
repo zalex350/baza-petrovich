@@ -20,82 +20,142 @@
 
 @else
 
-    <div class="space-y-4">
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
 
-        @foreach($orders as $order)
+        <table class="w-full text-left">
 
-            <div class="bg-white border rounded p-5">
+            <thead class="bg-slate-50 border-b border-slate-200">
 
-                <h3 class="text-xl font-semibold mb-3">
-                    Заказ #{{ $order->id }}
-                </h3>
+                <tr>
 
-                <div class="space-y-2">
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
+                        № заказа
+                    </th>
 
-                    <p>
-                        Статус:
-                        <strong>{{ $order->status }}</strong>
-                    </p>
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
+                        Дата
+                    </th>
 
-                    <p>
-                        Сумма:
-                        <strong>{{ $order->total }} BYN</strong>
-                    </p>
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
+                        Статус
+                    </th>
 
-                    <p>
-                        Дата:
-                        {{ $order->created_at }}
-                    </p>
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
+                        Сумма
+                    </th>
 
-                </div>
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
+                    </th>
 
-                <div class="mt-4 flex flex-wrap gap-4">
+                </tr>
 
-                    <a
-                        href="/order/{{ $order->id }}"
-                        class="underline"
-                    >
-                        Открыть заказ
-                    </a>
+            </thead>
 
-                    <form
-                        method="POST"
-                        action="/order/{{ $order->id }}/reorder"
-                    >
+            <tbody class="divide-y divide-slate-200">
 
-                        @csrf
+                @foreach($orders as $order)
 
-                        <button
-                            type="submit"
-                            class="text-blue-600 underline"
-                        >
-                            Повторить заказ
-                        </button>
+                    <tr>
 
-                    </form>
+                        <td class="px-4 py-3 font-medium text-slate-800">
+                            #{{ $order->id }}
+                        </td>
 
-                    <form
-                        method="POST"
-                        action="/order/{{ $order->id }}/delete"
-                    >
+                        <td class="px-4 py-3 text-slate-700">
+                            {{ $order->created_at->format('d.m.Y') }}
+                        </td>
 
-                        @csrf
+                        <td class="px-4 py-3">
 
-                        <button
-                            type="submit"
-                            class="text-red-600 underline"
-                            onclick="return confirm('Удалить заказ?')"
-                        >
-                            Удалить заказ
-                        </button>
+                            @if($order->status === 'new')
 
-                    </form>
+                                <span class="inline-flex rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-sm">
+                                    Новый
+                                </span>
 
-                </div>
+                            @elseif($order->status === 'paid')
 
-            </div>
+                                <span class="inline-flex rounded-full bg-green-100 text-green-700 px-3 py-1 text-sm">
+                                    Оплачен
+                                </span>
 
-        @endforeach
+                            @elseif($order->status === 'shipped')
+
+                                <span class="inline-flex rounded-full bg-purple-100 text-purple-700 px-3 py-1 text-sm">
+                                    Отправлен
+                                </span>
+
+                            @else
+
+                                <span class="inline-flex rounded-full bg-slate-100 text-slate-700 px-3 py-1 text-sm">
+                                    {{ $order->status }}
+                                </span>
+
+                            @endif
+
+                        </td>
+
+                        <td class="px-4 py-3 text-right font-semibold text-slate-800">
+                            {{ $order->total }} BYN
+                        </td>
+
+                        <td class="px-4 py-3">
+
+                            <div class="flex items-center gap-3">
+
+                                <a
+                                    href="/order/{{ $order->id }}"
+                                    class="text-slate-700 hover:text-blue-600 text-sm underline"
+                                >
+                                    Открыть
+                                </a>
+
+                                <form
+                                    method="POST"
+                                    action="/order/{{ $order->id }}/reorder"
+                                    class="inline"
+                                >
+
+                                    @csrf
+
+                                    <button
+                                        type="submit"
+                                        class="text-blue-600 hover:text-blue-700 text-sm underline"
+                                    >
+                                        Повторить
+                                    </button>
+
+                                </form>
+
+                                <form
+                                    method="POST"
+                                    action="/order/{{ $order->id }}/delete"
+                                    class="inline"
+                                >
+
+                                    @csrf
+
+                                    <button
+                                        type="submit"
+                                        class="text-red-600 hover:text-red-700 text-sm underline"
+                                        onclick="return confirm('Удалить заказ?')"
+                                    >
+                                        Удалить
+                                    </button>
+
+                                </form>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                @endforeach
+
+            </tbody>
+
+        </table>
 
     </div>
 

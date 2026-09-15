@@ -20,83 +20,156 @@
 
 @else
 
-    <div class="space-y-4">
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
 
-        @foreach($order->items as $item)
+        <table class="w-full text-left">
 
-            <div class="bg-white border rounded p-5">
+            <thead class="bg-slate-50 border-b border-slate-200">
 
-                <h3 class="text-xl font-semibold mb-3">
-                    {{ $item->product->name }}
-                </h3>
+                <tr>
 
-                <div class="space-y-3">
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
+                        Фото
+                    </th>
 
-                    <p>
-                        Цена:
-                        {{ $item->price }} BYN
-                    </p>
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
+                        Товар
+                    </th>
 
-                    <form
-                        method="POST"
-                        action="/order/update/{{ $item->id }}"
-                        class="flex items-center gap-3"
-                    >
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
+                        Артикул
+                    </th>
 
-                        @csrf
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
+                        Цена
+                    </th>
 
-                        <input
-                            type="number"
-                            name="quantity"
-                            value="{{ $item->quantity }}"
-                            min="1"
-                            class="border rounded px-2 py-1 w-24"
-                        >
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
+                        Количество
+                    </th>
 
-                        <button
-                            type="submit"
-                            class="bg-black text-white px-4 py-2 rounded"
-                        >
-                            Обновить
-                        </button>
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
+                        Сумма
+                    </th>
 
-                    </form>
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
+                    </th>
 
-                    <p>
-                        Сумма:
-                        <strong>
+                </tr>
+
+            </thead>
+
+            <tbody class="divide-y divide-slate-200">
+
+                @foreach($order->items as $item)
+
+                    <tr>
+
+                        <td class="px-4 py-3">
+
+                            @if($item->product->image)
+
+                                <img
+                                    src="{{ asset('storage/'.$item->product->image) }}"
+                                    alt="{{ $item->product->name }}"
+                                    class="w-12 h-12 object-contain rounded border border-slate-200">
+
+                            @else
+
+                                <div class="w-12 h-12 bg-slate-100 flex items-center justify-center rounded border border-slate-200 text-2xl">
+                                    🚰
+                                </div>
+
+                            @endif
+
+                        </td>
+
+                        <td class="px-4 py-3">
+
+                            <a
+                                href="{{ route('product.show', $item->product->id) }}"
+                                class="font-medium text-slate-800 hover:text-blue-600 transition"
+                            >
+                                {{ $item->product->name }}
+                            </a>
+
+                        </td>
+
+                        <td class="px-4 py-3 text-sm text-slate-400">
+                            {{ $item->product->sku }}
+                        </td>
+
+                        <td class="px-4 py-3 text-right text-slate-700">
+                            {{ $item->price }} BYN
+                        </td>
+
+                        <td class="px-4 py-3 text-right">
+
+                            <form
+                                method="POST"
+                                action="/order/update/{{ $item->id }}"
+                                class="flex items-center gap-2 justify-end"
+                            >
+
+                                @csrf
+
+                                <input
+                                    type="number"
+                                    name="quantity"
+                                    value="{{ $item->quantity }}"
+                                    min="1"
+                                    class="border border-slate-300 rounded px-2 py-1 w-16 text-right"
+                                >
+
+                                <button
+                                    type="submit"
+                                    class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1 rounded text-sm transition"
+                                >
+                                    Обновить
+                                </button>
+
+                            </form>
+
+                        </td>
+
+                        <td class="px-4 py-3 text-right font-semibold text-slate-800">
                             {{ $item->price * $item->quantity }} BYN
-                        </strong>
-                    </p>
+                        </td>
 
-                    <form
-                        method="POST"
-                        action="/order/delete/{{ $item->id }}"
-                    >
+                        <td class="px-4 py-3">
 
-                        @csrf
+                            <form
+                                method="POST"
+                                action="/order/delete/{{ $item->id }}"
+                            >
 
-                        <button
-                            type="submit"
-                            class="text-red-600 underline"
-                        >
-                            Удалить
-                        </button>
+                                @csrf
 
-                    </form>
+                                <button
+                                    type="submit"
+                                    class="text-red-600 hover:text-red-700 underline text-sm"
+                                >
+                                    Удалить
+                                </button>
 
-                </div>
+                            </form>
 
-            </div>
+                        </td>
 
-        @endforeach
+                    </tr>
+
+                @endforeach
+
+            </tbody>
+
+        </table>
 
     </div>
 
     <div class="mt-8 bg-white border rounded p-5">
 
         <h2 class="text-2xl font-bold mb-4">
-            Итого: {{ $order->total }} BYN
+            Итого: {{ $order->items->sum(fn($item) => $item->price * $item->quantity) }} BYN
         </h2>
 
         <form

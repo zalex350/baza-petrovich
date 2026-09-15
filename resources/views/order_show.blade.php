@@ -31,7 +31,15 @@
             <tr>
 
                 <th class="px-4 py-3 text-sm font-semibold text-slate-600">
+                    Фото
+                </th>
+
+                <th class="px-4 py-3 text-sm font-semibold text-slate-600">
                     Товар
+                </th>
+
+                <th class="px-4 py-3 text-sm font-semibold text-slate-600">
+                    Артикул
                 </th>
 
                 <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
@@ -58,6 +66,25 @@
 
                     <td class="px-4 py-3">
 
+                        @if($item->product->image)
+
+                            <img
+                                src="{{ asset('storage/'.$item->product->image) }}"
+                                alt="{{ $item->product->name }}"
+                                class="w-12 h-12 object-contain rounded border border-slate-200">
+
+                        @else
+
+                            <div class="w-12 h-12 bg-slate-100 flex items-center justify-center rounded border border-slate-200 text-2xl">
+                                🚰
+                            </div>
+
+                        @endif
+
+                    </td>
+
+                    <td class="px-4 py-3">
+
                         <a
                             href="{{ route('product.show', $item->product->id) }}"
                             class="font-medium text-slate-800 hover:text-blue-600 transition"
@@ -65,6 +92,10 @@
                             {{ $item->product->name }}
                         </a>
 
+                    </td>
+
+                    <td class="px-4 py-3 text-sm text-slate-400">
+                        {{ $item->product->sku }}
                     </td>
 
                     <td class="px-4 py-3 text-right text-slate-700">
