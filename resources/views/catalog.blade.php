@@ -11,7 +11,7 @@
     </h1>
 
     <p class="mt-2 text-slate-500">
-        Найдено товаров: {{ $products->count() }}
+        Найдено товаров: {{ $products->total() }}
     </p>
 
 </div>
@@ -143,6 +143,10 @@
 
     @endforeach
 
+</div>
+
+<div class="mt-8">
+    {{ $products->links() }}
 </div>
 
 @endsection

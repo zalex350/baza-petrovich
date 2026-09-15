@@ -18,7 +18,7 @@ class CatalogController extends Controller
             ->where('category_id', $category->id)
             ->where('is_active', 1)
             ->latest()
-            ->get();
+            ->paginate(24);
 
         return view('catalog', compact(
             'category',
