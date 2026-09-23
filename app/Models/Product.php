@@ -11,6 +11,7 @@ class Product extends Model
 
     protected $fillable = [
         'name',
+        'display_name',
         'sku',
         'price',
         'stock',
@@ -33,5 +34,10 @@ class Product extends Model
     public function images()
     {
         return $this->hasMany(\App\Models\ProductImage::class);
+    }
+
+    public function draft()
+    {
+        return $this->hasOne(\App\Models\ProductDraft::class);
     }
 }
