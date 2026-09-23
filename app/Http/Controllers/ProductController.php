@@ -13,6 +13,7 @@ class ProductController extends Controller
             'category',
         ])
         ->where('is_active', 1)
+        ->where('is_published', true)
         ->findOrFail($id);
 
         return view('product', compact('product'));

@@ -44,6 +44,26 @@ Route::middleware(['auth', 'admin'])->group(function () {
     );
 
     Route::get(
+        '/admin/product/{id}/preview',
+        [AdminProductController::class, 'preview']
+    );
+
+    Route::post(
+        '/admin/product/{id}/draft',
+        [AdminProductController::class, 'saveDraft']
+    );
+
+    Route::post(
+        '/admin/product/{id}/publish',
+        [AdminProductController::class, 'publish']
+    );
+
+    Route::post(
+        '/admin/product/{id}/draft/delete',
+        [AdminProductController::class, 'deleteDraft']
+    );
+
+    Route::get(
         '/admin/product/{id}',
         [AdminProductController::class, 'show']
     );

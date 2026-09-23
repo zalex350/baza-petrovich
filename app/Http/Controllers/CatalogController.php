@@ -30,6 +30,7 @@ class CatalogController extends Controller
         $products = Product::with('category')
             ->where('category_id', $category->id)
             ->where('is_active', 1)
+            ->where('is_published', true)
             ->latest()
             ->paginate(24);
 

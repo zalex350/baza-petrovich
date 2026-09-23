@@ -5,12 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductDraft;
 
 class AdminProductController extends Controller
 {
     public function index()
     {
-        $products = Product::latest()->paginate(50);
+        $products = Product::with('draft')->latest()->paginate(50);
 
         return view(
             'admin.products',
@@ -59,35 +60,97 @@ class AdminProductController extends Controller
     public function show($id)
     {
         $product = Product::findOrFail($id);
+        $draft   = $product->draft;
 
         $categories = Category::all();
 
         return view(
             'admin.product',
-            compact('product', 'categories')
+            compact('product', 'categories', 'draft')
         );
     }
+
     public function update($id)
     {
         $product = Product::findOrFail($id);
 
         $product->update([
-            'name' => request('name'),
-            'sku' => request('sku'),
-            'brand' => request('brand'),
-            'slug' => request('slug'),
-            'price' => request('price'),
-            'stock' => request('stock'),
-            'description' => request('description'),
-            'specifications' => request('specifications'),
-            'package_contents' => request('package_contents'),
+            'name'        => request('name'),
+            'sku'         => request('sku'),
+            'brand'       => request('brand'),
+            'slug'        => request('slug'),
+            'price'       => request('price'),
+            'stock'       => request('stock'),
             'category_id' => request('category_id'),
-            'is_active' => request()->has('is_active'),
+            'is_active'   => request()->has('is_active'),
         ]);
 
-        return back()->with(
-            'success',
-            'Product updated'
+        return back()->with('success', 'Товар сохранён');
+    }
+
+    public function saveDraft($id)
+    {
+        $product = Product::findOrFail($id);
+
+        ProductDraft::updateOrCreate(
+            ['product_id' => $product->id],
+            ['data' => [
+                'display_name'    => request('display_name'),
+                'description'     => request('description'),
+                'specifications'  => request('specifications'),
+                'package_contents' => request('package_contents'),
+            ]]
         );
+
+        return back()->with('success', 'Черновик сохранён');
+    }
+
+    public function publish($id)
+    {
+        $product = Product::findOrFail($id);
+        $draft   = $product->draft;
+
+        if ($draft) {
+            $data = $draft->data;
+
+            $product->update([
+                'display_name'    => $data['display_name'] ?? null,
+                'description'     => $data['description'] ?? $product->description,
+                'specifications'  => $data['specifications'] ?? $product->specifications,
+                'package_contents' => $data['package_contents'] ?? $product->package_contents,
+                'is_published'    => true,
+            ]);
+
+            $draft->delete();
+        } else {
+            $product->update(['is_published' => true]);
+        }
+
+        return back()->with('success', 'Товар опубликован');
+    }
+
+    public function deleteDraft($id)
+    {
+        $product = Product::findOrFail($id);
+        $product->draft()->delete();
+
+        return back()->with('success', 'Черновик удалён');
+    }
+
+    public function preview($id)
+    {
+        $product = Product::findOrFail($id);
+        $draft   = $product->draft;
+
+        if ($draft) {
+            $data = $draft->data;
+
+            $product->display_name    = $data['display_name'] ?? $product->display_name;
+            $product->description     = $data['description'] ?? $product->description;
+            $product->specifications  = $data['specifications'] ?? $product->specifications;
+            $product->package_contents = $data['package_contents'] ?? $product->package_contents;
+        }
+
+        return view('product', compact('product'));
     }
 }

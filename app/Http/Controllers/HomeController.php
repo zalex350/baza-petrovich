@@ -14,6 +14,7 @@ class HomeController extends Controller
             ->get();
 
         $featuredProducts = Product::where('is_active', 1)
+            ->where('is_published', true)
             ->latest()
             ->take(4)
             ->get();

@@ -23,6 +23,7 @@ class SearchController extends Controller
 
         $products = Product::query()
             ->where('is_active', 1)
+            ->where('is_published', true)
             ->where(function ($outer) use ($words) {
                 foreach ($words as $word) {
                     $outer->where(function ($inner) use ($word) {
@@ -57,6 +58,7 @@ class SearchController extends Controller
 
         $products = Product::query()
             ->where('is_active', 1)
+            ->where('is_published', true)
             ->where(function ($outer) use ($words) {
                 foreach ($words as $word) {
                     $outer->where(function ($inner) use ($word) {
@@ -69,7 +71,7 @@ class SearchController extends Controller
                 }
             })
             ->limit(5)
-            ->get(['id', 'name', 'sku', 'price', 'image']);
+            ->get(['id', 'name', 'display_name', 'sku', 'price', 'image']);
 
         $categories = Category::query()
             ->where(function ($outer) use ($words) {
@@ -83,7 +85,7 @@ class SearchController extends Controller
         return response()->json([
             'products' => $products->map(fn ($p) => [
                 'id' => $p->id,
-                'name' => $p->name,
+                'name' => $p->display_name ?: $p->name,
                 'sku' => $p->sku,
                 'price' => $p->price ? number_format($p->price, 2) : null,
                 'image' => $p->image ? asset('storage/' . $p->image) : null,
