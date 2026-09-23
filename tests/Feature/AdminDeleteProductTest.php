@@ -41,7 +41,14 @@ class AdminDeleteProductTest extends TestCase
             ->post("/admin/product/{$id}/delete");
 
         $response->assertRedirect('/admin/products');
+
+        // Мягкое удаление: из обычной выборки пропадает
         $this->assertNull(Product::find($id));
+
+        // Но физически остаётся в БД с заполненным deleted_at
+        $trashed = Product::withTrashed()->find($id);
+        $this->assertNotNull($trashed);
+        $this->assertNotNull($trashed->deleted_at);
     }
 
     public function test_deleted_product_returns_404(): void
