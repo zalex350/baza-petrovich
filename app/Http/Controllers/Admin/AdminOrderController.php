@@ -9,7 +9,7 @@ class AdminOrderController extends Controller
 {
     public function index()
     {
-        $orders = Order::latest()->get();
+        $orders = Order::latest()->paginate(50);
 
         return view(
             'admin.orders',

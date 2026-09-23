@@ -110,4 +110,8 @@
 
 @endif
 
+<div class="mt-8">
+    {{ $orders->links() }}
+</div>
+
 @endsection
