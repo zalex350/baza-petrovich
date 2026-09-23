@@ -14,7 +14,7 @@
         href="/admin/products"
         class="text-slate-600 underline"
     >
-        ← К списку товаров
+        ← Назад к списку товаров
     </a>
 
 </div>

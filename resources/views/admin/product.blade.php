@@ -4,9 +4,20 @@
 
 @section('content')
 
-<h1 class="text-3xl font-bold mb-6">
-    Редактирование товара
-</h1>
+<div class="flex items-center justify-between mb-6">
+
+    <h1 class="text-3xl font-bold">
+        Редактирование товара
+    </h1>
+
+    <a
+        href="/admin/products"
+        class="text-slate-600 underline"
+    >
+        ← Назад к списку товаров
+    </a>
+
+</div>
 
 <div class="bg-white border rounded p-6">
 
