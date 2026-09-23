@@ -10,7 +10,7 @@ class AdminProductController extends Controller
 {
     public function index()
     {
-        $products = Product::latest()->get();
+        $products = Product::latest()->paginate(50);
 
         return view(
             'admin.products',
