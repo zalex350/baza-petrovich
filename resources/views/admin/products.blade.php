@@ -105,12 +105,34 @@
 
                     <td class="border p-3">
 
-                        <a
-                            href="/admin/product/{{ $product->id }}"
-                            class="underline"
-                        >
-                            Edit
-                        </a>
+                        <div class="flex items-center gap-3">
+
+                            <a
+                                href="/admin/product/{{ $product->id }}"
+                                class="underline"
+                            >
+                                Edit
+                            </a>
+
+                            <form
+                                method="POST"
+                                action="/admin/product/{{ $product->id }}/delete"
+                                class="inline"
+                            >
+
+                                @csrf
+
+                                <button
+                                    type="submit"
+                                    class="text-red-600 hover:text-red-700 text-sm underline"
+                                    onclick="return confirm('Удалить товар «{{ addslashes($product->name) }}»?')"
+                                >
+                                    Удалить
+                                </button>
+
+                            </form>
+
+                        </div>
 
                     </td>
 

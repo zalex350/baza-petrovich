@@ -4,20 +4,16 @@
 
 @section('content')
 
-<div class="flex items-center justify-between mb-6">
+<a
+    href="/admin/products"
+    class="text-sm text-slate-500 hover:text-blue-600"
+>
+    ← Назад к списку товаров
+</a>
 
-    <h1 class="text-3xl font-bold">
-        Новый товар
-    </h1>
-
-    <a
-        href="/admin/products"
-        class="text-slate-600 underline"
-    >
-        ← Назад к списку товаров
-    </a>
-
-</div>
+<h1 class="text-3xl font-bold mt-4 mb-6">
+    Новый товар
+</h1>
 
 @if($errors->any())
 

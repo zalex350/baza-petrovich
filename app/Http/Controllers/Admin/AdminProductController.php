@@ -49,6 +49,13 @@ class AdminProductController extends Controller
         return redirect("/admin/product/{$product->id}")->with('success', 'Товар создан');
     }
 
+    public function destroy($id)
+    {
+        Product::findOrFail($id)->delete();
+
+        return redirect('/admin/products')->with('success', 'Товар удалён');
+    }
+
     public function show($id)
     {
         $product = Product::findOrFail($id);

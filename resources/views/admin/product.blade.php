@@ -4,20 +4,16 @@
 
 @section('content')
 
-<div class="flex items-center justify-between mb-6">
+<a
+    href="/admin/products"
+    class="text-sm text-slate-500 hover:text-blue-600"
+>
+    ← Назад к списку товаров
+</a>
 
-    <h1 class="text-3xl font-bold">
-        Редактирование товара
-    </h1>
-
-    <a
-        href="/admin/products"
-        class="text-slate-600 underline"
-    >
-        ← Назад к списку товаров
-    </a>
-
-</div>
+<h1 class="text-3xl font-bold mt-4 mb-6">
+    Редактирование товара
+</h1>
 
 <div class="bg-white border rounded p-6">
 
@@ -225,6 +221,28 @@
             </button>
 
         </div>
+
+    </form>
+
+</div>
+
+<div class="mt-6">
+
+    <form
+        method="POST"
+        action="/admin/product/{{ $product->id }}/delete"
+        class="inline"
+    >
+
+        @csrf
+
+        <button
+            type="submit"
+            class="text-red-600 hover:text-red-700 text-sm underline"
+            onclick="return confirm('Удалить товар «{{ addslashes($product->name) }}»? Это действие необратимо.')"
+        >
+            Удалить товар
+        </button>
 
     </form>
 

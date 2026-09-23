@@ -52,4 +52,9 @@ Route::middleware(['auth', 'admin'])->group(function () {
         '/admin/product/{id}',
         [AdminProductController::class, 'update']
     );
+
+    Route::post(
+        '/admin/product/{id}/delete',
+        [AdminProductController::class, 'destroy']
+    );
 });
