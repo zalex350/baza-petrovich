@@ -87,16 +87,30 @@
 
                     <td class="border p-3">
 
-                        @if($product->is_active)
+                        @if(!$product->is_published)
 
-                            <span class="text-green-700">
-                                Active
+                            <span class="inline-flex rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-xs">
+                                Черновик
+                            </span>
+
+                        @elseif($product->is_active)
+
+                            <span class="inline-flex rounded-full bg-green-100 text-green-700 px-2 py-0.5 text-xs">
+                                Опубликован
                             </span>
 
                         @else
 
-                            <span class="text-red-700">
-                                Disabled
+                            <span class="inline-flex rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-xs">
+                                Скрыт
+                            </span>
+
+                        @endif
+
+                        @if($product->draft)
+
+                            <span class="inline-flex rounded-full bg-blue-100 text-blue-600 px-2 py-0.5 text-xs ml-1">
+                                есть черновик
                             </span>
 
                         @endif
