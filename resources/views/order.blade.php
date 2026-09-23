@@ -71,7 +71,7 @@
 
                                 <img
                                     src="{{ asset('storage/'.$item->product->image) }}"
-                                    alt="{{ $item->product->name }}"
+                                    alt="{{ $item->product->display_name ?: $item->product->name }}"
                                     class="w-12 h-12 object-contain rounded border border-slate-200">
 
                             @else
@@ -90,7 +90,7 @@
                                 href="{{ route('product.show', $item->product->id) }}"
                                 class="font-medium text-slate-800 hover:text-blue-600 transition"
                             >
-                                {{ $item->product->name }}
+                                {{ $item->product->display_name ?: $item->product->name }}
                             </a>
 
                         </td>

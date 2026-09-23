@@ -138,7 +138,7 @@
 
                     <img
                         src="{{ asset('storage/' . $product->image) }}"
-                        alt="{{ $product->name }}"
+                        alt="{{ $product->display_name ?: $product->name }}"
                         class="w-full h-full object-contain p-6">
 
                 @else
@@ -172,7 +172,7 @@
             @endif
 
             <h3 class="text-lg font-semibold leading-6 min-h-[56px]">
-                {{ $product->name }}
+                {{ $product->display_name ?: $product->name }}
             </h3>
 
             <div class="mt-5 flex items-center justify-between">

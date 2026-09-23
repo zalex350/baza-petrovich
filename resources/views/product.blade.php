@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', $product->name)
+@section('title', $product->display_name ?: $product->name)
 
 @section('content')
 
@@ -66,7 +66,7 @@
             </p>
 
             <h1 class="text-3xl font-bold mb-4">
-                {{ $product->name }}
+                {{ $product->display_name ?: $product->name }}
             </h1>
 
             <p class="mb-2">
