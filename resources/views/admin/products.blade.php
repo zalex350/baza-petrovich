@@ -10,6 +10,13 @@
         Админка — Товары
     </h1>
 
+    <a
+        href="/admin/product/create"
+        class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded"
+    >
+        Добавить товар
+    </a>
+
 </div>
 
 <div class="bg-white border rounded overflow-hidden">

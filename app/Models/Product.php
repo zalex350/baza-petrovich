@@ -18,6 +18,7 @@ class Product extends Model
         'brand',
         'slug',
         'is_active',
+        'is_published',
         'package_contents',
     ];
 

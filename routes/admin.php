@@ -34,6 +34,16 @@ Route::middleware(['auth', 'admin'])->group(function () {
     );
 
     Route::get(
+        '/admin/product/create',
+        [AdminProductController::class, 'create']
+    );
+
+    Route::post(
+        '/admin/product',
+        [AdminProductController::class, 'store']
+    );
+
+    Route::get(
         '/admin/product/{id}',
         [AdminProductController::class, 'show']
     );
