@@ -71,6 +71,11 @@ class AdminProductController extends Controller
     {
         $product = Product::findOrFail($id);
 
+        request()->validate([
+            'price' => 'required|numeric|min:0',
+            'stock' => 'required|integer|min:0',
+        ]);
+
         $product->update([
             'name' => request('name'),
             'sku' => request('sku'),
