@@ -15,6 +15,60 @@
     Редактирование товара
 </h1>
 
+<!-- Visibility -->
+<div class="bg-white border rounded p-4 mb-6 flex items-center justify-between gap-4">
+
+    <div class="flex items-center gap-3">
+
+        @if($product->is_active)
+
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                Виден на сайте
+            </span>
+
+        @else
+
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-slate-200 text-slate-700">
+                <span class="w-2 h-2 rounded-full bg-slate-500"></span>
+                Скрыт с сайта
+            </span>
+
+        @endif
+
+    </div>
+
+    <form
+        method="POST"
+        action="/admin/product/{{ $product->id }}/toggle-visibility"
+    >
+
+        @csrf
+
+        @if($product->is_active)
+
+            <button
+                type="submit"
+                class="border border-slate-300 hover:bg-slate-100 text-slate-800 px-4 py-2 rounded"
+            >
+                Скрыть товар
+            </button>
+
+        @else
+
+            <button
+                type="submit"
+                class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded"
+            >
+                Показать товар
+            </button>
+
+        @endif
+
+    </form>
+
+</div>
+
 <div class="bg-white border rounded p-6">
 
     <form
@@ -191,22 +245,6 @@
                 rows="5"
                 class="w-full border rounded px-3 py-2"
             >{{ old('package_contents', $product->package_contents) }}</textarea>
-
-        </div>
-
-        <!-- Active -->
-        <div class="flex items-center gap-3">
-
-            <input
-                type="checkbox"
-                name="is_active"
-                value="1"
-                @checked($product->is_active)
-            >
-
-            <label>
-                Активен
-            </label>
 
         </div>
 

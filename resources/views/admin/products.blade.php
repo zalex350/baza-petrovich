@@ -89,14 +89,16 @@
 
                         @if($product->is_active)
 
-                            <span class="text-green-700">
-                                Active
+                            <span class="inline-flex items-center gap-1.5 text-green-700">
+                                <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                                Виден
                             </span>
 
                         @else
 
-                            <span class="text-red-700">
-                                Disabled
+                            <span class="inline-flex items-center gap-1.5 text-slate-500">
+                                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                                Скрыт
                             </span>
 
                         @endif
@@ -113,6 +115,23 @@
                             >
                                 Edit
                             </a>
+
+                            <form
+                                method="POST"
+                                action="/admin/product/{{ $product->id }}/toggle-visibility"
+                                class="inline"
+                            >
+
+                                @csrf
+
+                                <button
+                                    type="submit"
+                                    class="text-slate-700 hover:text-slate-900 text-sm underline"
+                                >
+                                    {{ $product->is_active ? 'Скрыть' : 'Показать' }}
+                                </button>
+
+                            </form>
 
                             <form
                                 method="POST"
