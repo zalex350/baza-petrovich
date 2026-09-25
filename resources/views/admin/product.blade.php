@@ -15,14 +15,6 @@
     Редактирование товара
 </h1>
 
-@if(session('success'))
-
-    <div class="bg-green-50 border border-green-200 rounded-2xl px-4 py-3 mb-6 text-green-700">
-        {{ session('success') }}
-    </div>
-
-@endif
-
 @if($errors->any())
 
     <div class="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6">
