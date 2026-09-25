@@ -19,18 +19,20 @@ class CreateUser extends Command
         {email? : Email (логин)}
         {--role= : Роль: client или admin}
         {--password= : Пароль (если не задан — запрашивается или генерируется)}
-        {--generate-password : Сгенерировать пароль и вывести его в консоль}';
+        {--generate-password : Сгенерировать пароль и вывести его в консоль}
+        {--debug-input : Показать длину и hex каждого введённого поля до и после очистки}';
 
     protected $description = 'Create a user account (self-registration is disabled, SRS §3)';
 
     public function handle(): int
     {
-        $name  = $this->argument('name') ?? $this->ask('Имя');
-        $email = $this->argument('email') ?? $this->ask('Email');
-        $role  = $this->normalizeRole(
+        $name  = $this->cleanField('name', $this->argument('name') ?? $this->ask('Имя'));
+        $email = $this->cleanField('email', $this->argument('email') ?? $this->ask('Email'));
+        $role  = $this->normalizeRole($this->cleanField(
+            'role',
             $this->option('role')
                 ?? ($this->input->isInteractive() ? $this->choice('Роль', self::ROLES, 0) : 'client')
-        );
+        ));
 
         $password = $this->option('password');
 
@@ -40,12 +42,22 @@ class CreateUser extends Command
 
         // Пустой ввод → генерация до валидации; правила длины применяются
         // только к ручному паролю.
-        $password  = $this->cleanInput($password);
+        $password  = $this->cleanField('password', $password);
         $generated = $password === '';
+
+        if (! mb_check_encoding($name, 'UTF-8')) {
+            $this->error('Некорректная кодировка ввода, используйте аргументы команды:');
+            $this->line('  php artisan user:create "Имя Фамилия" email@example.com --role=client');
+            $this->outputRaw('Получено: '.$this->visible($name));
+
+            return self::FAILURE;
+        }
 
         if ($generated) {
             $password = Str::password(12);
         }
+
+        $values = compact('name', 'email', 'role', 'password');
 
         $rules = [
             'name'  => ['required', 'string', 'max:255'],
@@ -57,11 +69,15 @@ class CreateUser extends Command
             $rules['password'] = ['required', Password::defaults()];
         }
 
-        $validator = Validator::make(compact('name', 'email', 'role', 'password'), $rules);
+        $validator = Validator::make($values, $rules);
 
         if ($validator->fails()) {
-            foreach ($validator->errors()->all() as $error) {
-                $this->error($error);
+            foreach ($validator->errors()->messages() as $field => $messages) {
+                foreach ($messages as $message) {
+                    $this->error($message);
+                }
+
+                $this->outputRaw('  Получено: '.$this->visible($values[$field]));
             }
 
             return self::FAILURE;
@@ -88,14 +104,50 @@ class CreateUser extends Command
     }
 
     /**
+     * Очищает значение поля; с --debug-input выводит байты до и после очистки.
+     */
+    private function cleanField(string $field, ?string $raw): string
+    {
+        $clean = $this->cleanInput($raw);
+
+        if ($this->option('debug-input')) {
+            $this->outputRaw(sprintf(
+                '[debug-input] %s: raw %s, clean %d байт hex=%s',
+                $field,
+                $raw === null ? 'null' : strlen($raw).' байт hex='.bin2hex($raw),
+                strlen($clean),
+                bin2hex($clean),
+            ));
+        }
+
+        return $clean;
+    }
+
+    /**
      * Вывод в обход форматтера: Str::password() содержит < > \,
      * а форматтер Symfony съедает «\<» и разбирает <...> как теги.
      */
     private function printGeneratedPassword(string $password): void
     {
         $this->newLine();
-        $this->output->writeln("Сгенерированный пароль: {$password}", OutputInterface::OUTPUT_RAW);
+        $this->outputRaw("Сгенерированный пароль: {$password}");
         $this->line('Пароль показывается один раз — сохраните его.');
+    }
+
+    private function outputRaw(string $text): void
+    {
+        $this->output->writeln($text, OutputInterface::OUTPUT_RAW);
+    }
+
+    /**
+     * Значение в видимом виде: управляющие и не-ASCII символы экранируются
+     * (\u001b, и…); не-UTF-8 строка выводится как hex.
+     */
+    private function visible(?string $value): string
+    {
+        $json = json_encode($value, JSON_UNESCAPED_SLASHES);
+
+        return $json !== false ? $json : 'hex:'.bin2hex((string) $value);
     }
 
     /**

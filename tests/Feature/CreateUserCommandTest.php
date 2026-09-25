@@ -188,6 +188,107 @@ class CreateUserCommandTest extends TestCase
         ];
     }
 
+    public function test_garbage_in_name_and_email_is_cleaned(): void
+    {
+        $this->artisan('user:create')
+            ->expectsQuestion('Имя', "\e[O\e[Iимя\r")
+            ->expectsQuestion('Email', "\e[I w@ht.c\r\n")
+            ->expectsChoice('Роль', '0', ['client', 'admin'])
+            ->expectsQuestion('Пароль (пусто — сгенерировать)', "\e[I\r")
+            ->expectsOutputToContain('Сгенерированный пароль: ')
+            ->doesntExpectOutputToContain('valid email address')
+            ->assertSuccessful();
+
+        $user = User::where('email', 'w@ht.c')->first();
+
+        $this->assertNotNull($user);
+        $this->assertSame('имя', $user->name);
+        $this->assertSame('client', $user->role);
+    }
+
+    public function test_garbage_in_role_is_cleaned(): void
+    {
+        $this->artisan('user:create', [
+            'name'       => 'Role',
+            'email'      => 'role@example.com',
+            '--role'     => "\e[I1\r",
+            '--password' => 'Manual-pass-123',
+        ])->assertSuccessful();
+
+        $this->assertSame('admin', User::where('email', 'role@example.com')->first()->role);
+    }
+
+    public function test_non_utf8_name_gives_clear_error(): void
+    {
+        $cp1251Name = "\xC8\xEC\xFF"; // «Имя» в Windows-1251
+
+        $this->artisan('user:create')
+            ->expectsQuestion('Имя', $cp1251Name)
+            ->expectsQuestion('Email', 'w@ht.c')
+            ->expectsChoice('Роль', 'client', ['client', 'admin'])
+            ->expectsQuestion('Пароль (пусто — сгенерировать)', '')
+            ->expectsOutputToContain('Некорректная кодировка ввода, используйте аргументы команды')
+            ->expectsOutputToContain('hex:c8ecff')
+            ->doesntExpectOutputToContain('Пользователь создан')
+            ->assertFailed();
+
+        $this->assertSame(0, User::count());
+    }
+
+    public function test_validation_errors_show_received_value_visibly(): void
+    {
+        $this->artisan('user:create', [
+            'name'       => 'Bad',
+            'email'      => "w@ht\u{200B}",
+            '--role'     => 'client',
+            '--password' => 'Manual-pass-123',
+        ])
+            ->expectsOutputToContain('The email field must be a valid email address.')
+            ->expectsOutputToContain('Получено: "w@ht'.chr(92).'u200b"')
+            ->assertFailed();
+
+        $this->assertSame(0, User::count());
+    }
+
+    public function test_short_manual_password_error_shows_received_value(): void
+    {
+        $this->artisan('user:create', [
+            'name'       => 'Short',
+            'email'      => 'short2@example.com',
+            '--role'     => 'client',
+            '--password' => 'ab',
+        ])
+            ->expectsOutputToContain('at least 8 characters')
+            ->expectsOutputToContain('Получено: "ab"')
+            ->assertFailed();
+    }
+
+    public function test_debug_input_prints_bytes_before_and_after_cleaning(): void
+    {
+        $this->artisan('user:create', ['--debug-input' => true])
+            ->expectsQuestion('Имя', "\e[Iя")
+            ->expectsQuestion('Email', 'd@ht.c')
+            ->expectsChoice('Роль', '0', ['client', 'admin'])
+            ->expectsQuestion('Пароль (пусто — сгенерировать)', "\r")
+            ->expectsOutputToContain('[debug-input] name: raw 5 байт hex=1b5b49d18f, clean 2 байт hex=d18f')
+            ->expectsOutputToContain('[debug-input] email: raw 6 байт hex=644068742e63, clean 6 байт hex=644068742e63')
+            ->expectsOutputToContain('[debug-input] role: raw 1 байт hex=30, clean 1 байт hex=30')
+            ->expectsOutputToContain('[debug-input] password: raw 1 байт hex=0d, clean 0 байт hex=')
+            ->assertSuccessful();
+    }
+
+    public function test_without_debug_input_no_debug_lines(): void
+    {
+        $this->artisan('user:create', [
+            'name'                => 'Quiet',
+            'email'               => 'quiet@example.com',
+            '--role'              => 'client',
+            '--generate-password' => true,
+        ])
+            ->doesntExpectOutputToContain('[debug-input]')
+            ->assertSuccessful();
+    }
+
     public function test_manual_password_is_reported(): void
     {
         $this->artisan('user:create')
