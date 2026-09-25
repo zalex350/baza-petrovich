@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Hashing\HashManager;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class CreateUserCommandTest extends TestCase
@@ -43,11 +45,29 @@ class CreateUserCommandTest extends TestCase
         ]);
 
         $this->assertSame(0, $exitCode);
-        $this->assertSame(1, preg_match('/Сгенерированный пароль: (\S+)/u', Artisan::output(), $m));
+        $this->assertSame(1, preg_match('/^Сгенерированный пароль: (\S+)\r?$/mu', Artisan::output(), $m));
+        $this->assertSame(12, mb_strlen($m[1]));
 
         $user = User::where('email', 'client@example.com')->first();
         $this->assertSame('client', $user->role);
         $this->assertTrue(Hash::check($m[1], $user->password));
+    }
+
+    /**
+     * Str::password() содержит < > \ — форматтер Symfony съедает «\<»,
+     * поэтому пароль должен выводиться «как есть» (OUTPUT_RAW).
+     */
+    public function test_generated_password_is_printed_without_formatting(): void
+    {
+        $command = $this->app->make(\App\Console\Commands\CreateUser::class);
+        $output = new \Symfony\Component\Console\Output\BufferedOutput();
+        $command->setLaravel($this->app);
+        $command->setOutput(new \Illuminate\Console\OutputStyle(new \Symfony\Component\Console\Input\ArrayInput([]), $output));
+
+        $method = new \ReflectionMethod($command, 'printGeneratedPassword');
+        $method->invoke($command, 'ab\<cd<b>ef');
+
+        $this->assertStringContainsString('Сгенерированный пароль: ab\<cd<b>ef', $output->fetch());
     }
 
     public function test_generated_password_allows_login(): void
@@ -95,6 +115,270 @@ class CreateUserCommandTest extends TestCase
             ->assertSuccessful();
 
         $this->assertDatabaseHas('users', ['email' => 'oleg@example.com', 'role' => 'client']);
+    }
+
+    /**
+     * Сценарий из баг-репорта: Имя, Email, Роль = 0, Пароль = пусто (Enter).
+     */
+    public function test_empty_password_input_generates_password_that_works(): void
+    {
+        $plain = $this->capturePlainPasswords();
+
+        $this->artisan('user:create')
+            ->expectsQuestion('Имя', 'test client')
+            ->expectsQuestion('Email', 'test@test.com')
+            ->expectsChoice('Роль', '0', ['client', 'admin'])
+            ->expectsQuestion('Пароль (пусто — сгенерировать)', '')
+            ->expectsOutputToContain('Сгенерированный пароль: ')
+            ->expectsOutputToContain('Пароль показывается один раз')
+            ->doesntExpectOutputToContain('at least 8 characters')
+            ->assertSuccessful()
+            ->run();
+
+        $user = User::where('email', 'test@test.com')->first();
+
+        $this->assertNotNull($user);
+        $this->assertCount(1, $plain->values);
+        $this->assertSame(12, mb_strlen($plain->values[0]));
+        $this->assertTrue(Hash::check($plain->values[0], $user->password));
+
+        $this->post('/login', ['email' => 'test@test.com', 'password' => $plain->values[0]]);
+        $this->assertAuthenticatedAs($user);
+    }
+
+    /**
+     * Терминал (docker-compose exec из Windows) может прислать при «пустом»
+     * Enter невидимую ESC-последовательность: короткая давала ошибку
+     * «at least 8 characters», длинная проходила валидацию как ручной пароль —
+     * пользователь создавался без вывода пароля.
+     */
+    #[DataProvider('terminalGarbageProvider')]
+    public function test_terminal_escape_sequence_input_generates_password(string $input): void
+    {
+        $plain = $this->capturePlainPasswords();
+
+        $this->artisan('user:create')
+            ->expectsQuestion('Имя', 'test')
+            ->expectsQuestion('Email', 'test@g.c')
+            ->expectsChoice('Роль', '0', ['client', 'admin'])
+            ->expectsQuestion('Пароль (пусто — сгенерировать)', $input)
+            ->expectsOutputToContain('Сгенерированный пароль: ')
+            ->expectsOutputToContain('Пароль показывается один раз')
+            ->doesntExpectOutputToContain('введённый вручную')
+            ->assertSuccessful()
+            ->run();
+
+        $user = User::where('email', 'test@g.c')->first();
+
+        $this->assertNotNull($user);
+        $this->assertSame('client', $user->role);
+        $this->assertCount(1, $plain->values);
+        $this->assertSame(12, mb_strlen($plain->values[0]));
+        $this->assertTrue(Hash::check($plain->values[0], $user->password));
+    }
+
+    public static function terminalGarbageProvider(): array
+    {
+        return [
+            'focus in'           => ["\e[I"],
+            'focus out + in'     => ["\e[O\e[I"],
+            'bracketed paste'    => ["\e[200~\e[201~"],
+            'win32-input Enter'  => ["\e[13;28;13;1;0;1_\e[13;28;13;0;0;1_"],
+            'CRLF'               => ["\r\n"],
+        ];
+    }
+
+    public function test_garbage_in_name_and_email_is_cleaned(): void
+    {
+        $this->artisan('user:create')
+            ->expectsQuestion('Имя', "\e[O\e[Iимя\r")
+            ->expectsQuestion('Email', "\e[I w@ht.c\r\n")
+            ->expectsChoice('Роль', '0', ['client', 'admin'])
+            ->expectsQuestion('Пароль (пусто — сгенерировать)', "\e[I\r")
+            ->expectsOutputToContain('Сгенерированный пароль: ')
+            ->doesntExpectOutputToContain('valid email address')
+            ->assertSuccessful();
+
+        $user = User::where('email', 'w@ht.c')->first();
+
+        $this->assertNotNull($user);
+        $this->assertSame('имя', $user->name);
+        $this->assertSame('client', $user->role);
+    }
+
+    public function test_garbage_in_role_is_cleaned(): void
+    {
+        $this->artisan('user:create', [
+            'name'       => 'Role',
+            'email'      => 'role@example.com',
+            '--role'     => "\e[I1\r",
+            '--password' => 'Manual-pass-123',
+        ])->assertSuccessful();
+
+        $this->assertSame('admin', User::where('email', 'role@example.com')->first()->role);
+    }
+
+    public function test_non_utf8_name_gives_clear_error(): void
+    {
+        $cp1251Name = "\xC8\xEC\xFF"; // «Имя» в Windows-1251
+
+        $this->artisan('user:create')
+            ->expectsQuestion('Имя', $cp1251Name)
+            ->expectsQuestion('Email', 'w@ht.c')
+            ->expectsChoice('Роль', 'client', ['client', 'admin'])
+            ->expectsQuestion('Пароль (пусто — сгенерировать)', '')
+            ->expectsOutputToContain('Некорректная кодировка ввода, используйте аргументы команды')
+            ->expectsOutputToContain('hex:c8ecff')
+            ->doesntExpectOutputToContain('Пользователь создан')
+            ->assertFailed();
+
+        $this->assertSame(0, User::count());
+    }
+
+    public function test_validation_errors_show_received_value_visibly(): void
+    {
+        $this->artisan('user:create', [
+            'name'       => 'Bad',
+            'email'      => "w@ht\u{200B}",
+            '--role'     => 'client',
+            '--password' => 'Manual-pass-123',
+        ])
+            ->expectsOutputToContain('The email field must be a valid email address.')
+            ->expectsOutputToContain('Получено: "w@ht'.chr(92).'u200b"')
+            ->assertFailed();
+
+        $this->assertSame(0, User::count());
+    }
+
+    public function test_short_manual_password_error_shows_received_value(): void
+    {
+        $this->artisan('user:create', [
+            'name'       => 'Short',
+            'email'      => 'short2@example.com',
+            '--role'     => 'client',
+            '--password' => 'ab',
+        ])
+            ->expectsOutputToContain('at least 8 characters')
+            ->expectsOutputToContain('Получено: "ab"')
+            ->assertFailed();
+    }
+
+    public function test_debug_input_prints_bytes_before_and_after_cleaning(): void
+    {
+        $this->artisan('user:create', ['--debug-input' => true])
+            ->expectsQuestion('Имя', "\e[Iя")
+            ->expectsQuestion('Email', 'd@ht.c')
+            ->expectsChoice('Роль', '0', ['client', 'admin'])
+            ->expectsQuestion('Пароль (пусто — сгенерировать)', "\r")
+            ->expectsOutputToContain('[debug-input] name: raw 5 байт hex=1b5b49d18f, clean 2 байт hex=d18f')
+            ->expectsOutputToContain('[debug-input] email: raw 6 байт hex=644068742e63, clean 6 байт hex=644068742e63')
+            ->expectsOutputToContain('[debug-input] role: raw 1 байт hex=30, clean 1 байт hex=30')
+            ->expectsOutputToContain('[debug-input] password: raw 1 байт hex=0d, clean 0 байт hex=')
+            ->assertSuccessful();
+    }
+
+    public function test_without_debug_input_no_debug_lines(): void
+    {
+        $this->artisan('user:create', [
+            'name'                => 'Quiet',
+            'email'               => 'quiet@example.com',
+            '--role'              => 'client',
+            '--generate-password' => true,
+        ])
+            ->doesntExpectOutputToContain('[debug-input]')
+            ->assertSuccessful();
+    }
+
+    public function test_manual_password_is_reported(): void
+    {
+        $this->artisan('user:create')
+            ->expectsQuestion('Имя', 'Manual')
+            ->expectsQuestion('Email', 'manual@example.com')
+            ->expectsChoice('Роль', 'client', ['client', 'admin'])
+            ->expectsQuestion('Пароль (пусто — сгенерировать)', 'Manual-pass-123')
+            ->expectsOutputToContain('Установлен пароль, введённый вручную (15 симв.)')
+            ->doesntExpectOutputToContain('Сгенерированный пароль')
+            ->assertSuccessful();
+
+        $this->assertTrue(Hash::check('Manual-pass-123', User::where('email', 'manual@example.com')->first()->password));
+    }
+
+    public function test_whitespace_password_input_is_treated_as_empty(): void
+    {
+        $this->artisan('user:create')
+            ->expectsQuestion('Имя', 'Space')
+            ->expectsQuestion('Email', 'space@example.com')
+            ->expectsChoice('Роль', 'client', ['client', 'admin'])
+            ->expectsQuestion('Пароль (пусто — сгенерировать)', "  \r")
+            ->expectsOutputToContain('Сгенерированный пароль')
+            ->assertSuccessful();
+
+        $this->assertDatabaseHas('users', ['email' => 'space@example.com']);
+    }
+
+    public function test_short_manual_password_fails_and_user_is_not_created(): void
+    {
+        $this->artisan('user:create')
+            ->expectsQuestion('Имя', 'Short')
+            ->expectsQuestion('Email', 'short@example.com')
+            ->expectsChoice('Роль', 'client', ['client', 'admin'])
+            ->expectsQuestion('Пароль (пусто — сгенерировать)', '1234567')
+            ->expectsOutputToContain('at least 8 characters')
+            ->doesntExpectOutputToContain('Сгенерированный пароль')
+            ->assertFailed();
+
+        $this->assertDatabaseMissing('users', ['email' => 'short@example.com']);
+        $this->assertSame(0, User::count());
+    }
+
+    public function test_role_choice_by_index_saves_client(): void
+    {
+        $this->artisan('user:create')
+            ->expectsQuestion('Имя', 'Index')
+            ->expectsQuestion('Email', 'index@example.com')
+            ->expectsChoice('Роль', '0', ['client', 'admin'])
+            ->expectsQuestion('Пароль (пусто — сгенерировать)', 'Manual-pass-123')
+            ->assertSuccessful();
+
+        $this->assertSame('client', User::where('email', 'index@example.com')->first()->role);
+    }
+
+    public function test_role_choice_by_index_saves_admin(): void
+    {
+        $this->artisan('user:create', [
+            'name'       => 'Index Admin',
+            'email'      => 'index-admin@example.com',
+            '--role'     => '1',
+            '--password' => 'Manual-pass-123',
+        ])->assertSuccessful();
+
+        $this->assertSame('admin', User::where('email', 'index-admin@example.com')->first()->role);
+    }
+
+    /**
+     * Перехватывает открытые пароли, которые cast 'hashed' передаёт в Hash::make().
+     */
+    private function capturePlainPasswords(): object
+    {
+        $captured = new class { public array $values = []; };
+
+        $this->app->instance('hash', new class($this->app, $captured) extends HashManager
+        {
+            public function __construct($app, private object $captured)
+            {
+                parent::__construct($app);
+            }
+
+            public function make($value, array $options = []): string
+            {
+                $this->captured->values[] = $value;
+
+                return parent::make($value, $options);
+            }
+        });
+        Hash::clearResolvedInstance('hash');
+
+        return $captured;
     }
 
     public function test_non_interactive_defaults_to_client_and_generated_password(): void

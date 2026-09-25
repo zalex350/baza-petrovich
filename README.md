@@ -7,6 +7,32 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Локальная разработка
+
+Приложение работает в Docker: `http://localhost:8090`, MySQL на порту 3307. Подробнее о командах — в `CLAUDE.md` в корне репозитория.
+
+```bash
+docker-compose up -d
+docker-compose exec php php artisan migrate
+docker-compose exec node npm run build
+```
+
+### Создание пользователей
+
+Самостоятельная регистрация отключена (SRS §3), учётные записи создаются командой `user:create`. Передавайте все данные аргументами:
+
+```bash
+php artisan user:create "Имя" email@example.com --role=client --generate-password
+# в Docker:
+docker-compose exec php php artisan user:create "Имя" email@example.com --role=client --generate-password
+```
+
+- `--role` — `client` или `admin`;
+- `--generate-password` — сгенерировать пароль; он выводится в консоль один раз;
+- вместо генерации можно задать пароль: `--password=...` (не короче 8 символов).
+
+> **Внимание:** интерактивный ввод (запуск без аргументов) в PowerShell через `docker-compose exec` может приходить с «мусором» — лишними управляющими символами или в неверной кодировке. Из-за этого возможны ошибки валидации email/пароля. Используйте запуск с аргументами, как в примере выше.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
