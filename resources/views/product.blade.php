@@ -76,9 +76,24 @@
 
             @auth
 
-                <h2 class="text-4xl font-semibold text-green-800 mb-6">
-                    {{ $product->price }} BYN
-                </h2>
+                <div class="mb-6 space-y-1">
+
+                    <p class="text-slate-600">
+                        Цена без НДС:
+                        {{ number_format($product->price, 2) }} BYN
+                    </p>
+
+                    <p class="text-slate-600">
+                        НДС ({{ rtrim(rtrim(number_format($product->vat_rate, 2), '0'), '.') }}%):
+                        {{ number_format($product->vat_amount, 2) }} BYN
+                    </p>
+
+                    <h2 class="text-4xl font-semibold text-green-800">
+                        Цена с НДС:
+                        {{ number_format($product->price_with_vat, 2) }} BYN
+                    </h2>
+
+                </div>
 
                 <p class="mb-4">
                     В наличии: {{ $product->stock }}

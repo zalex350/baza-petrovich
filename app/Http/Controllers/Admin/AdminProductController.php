@@ -34,6 +34,7 @@ class AdminProductController extends Controller
             'brand'            => 'nullable|string|max:255',
             'slug'             => 'nullable|string|max:255|unique:products,slug',
             'price'            => 'required|numeric|min:0',
+            'vat_rate'         => 'numeric|min:0|max:100',
             'stock'            => 'required|integer|min:0',
             'category_id'      => 'nullable|exists:categories,id',
             'description'      => 'nullable|string',
@@ -89,6 +90,7 @@ class AdminProductController extends Controller
         request()->validate([
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
+            'vat_rate' => 'numeric|min:0|max:100',
         ]);
 
         $product->update([
@@ -97,6 +99,7 @@ class AdminProductController extends Controller
             'brand'       => request('brand'),
             'slug'        => request('slug'),
             'price'       => request('price'),
+            'vat_rate'    => request('vat_rate', $product->vat_rate),
             'stock'       => request('stock'),
             'category_id' => request('category_id'),
         ]);

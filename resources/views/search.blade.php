@@ -119,6 +119,10 @@
                                     {{ number_format($product->price, 2) }} BYN
                                 </span>
 
+                                <span class="block text-xs text-slate-500">
+                                    (с НДС: {{ number_format($product->price_with_vat, 2) }} BYN)
+                                </span>
+
                             @else
 
                                 <span class="text-sm text-slate-500">
