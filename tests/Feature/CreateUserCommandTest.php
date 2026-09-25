@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Hashing\HashManager;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -95,6 +96,113 @@ class CreateUserCommandTest extends TestCase
             ->assertSuccessful();
 
         $this->assertDatabaseHas('users', ['email' => 'oleg@example.com', 'role' => 'client']);
+    }
+
+    /**
+     * Сценарий из баг-репорта: Имя, Email, Роль = 0, Пароль = пусто (Enter).
+     */
+    public function test_empty_password_input_generates_password_that_works(): void
+    {
+        $plain = $this->capturePlainPasswords();
+
+        $this->artisan('user:create')
+            ->expectsQuestion('Имя', 'test client')
+            ->expectsQuestion('Email', 'test@test.com')
+            ->expectsChoice('Роль', '0', ['client', 'admin'])
+            ->expectsQuestion('Пароль (пусто — сгенерировать)', '')
+            ->expectsOutputToContain('Сгенерированный пароль: ')
+            ->expectsOutputToContain('Пароль показывается один раз')
+            ->doesntExpectOutputToContain('at least 8 characters')
+            ->assertSuccessful()
+            ->run();
+
+        $user = User::where('email', 'test@test.com')->first();
+
+        $this->assertNotNull($user);
+        $this->assertCount(1, $plain->values);
+        $this->assertSame(12, mb_strlen($plain->values[0]));
+        $this->assertTrue(Hash::check($plain->values[0], $user->password));
+
+        $this->post('/login', ['email' => 'test@test.com', 'password' => $plain->values[0]]);
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_whitespace_password_input_is_treated_as_empty(): void
+    {
+        $this->artisan('user:create')
+            ->expectsQuestion('Имя', 'Space')
+            ->expectsQuestion('Email', 'space@example.com')
+            ->expectsChoice('Роль', 'client', ['client', 'admin'])
+            ->expectsQuestion('Пароль (пусто — сгенерировать)', "  \r")
+            ->expectsOutputToContain('Сгенерированный пароль')
+            ->assertSuccessful();
+
+        $this->assertDatabaseHas('users', ['email' => 'space@example.com']);
+    }
+
+    public function test_short_manual_password_fails_and_user_is_not_created(): void
+    {
+        $this->artisan('user:create')
+            ->expectsQuestion('Имя', 'Short')
+            ->expectsQuestion('Email', 'short@example.com')
+            ->expectsChoice('Роль', 'client', ['client', 'admin'])
+            ->expectsQuestion('Пароль (пусто — сгенерировать)', '1234567')
+            ->expectsOutputToContain('at least 8 characters')
+            ->doesntExpectOutputToContain('Сгенерированный пароль')
+            ->assertFailed();
+
+        $this->assertDatabaseMissing('users', ['email' => 'short@example.com']);
+        $this->assertSame(0, User::count());
+    }
+
+    public function test_role_choice_by_index_saves_client(): void
+    {
+        $this->artisan('user:create')
+            ->expectsQuestion('Имя', 'Index')
+            ->expectsQuestion('Email', 'index@example.com')
+            ->expectsChoice('Роль', '0', ['client', 'admin'])
+            ->expectsQuestion('Пароль (пусто — сгенерировать)', 'Manual-pass-123')
+            ->assertSuccessful();
+
+        $this->assertSame('client', User::where('email', 'index@example.com')->first()->role);
+    }
+
+    public function test_role_choice_by_index_saves_admin(): void
+    {
+        $this->artisan('user:create', [
+            'name'       => 'Index Admin',
+            'email'      => 'index-admin@example.com',
+            '--role'     => '1',
+            '--password' => 'Manual-pass-123',
+        ])->assertSuccessful();
+
+        $this->assertSame('admin', User::where('email', 'index-admin@example.com')->first()->role);
+    }
+
+    /**
+     * Перехватывает открытые пароли, которые cast 'hashed' передаёт в Hash::make().
+     */
+    private function capturePlainPasswords(): object
+    {
+        $captured = new class { public array $values = []; };
+
+        $this->app->instance('hash', new class($this->app, $captured) extends HashManager
+        {
+            public function __construct($app, private object $captured)
+            {
+                parent::__construct($app);
+            }
+
+            public function make($value, array $options = []): string
+            {
+                $this->captured->values[] = $value;
+
+                return parent::make($value, $options);
+            }
+        });
+        Hash::clearResolvedInstance('hash');
+
+        return $captured;
     }
 
     public function test_non_interactive_defaults_to_client_and_generated_password(): void
