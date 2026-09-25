@@ -79,6 +79,19 @@ class AdminProductVisibilityTest extends TestCase
         $this->assertTrue((bool) $product->fresh()->is_active);
     }
 
+    public function test_flash_message_is_shown_once_on_edit_page(): void
+    {
+        $product = $this->makeProduct(true);
+
+        $response = $this->actingAs($this->admin)
+            ->from("/admin/product/{$product->id}")
+            ->followingRedirects()
+            ->post("/admin/product/{$product->id}/toggle-visibility");
+
+        $response->assertStatus(200);
+        $this->assertSame(1, substr_count($response->getContent(), 'Товар скрыт с сайта'));
+    }
+
     public function test_toggle_missing_product_returns_404(): void
     {
         $this->actingAs($this->admin)
