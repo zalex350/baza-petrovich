@@ -13,6 +13,10 @@ use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
+/**
+ * Маршруты /register отключены по SRS §3 (самостоятельная регистрация
+ * запрещена). Класс сохранён для будущей регистрации по приглашению (SRS §6).
+ */
 class RegisteredUserController extends Controller
 {
     /**
