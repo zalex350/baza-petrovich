@@ -22,7 +22,9 @@ class CreateUser extends Command
         {--generate-password : Сгенерировать пароль и вывести его в консоль}
         {--debug-input : Показать длину и hex каждого введённого поля до и после очистки}';
 
-    protected $description = 'Create a user account (self-registration is disabled, SRS §3)';
+    protected $description = 'Create a user account (self-registration is disabled, SRS §3). '
+        .'Example: php artisan user:create "Имя" email@example.com --role=client --generate-password. '
+        .'Prefer arguments: interactive input in PowerShell via docker-compose exec may arrive with garbage characters';
 
     public function handle(): int
     {
