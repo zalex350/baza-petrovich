@@ -79,7 +79,7 @@ class ProductVatTest extends TestCase
 
     public function test_admin_can_set_vat_rate_on_create(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
+        $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin)->post('/admin/product', [
             'name'     => 'VAT Product',
@@ -94,7 +94,7 @@ class ProductVatTest extends TestCase
 
     public function test_create_without_vat_rate_uses_default(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
+        $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin)->post('/admin/product', [
             'name'  => 'No VAT field',
@@ -108,7 +108,7 @@ class ProductVatTest extends TestCase
 
     public function test_admin_can_update_vat_rate(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
+        $admin = User::factory()->admin()->create();
         $product = $this->makeProduct();
 
         $this->actingAs($admin)->post("/admin/product/{$product->id}", [
@@ -124,7 +124,7 @@ class ProductVatTest extends TestCase
 
     public function test_vat_rate_validation(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
+        $admin = User::factory()->admin()->create();
         $product = $this->makeProduct();
 
         foreach ([-1, 100.01, 'abc', ''] as $invalid) {
@@ -151,7 +151,7 @@ class ProductVatTest extends TestCase
 
     public function test_admin_forms_have_vat_rate_field(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
+        $admin = User::factory()->admin()->create();
         $product = $this->makeProduct();
 
         $this->actingAs($admin)->get('/admin/product/create')

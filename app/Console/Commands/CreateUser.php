@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Validator;
@@ -12,8 +13,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class CreateUser extends Command
 {
-    public const ROLES = ['client', 'admin'];
-
     protected $signature = 'user:create
         {name? : Имя пользователя}
         {email? : Email (логин)}
@@ -33,7 +32,9 @@ class CreateUser extends Command
         $role  = $this->normalizeRole($this->cleanField(
             'role',
             $this->option('role')
-                ?? ($this->input->isInteractive() ? $this->choice('Роль', self::ROLES, 0) : 'client')
+                ?? ($this->input->isInteractive()
+                    ? $this->choice('Роль', UserRole::values(), 0)
+                    : UserRole::Client->value)
         ));
 
         $password = $this->option('password');
@@ -64,7 +65,7 @@ class CreateUser extends Command
         $rules = [
             'name'  => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)],
-            'role'  => ['required', Rule::in(self::ROLES)],
+            'role'  => ['required', Rule::enum(UserRole::class)],
         ];
 
         if (! $generated) {
@@ -90,11 +91,11 @@ class CreateUser extends Command
             'email'    => $email,
             'password' => $password,
         ]);
-        $user->role              = $role;
+        $user->role              = UserRole::from($role);
         $user->email_verified_at = now();
         $user->save();
 
-        $this->info("Пользователь создан: #{$user->id} {$user->email} ({$user->role})");
+        $this->info("Пользователь создан: #{$user->id} {$user->email} ({$user->role->value})");
 
         if ($generated) {
             $this->printGeneratedPassword($password);
@@ -173,8 +174,10 @@ class CreateUser extends Command
      */
     private function normalizeRole(?string $role): ?string
     {
-        if ($role !== null && ctype_digit($role) && isset(self::ROLES[(int) $role])) {
-            return self::ROLES[(int) $role];
+        $roles = UserRole::values();
+
+        if ($role !== null && ctype_digit($role) && isset($roles[(int) $role])) {
+            return $roles[(int) $role];
         }
 
         return $role;

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Hashing\HashManager;
@@ -30,7 +31,7 @@ class CreateUserCommandTest extends TestCase
 
         $this->assertNotNull($user);
         $this->assertSame('Иван Петров', $user->name);
-        $this->assertSame('admin', $user->role);
+        $this->assertSame(UserRole::Admin, $user->role);
         $this->assertTrue(Hash::check('Secret-pass-123', $user->password));
         $this->assertNotNull($user->email_verified_at);
     }
@@ -49,7 +50,7 @@ class CreateUserCommandTest extends TestCase
         $this->assertSame(12, mb_strlen($m[1]));
 
         $user = User::where('email', 'client@example.com')->first();
-        $this->assertSame('client', $user->role);
+        $this->assertSame(UserRole::Client, $user->role);
         $this->assertTrue(Hash::check($m[1], $user->password));
     }
 
@@ -100,7 +101,7 @@ class CreateUserCommandTest extends TestCase
 
         $user = User::where('email', 'anna@example.com')->first();
 
-        $this->assertSame('admin', $user->role);
+        $this->assertSame(UserRole::Admin, $user->role);
         $this->assertTrue(Hash::check('Interactive-pass-1', $user->password));
     }
 
@@ -171,7 +172,7 @@ class CreateUserCommandTest extends TestCase
         $user = User::where('email', 'test@g.c')->first();
 
         $this->assertNotNull($user);
-        $this->assertSame('client', $user->role);
+        $this->assertSame(UserRole::Client, $user->role);
         $this->assertCount(1, $plain->values);
         $this->assertSame(12, mb_strlen($plain->values[0]));
         $this->assertTrue(Hash::check($plain->values[0], $user->password));
@@ -203,7 +204,7 @@ class CreateUserCommandTest extends TestCase
 
         $this->assertNotNull($user);
         $this->assertSame('имя', $user->name);
-        $this->assertSame('client', $user->role);
+        $this->assertSame(UserRole::Client, $user->role);
     }
 
     public function test_garbage_in_role_is_cleaned(): void
@@ -215,7 +216,7 @@ class CreateUserCommandTest extends TestCase
             '--password' => 'Manual-pass-123',
         ])->assertSuccessful();
 
-        $this->assertSame('admin', User::where('email', 'role@example.com')->first()->role);
+        $this->assertSame(UserRole::Admin, User::where('email', 'role@example.com')->first()->role);
     }
 
     public function test_non_utf8_name_gives_clear_error(): void
@@ -340,7 +341,7 @@ class CreateUserCommandTest extends TestCase
             ->expectsQuestion('Пароль (пусто — сгенерировать)', 'Manual-pass-123')
             ->assertSuccessful();
 
-        $this->assertSame('client', User::where('email', 'index@example.com')->first()->role);
+        $this->assertSame(UserRole::Client, User::where('email', 'index@example.com')->first()->role);
     }
 
     public function test_role_choice_by_index_saves_admin(): void
@@ -352,7 +353,7 @@ class CreateUserCommandTest extends TestCase
             '--password' => 'Manual-pass-123',
         ])->assertSuccessful();
 
-        $this->assertSame('admin', User::where('email', 'index-admin@example.com')->first()->role);
+        $this->assertSame(UserRole::Admin, User::where('email', 'index-admin@example.com')->first()->role);
     }
 
     /**

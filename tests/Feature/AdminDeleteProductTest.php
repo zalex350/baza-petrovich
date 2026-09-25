@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -19,7 +20,7 @@ class AdminDeleteProductTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create(['role' => 'admin']);
+        $this->admin = User::factory()->admin()->create();
 
         $category = Category::create(['name' => 'Смесители', 'slug' => 'smesiteli']);
 
@@ -64,7 +65,7 @@ class AdminDeleteProductTest extends TestCase
 
     public function test_non_admin_cannot_delete_product(): void
     {
-        $user = User::factory()->create(['role' => 'user']);
+        $user = User::factory()->create(['role' => UserRole::Client]);
         $id   = $this->product->id;
 
         $response = $this->actingAs($user)->post("/admin/product/{$id}/delete");
