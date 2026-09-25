@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Hashing\HashManager;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class CreateUserCommandTest extends TestCase
@@ -44,11 +45,29 @@ class CreateUserCommandTest extends TestCase
         ]);
 
         $this->assertSame(0, $exitCode);
-        $this->assertSame(1, preg_match('/Сгенерированный пароль: (\S+)/u', Artisan::output(), $m));
+        $this->assertSame(1, preg_match('/^Сгенерированный пароль: (\S+)\r?$/mu', Artisan::output(), $m));
+        $this->assertSame(12, mb_strlen($m[1]));
 
         $user = User::where('email', 'client@example.com')->first();
         $this->assertSame('client', $user->role);
         $this->assertTrue(Hash::check($m[1], $user->password));
+    }
+
+    /**
+     * Str::password() содержит < > \ — форматтер Symfony съедает «\<»,
+     * поэтому пароль должен выводиться «как есть» (OUTPUT_RAW).
+     */
+    public function test_generated_password_is_printed_without_formatting(): void
+    {
+        $command = $this->app->make(\App\Console\Commands\CreateUser::class);
+        $output = new \Symfony\Component\Console\Output\BufferedOutput();
+        $command->setLaravel($this->app);
+        $command->setOutput(new \Illuminate\Console\OutputStyle(new \Symfony\Component\Console\Input\ArrayInput([]), $output));
+
+        $method = new \ReflectionMethod($command, 'printGeneratedPassword');
+        $method->invoke($command, 'ab\<cd<b>ef');
+
+        $this->assertStringContainsString('Сгенерированный пароль: ab\<cd<b>ef', $output->fetch());
     }
 
     public function test_generated_password_allows_login(): void
@@ -125,6 +144,62 @@ class CreateUserCommandTest extends TestCase
 
         $this->post('/login', ['email' => 'test@test.com', 'password' => $plain->values[0]]);
         $this->assertAuthenticatedAs($user);
+    }
+
+    /**
+     * Терминал (docker-compose exec из Windows) может прислать при «пустом»
+     * Enter невидимую ESC-последовательность: короткая давала ошибку
+     * «at least 8 characters», длинная проходила валидацию как ручной пароль —
+     * пользователь создавался без вывода пароля.
+     */
+    #[DataProvider('terminalGarbageProvider')]
+    public function test_terminal_escape_sequence_input_generates_password(string $input): void
+    {
+        $plain = $this->capturePlainPasswords();
+
+        $this->artisan('user:create')
+            ->expectsQuestion('Имя', 'test')
+            ->expectsQuestion('Email', 'test@g.c')
+            ->expectsChoice('Роль', '0', ['client', 'admin'])
+            ->expectsQuestion('Пароль (пусто — сгенерировать)', $input)
+            ->expectsOutputToContain('Сгенерированный пароль: ')
+            ->expectsOutputToContain('Пароль показывается один раз')
+            ->doesntExpectOutputToContain('введённый вручную')
+            ->assertSuccessful()
+            ->run();
+
+        $user = User::where('email', 'test@g.c')->first();
+
+        $this->assertNotNull($user);
+        $this->assertSame('client', $user->role);
+        $this->assertCount(1, $plain->values);
+        $this->assertSame(12, mb_strlen($plain->values[0]));
+        $this->assertTrue(Hash::check($plain->values[0], $user->password));
+    }
+
+    public static function terminalGarbageProvider(): array
+    {
+        return [
+            'focus in'           => ["\e[I"],
+            'focus out + in'     => ["\e[O\e[I"],
+            'bracketed paste'    => ["\e[200~\e[201~"],
+            'win32-input Enter'  => ["\e[13;28;13;1;0;1_\e[13;28;13;0;0;1_"],
+            'CRLF'               => ["\r\n"],
+        ];
+    }
+
+    public function test_manual_password_is_reported(): void
+    {
+        $this->artisan('user:create')
+            ->expectsQuestion('Имя', 'Manual')
+            ->expectsQuestion('Email', 'manual@example.com')
+            ->expectsChoice('Роль', 'client', ['client', 'admin'])
+            ->expectsQuestion('Пароль (пусто — сгенерировать)', 'Manual-pass-123')
+            ->expectsOutputToContain('Установлен пароль, введённый вручную (15 симв.)')
+            ->doesntExpectOutputToContain('Сгенерированный пароль')
+            ->assertSuccessful();
+
+        $this->assertTrue(Hash::check('Manual-pass-123', User::where('email', 'manual@example.com')->first()->password));
     }
 
     public function test_whitespace_password_input_is_treated_as_empty(): void

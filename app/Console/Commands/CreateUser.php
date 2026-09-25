@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use Symfony\Component\Console\Output\OutputInterface;
 
 class CreateUser extends Command
 {
@@ -37,9 +38,10 @@ class CreateUser extends Command
             $password = $this->secret('Пароль (пусто — сгенерировать)');
         }
 
-        // Пустой ввод (null, '', пробелы, \r от Windows-консоли) → генерация
-        // до валидации; правила длины применяются только к ручному паролю.
-        $generated = $password === null || trim($password) === '';
+        // Пустой ввод → генерация до валидации; правила длины применяются
+        // только к ручному паролю.
+        $password  = $this->cleanInput($password);
+        $generated = $password === '';
 
         if ($generated) {
             $password = Str::password(12);
@@ -77,11 +79,39 @@ class CreateUser extends Command
         $this->info("Пользователь создан: #{$user->id} {$user->email} ({$user->role})");
 
         if ($generated) {
-            $this->warn("Сгенерированный пароль: {$password}");
-            $this->line('Пароль показывается один раз — сохраните его.');
+            $this->printGeneratedPassword($password);
+        } else {
+            $this->line('Установлен пароль, введённый вручную ('.mb_strlen($password).' симв.).');
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Вывод в обход форматтера: Str::password() содержит < > \,
+     * а форматтер Symfony съедает «\<» и разбирает <...> как теги.
+     */
+    private function printGeneratedPassword(string $password): void
+    {
+        $this->newLine();
+        $this->output->writeln("Сгенерированный пароль: {$password}", OutputInterface::OUTPUT_RAW);
+        $this->line('Пароль показывается один раз — сохраните его.');
+    }
+
+    /**
+     * Убирает из ввода невидимый «мусор» терминала: ESC-последовательности
+     * (события фокуса ESC[I / ESC[O, bracketed paste, win32-input-mode)
+     * и управляющие символы (\r, \n, \t…), затем обрезает пробелы.
+     */
+    private function cleanInput(?string $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        $value = preg_replace('/\e\[[0-9;?]*[ -\/]*[@-~]|\e[@-_]|[\x00-\x1F\x7F]/', '', $value);
+
+        return trim($value);
     }
 
     /**
