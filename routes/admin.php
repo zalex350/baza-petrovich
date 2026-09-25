@@ -74,6 +74,11 @@ Route::middleware(['auth', 'admin'])->group(function () {
     );
 
     Route::post(
+        '/admin/product/{id}/toggle-visibility',
+        [AdminProductController::class, 'toggleVisibility']
+    );
+
+    Route::post(
         '/admin/product/{id}/delete',
         [AdminProductController::class, 'destroy']
     );

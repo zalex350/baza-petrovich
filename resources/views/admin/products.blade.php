@@ -130,6 +130,23 @@
 
                             <form
                                 method="POST"
+                                action="/admin/product/{{ $product->id }}/toggle-visibility"
+                                class="inline"
+                            >
+
+                                @csrf
+
+                                <button
+                                    type="submit"
+                                    class="text-slate-700 hover:text-slate-900 text-sm underline"
+                                >
+                                    {{ $product->is_active ? 'Скрыть' : 'Показать' }}
+                                </button>
+
+                            </form>
+
+                            <form
+                                method="POST"
                                 action="/admin/product/{{ $product->id }}/delete"
                                 class="inline"
                             >

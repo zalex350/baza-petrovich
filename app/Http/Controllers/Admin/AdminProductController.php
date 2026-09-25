@@ -50,6 +50,18 @@ class AdminProductController extends Controller
         return redirect("/admin/product/{$product->id}")->with('success', 'Товар создан');
     }
 
+    public function toggleVisibility($id)
+    {
+        $product = Product::findOrFail($id);
+
+        $product->update(['is_active' => ! $product->is_active]);
+
+        return back()->with(
+            'success',
+            $product->is_active ? 'Товар показан на сайте' : 'Товар скрыт с сайта'
+        );
+    }
+
     public function destroy($id)
     {
         Product::findOrFail($id)->delete();
@@ -87,7 +99,6 @@ class AdminProductController extends Controller
             'price'       => request('price'),
             'stock'       => request('stock'),
             'category_id' => request('category_id'),
-            'is_active'   => request()->has('is_active'),
         ]);
 
         return back()->with('success', 'Товар сохранён');

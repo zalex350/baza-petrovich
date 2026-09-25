@@ -134,17 +134,6 @@
             </select>
         </div>
 
-        <!-- Active -->
-        <div class="flex items-center gap-3">
-            <input
-                type="checkbox"
-                name="is_active"
-                value="1"
-                @checked($product->is_active)
-            >
-            <label>Активен</label>
-        </div>
-
         <!-- Submit -->
         <div>
             <button
@@ -306,12 +295,35 @@
         <span class="text-sm text-slate-400">
             @if(!$product->is_published)
                 Статус: <strong class="text-slate-600">Черновик</strong>
+                @unless($product->is_active)
+                    <span class="text-amber-600">· после публикации будет скрыт</span>
+                @endunless
             @elseif($product->is_active)
                 Статус: <strong class="text-green-700">Опубликован</strong>
             @else
                 Статус: <strong class="text-amber-600">Скрыт</strong>
             @endif
         </span>
+
+        {{-- Видимость на сайте (is_active) --}}
+        <form method="POST" action="/admin/product/{{ $product->id }}/toggle-visibility" class="inline">
+            @csrf
+            @if($product->is_active)
+                <button
+                    type="submit"
+                    class="border border-slate-300 hover:bg-slate-100 text-slate-700 px-4 py-2 rounded"
+                >
+                    Скрыть товар
+                </button>
+            @else
+                <button
+                    type="submit"
+                    class="border border-slate-300 hover:bg-slate-100 text-slate-700 px-4 py-2 rounded"
+                >
+                    Показать товар
+                </button>
+            @endif
+        </form>
 
     </div>
 
