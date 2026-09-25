@@ -33,6 +33,7 @@ class AdminProductController extends Controller
             'brand'            => 'nullable|string|max:255',
             'slug'             => 'nullable|string|max:255|unique:products,slug',
             'price'            => 'required|numeric|min:0',
+            'vat_rate'         => 'numeric|min:0|max:100',
             'stock'            => 'required|integer|min:0',
             'category_id'      => 'nullable|exists:categories,id',
             'description'      => 'nullable|string',
@@ -71,12 +72,17 @@ class AdminProductController extends Controller
     {
         $product = Product::findOrFail($id);
 
+        request()->validate([
+            'vat_rate' => 'numeric|min:0|max:100',
+        ]);
+
         $product->update([
             'name' => request('name'),
             'sku' => request('sku'),
             'brand' => request('brand'),
             'slug' => request('slug'),
             'price' => request('price'),
+            'vat_rate' => request('vat_rate', $product->vat_rate),
             'stock' => request('stock'),
             'description' => request('description'),
             'specifications' => request('specifications'),

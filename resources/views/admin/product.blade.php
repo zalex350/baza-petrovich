@@ -106,6 +106,30 @@
 
         </div>
 
+        <!-- VAT rate -->
+        <div>
+
+            <label class="block mb-2 font-semibold">
+                Ставка НДС, %
+            </label>
+
+            <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                name="vat_rate"
+                value="{{ old('vat_rate', $product->vat_rate) }}"
+                class="w-full border rounded px-3 py-2"
+                required
+            >
+
+            @error('vat_rate')
+                <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+            @enderror
+
+        </div>
+
         <!-- Stock -->
         <div>
 
