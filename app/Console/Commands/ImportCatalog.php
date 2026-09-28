@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\CatalogMenu;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Console\Command;
@@ -116,6 +117,9 @@ class ImportCatalog extends Command
         $this->newLine(2);
 
         $this->info("Done. Created: {$created}, skipped (duplicates/no sku): {$skipped}");
+
+        // Массовые изменения идут мимо observer — сбрасываем кэш меню вручную
+        CatalogMenu::flush();
 
         return self::SUCCESS;
     }

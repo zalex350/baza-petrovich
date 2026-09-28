@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Services\CatalogMenu;
 
 class CatalogController extends Controller
 {
@@ -20,7 +21,21 @@ class CatalogController extends Controller
         return view('catalog_index', compact('parents'));
     }
 
-    public function show($slug)
+    /**
+     * JSON-дерево категорий для мобильного меню (из кэша CatalogMenu).
+     */
+    public function menu(CatalogMenu $menu)
+    {
+        return response()
+            ->json($menu->tree(), 200, [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            ->header('Cache-Control', 'public, max-age=300');
+    }
+
+    /**
+     * Товары категории вместе со всеми вложенными подкатегориями —
+     * «весь раздел» из мегаменю и мобильного меню.
+     */
+    public function show($slug, CatalogMenu $menu)
     {
         $category = Category::where(
             'slug',
@@ -28,7 +43,7 @@ class CatalogController extends Controller
         )->firstOrFail();
 
         $products = Product::with('category')
-            ->where('category_id', $category->id)
+            ->whereIn('category_id', $menu->descendantIds($category))
             ->where('is_active', 1)
             ->where('is_published', true)
             ->latest()

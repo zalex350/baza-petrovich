@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\CatalogMenu;
 use App\Models\Category;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
@@ -76,6 +77,9 @@ class GroupCategories extends Command
                 $this->line(' - ' . $name);
             }
         }
+
+        // Массовые изменения идут мимо observer — сбрасываем кэш меню вручную
+        CatalogMenu::flush();
 
         return self::SUCCESS;
     }

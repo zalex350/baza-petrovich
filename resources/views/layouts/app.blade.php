@@ -10,7 +10,7 @@
     >
 
     <title>
-        @yield('title', 'Smesitel')
+        @yield('title', config('shop.name'))
     </title>
 
     @vite([
@@ -22,153 +22,16 @@
 
 <body class="bg-gray-100 text-gray-900">
 
-    @include('layouts.navigation')
+    @include('partials.header')
 
     <main class="max-w-7xl mx-auto py-6 px-4">
 
-        @if(session('success'))
-
-            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-                {{ session('success') }}
-            </div>
-
-        @endif
-
-        @if(session('error'))
-
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                {{ session('error') }}
-            </div>
-
-        @endif
-
-        @if(session('warning'))
-
-            <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
-                {{ session('warning') }}
-            </div>
-
-        @endif
-
-        @if($errors->any())
-
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-
-                <ul class="list-disc pl-5">
-
-                    @foreach($errors->all() as $error)
-
-                        <li>{{ $error }}</li>
-
-                    @endforeach
-
-                </ul>
-
-            </div>
-
-        @endif
+        @include('partials.flash')
 
         @yield('content')
 
     </main>
 
-    <script>
-    (function() {
-        const searchInput = document.querySelector('input[name="q"]');
-        const suggestionsDiv = document.getElementById('search-suggestions');
-        let debounceTimer;
-
-        if (!searchInput || !suggestionsDiv) return;
-
-        searchInput.addEventListener('input', function() {
-            clearTimeout(debounceTimer);
-            const query = this.value.trim();
-
-            if (query.length < 2) {
-                suggestionsDiv.classList.add('hidden');
-                suggestionsDiv.innerHTML = '';
-                return;
-            }
-
-            debounceTimer = setTimeout(() => {
-                fetch('{{ route("search.suggest") }}?q=' + encodeURIComponent(query))
-                    .then(response => response.json())
-                    .then(data => {
-                        renderSuggestions(data, query);
-                    })
-                    .catch(error => {
-                        console.error('Search suggest error:', error);
-                    });
-            }, 300);
-        });
-
-        function renderSuggestions(data, query) {
-            let html = '';
-
-            if (data.products.length === 0 && data.categories.length === 0) {
-                html = '<div class="px-4 py-3 text-sm text-slate-500">Ничего не найдено</div>';
-            } else {
-                html += '<div class="flex divide-x divide-slate-100">';
-
-                // Категории слева (1/3 ширины)
-                html += '<div class="w-1/3 min-w-0">';
-                if (data.categories.length > 0) {
-                    html += '<div class="py-2">';
-                    html += '<div class="px-4 py-1 text-xs font-semibold text-slate-500 uppercase">Категории</div>';
-                    data.categories.forEach(cat => {
-                        html += `<a href="${cat.url}" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">${cat.name}</a>`;
-                    });
-                    html += '</div>';
-                }
-                html += '</div>';
-
-                // Товары справа (2/3 ширины) в сетке 2 колонки
-                html += '<div class="w-2/3 min-w-0">';
-                if (data.products.length > 0) {
-                    html += '<div class="py-2">';
-                    html += '<div class="px-4 py-1 text-xs font-semibold text-slate-500 uppercase">Товары</div>';
-                    html += '<div class="grid grid-cols-2 gap-1 px-2">';
-                    data.products.forEach(prod => {
-                        html += `<a href="${prod.url}" class="flex items-center gap-3 hover:bg-slate-50 rounded-lg p-2">`;
-                        if (prod.image) {
-                            html += `<img src="${prod.image}" alt="${prod.name}" class="w-12 h-12 object-contain rounded border border-slate-200">`;
-                        } else {
-                            html += `<div class="w-12 h-12 bg-slate-100 flex items-center justify-center rounded border border-slate-200 text-2xl">🚰</div>`;
-                        }
-                        html += '<div class="flex-1 min-w-0">';
-                        html += `<div class="text-sm text-slate-800 truncate">${prod.name}</div>`;
-                        if (prod.price) {
-                            html += `<div class="text-xs text-slate-500">${prod.price} BYN</div>`;
-                        } else {
-                            html += `<div class="text-xs text-slate-400">Цена уточняется</div>`;
-                        }
-                        html += '</div>';
-                        html += '</a>';
-                    });
-                    html += '</div>';
-                    html += '</div>';
-                }
-                html += '</div>';
-
-                html += '</div>';
-
-                // Ссылка "Показать все результаты" под обоими столбцами
-                html += `<div class="border-t border-slate-100">`;
-                html += `<a href="/search?q=${encodeURIComponent(query)}" class="block px-4 py-2 text-sm text-blue-600 hover:bg-slate-50 font-medium">Показать все результаты →</a>`;
-                html += '</div>';
-            }
-
-            suggestionsDiv.innerHTML = html;
-            suggestionsDiv.classList.remove('hidden');
-        }
-
-        document.addEventListener('click', function(event) {
-            if (!suggestionsDiv.contains(event.target) && event.target !== searchInput) {
-                suggestionsDiv.classList.add('hidden');
-            }
-        });
-    })();
-    </script>
 
 </body>
 </html>

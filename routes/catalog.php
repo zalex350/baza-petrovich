@@ -16,6 +16,12 @@ Route::get(
     [CatalogController::class, 'index']
 )->name('catalog.index');
 
+// Дерево категорий для мобильного меню (drill-down), до /catalog/{slug}
+Route::get(
+    '/catalog/menu.json',
+    [CatalogController::class, 'menu']
+)->name('catalog.menu');
+
 Route::get(
     '/catalog/{slug}',
     [CatalogController::class, 'show']
