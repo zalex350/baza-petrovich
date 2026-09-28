@@ -50,7 +50,7 @@
     {{-- Основная строка (desktop) --}}
     <div class="hidden lg:block">
 
-        <div class="relative max-w-7xl mx-auto px-6 h-16 flex items-center gap-6">
+        <div class="relative max-w-7xl mx-auto px-6 h-16 flex items-center gap-4 xl:gap-6">
 
             <a href="/" class="text-2xl font-extrabold tracking-tight text-slate-900 shrink-0" aria-label="{{ config('shop.name') }} — на главную">
                 {{ config('shop.name') }}
@@ -87,7 +87,8 @@
                         </span>
                     @endif
                 </span>
-                <span class="leading-tight">
+                {{-- На 1024px подписи скрыты, чтобы поиску хватило ширины --}}
+                <span class="leading-tight hidden xl:block">
                     <span class="block">Корзина</span>
                     <span class="block text-xs text-slate-500" data-cart-total>
                         {{ number_format($cartSummary['total'], 2, '.', ' ') }} BYN
@@ -125,7 +126,7 @@
                         ])
                     >
                         @svg('heroicon-o-user-circle', $iconClass)
-                        <span class="leading-tight max-w-40">
+                        <span class="leading-tight max-w-28 xl:max-w-40">
                             <span class="block truncate font-medium">{{ $user->name }}</span>
                             @if($user->organization)
                                 <span class="block truncate text-xs text-slate-500">{{ $user->organization->name }}</span>
@@ -173,5 +174,8 @@
         </div>
 
     </div>
+
+    {{-- Мобильная версия (<1024px) --}}
+    @include('partials.header.mobile')
 
 </header>

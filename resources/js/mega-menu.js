@@ -157,7 +157,11 @@ export default ({ first = null } = {}) => ({
         next?.focus();
     },
 
+    // Секция активного раздела показывается через x-show асинхронно —
+    // фокусируем после обновления DOM.
     focusSubmenu() {
-        this.$refs.panel.querySelector(`[data-mega-sub="${this.active}"] a`)?.focus();
+        this.$nextTick(() => {
+            this.$refs.panel.querySelector(`[data-mega-sub="${this.active}"] a`)?.focus();
+        });
     },
 });

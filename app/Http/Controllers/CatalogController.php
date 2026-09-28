@@ -22,6 +22,16 @@ class CatalogController extends Controller
     }
 
     /**
+     * JSON-дерево категорий для мобильного меню (из кэша CatalogMenu).
+     */
+    public function menu(CatalogMenu $menu)
+    {
+        return response()
+            ->json($menu->tree(), 200, [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            ->header('Cache-Control', 'public, max-age=300');
+    }
+
+    /**
      * Товары категории вместе со всеми вложенными подкатегориями —
      * «весь раздел» из мегаменю и мобильного меню.
      */
