@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -19,7 +20,7 @@ class AdminCreateProductTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create(['role' => 'admin']);
+        $this->admin = User::factory()->admin()->create();
 
         $this->category = Category::create([
             'name' => 'Смесители',
@@ -36,7 +37,7 @@ class AdminCreateProductTest extends TestCase
 
     public function test_create_form_requires_admin_role(): void
     {
-        $user = User::factory()->create(['role' => 'user']);
+        $user = User::factory()->create(['role' => UserRole::Client]);
 
         $response = $this->actingAs($user)->get('/admin/product/create');
 

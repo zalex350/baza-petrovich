@@ -11,7 +11,7 @@ use App\Http\Controllers\Admin\AdminOrderController;
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'admin'])->group(function () {
+Route::middleware(['auth', 'role:admin'])->group(function () {
 
     Route::get(
         '/admin/orders',

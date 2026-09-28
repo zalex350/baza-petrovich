@@ -17,7 +17,7 @@ class AdminProductValidationTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create(['role' => 'admin']);
+        $this->admin = User::factory()->admin()->create();
     }
 
     private function makeProduct(): Product

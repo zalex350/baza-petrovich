@@ -93,7 +93,7 @@
                         Профиль
                     </a>
 
-                    @if(auth()->user()->role === 'admin')
+                    @if(auth()->user()->isAdmin())
 
                         <span class="text-slate-300">
                             |
