@@ -18,10 +18,18 @@ class CatalogMenuObserver
 {
     private const PRODUCT_FIELDS = ['is_active', 'is_published', 'category_id', 'deleted_at'];
 
-    public function saved(Model $model): void
+    public function created(Model $model): void
+    {
+        CatalogMenu::flush();
+    }
+
+    /**
+     * wasRecentlyCreated здесь не годится: у модели, созданной в этом же
+     * запросе, он остаётся true и при последующих сохранениях.
+     */
+    public function updated(Model $model): void
     {
         if ($model instanceof Category
-            || $model->wasRecentlyCreated
             || ($model instanceof Product && $model->wasChanged(self::PRODUCT_FIELDS))) {
             CatalogMenu::flush();
         }

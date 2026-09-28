@@ -4,7 +4,7 @@
 --}}
 <div
     class="lg:hidden"
-    x-data="mobileMenu({ menuUrl: @js(route('catalog.menu')) })"
+    x-data="mobileMenu({ menuUrl: @js(route('catalog.menu', [], false)) })"
     @keydown.escape.window="closePanel(); search = false"
 >
 
