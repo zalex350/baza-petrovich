@@ -10,7 +10,8 @@ class Order extends Model
         'user_id',
         'status',
         'total',
-        'is_paid'
+        'is_paid',
+        'organization_id',
     ];
 
     public function items()

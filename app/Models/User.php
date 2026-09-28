@@ -23,6 +23,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'organization_id',
     ];
 
     /**
@@ -57,6 +58,21 @@ class User extends Authenticatable
     public function isClient(): bool
     {
         return $this->role === UserRole::Client;
+    }
+
+    /**
+     * Правила для organization_id (BR-111): клиент обязан быть привязан
+     * к организации, администратор — нет.
+     */
+    public static function organizationRules(UserRole|string|null $role): array
+    {
+        $role = is_string($role) ? UserRole::tryFrom($role) : $role;
+
+        return [
+            $role === UserRole::Client ? 'required' : 'nullable',
+            'integer',
+            'exists:organizations,id',
+        ];
     }
 
     public function organization()

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\UserRole;
+use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Hashing\HashManager;
@@ -15,9 +16,19 @@ class CreateUserCommandTest extends TestCase
 {
     use RefreshDatabase;
 
+    private Organization $org;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->org = Organization::factory()->create();
+    }
+
     public function test_creates_user_with_given_password_and_role(): void
     {
         $this->artisan('user:create', [
+            '--organization' => $this->org->id,
             'name'       => 'Иван Петров',
             'email'      => 'ivan@example.com',
             '--role'     => 'admin',
@@ -39,6 +50,7 @@ class CreateUserCommandTest extends TestCase
     public function test_generates_password_and_prints_it(): void
     {
         $exitCode = Artisan::call('user:create', [
+            '--organization' => $this->org->id,
             'name'                => 'Client',
             'email'               => 'client@example.com',
             '--role'              => 'client',
@@ -74,6 +86,7 @@ class CreateUserCommandTest extends TestCase
     public function test_generated_password_allows_login(): void
     {
         Artisan::call('user:create', [
+            '--organization' => $this->org->id,
             'name'                => 'Client',
             'email'               => 'login@example.com',
             '--role'              => 'client',
@@ -111,6 +124,7 @@ class CreateUserCommandTest extends TestCase
             ->expectsQuestion('Имя', 'Олег')
             ->expectsQuestion('Email', 'oleg@example.com')
             ->expectsChoice('Роль', 'client', ['client', 'admin'])
+            ->expectsQuestion('ID организации', (string) $this->org->id)
             ->expectsQuestion('Пароль (пусто — сгенерировать)', '')
             ->expectsOutputToContain('Сгенерированный пароль')
             ->assertSuccessful();
@@ -129,6 +143,7 @@ class CreateUserCommandTest extends TestCase
             ->expectsQuestion('Имя', 'test client')
             ->expectsQuestion('Email', 'test@test.com')
             ->expectsChoice('Роль', '0', ['client', 'admin'])
+            ->expectsQuestion('ID организации', (string) $this->org->id)
             ->expectsQuestion('Пароль (пусто — сгенерировать)', '')
             ->expectsOutputToContain('Сгенерированный пароль: ')
             ->expectsOutputToContain('Пароль показывается один раз')
@@ -162,6 +177,7 @@ class CreateUserCommandTest extends TestCase
             ->expectsQuestion('Имя', 'test')
             ->expectsQuestion('Email', 'test@g.c')
             ->expectsChoice('Роль', '0', ['client', 'admin'])
+            ->expectsQuestion('ID организации', (string) $this->org->id)
             ->expectsQuestion('Пароль (пусто — сгенерировать)', $input)
             ->expectsOutputToContain('Сгенерированный пароль: ')
             ->expectsOutputToContain('Пароль показывается один раз')
@@ -195,6 +211,7 @@ class CreateUserCommandTest extends TestCase
             ->expectsQuestion('Имя', "\e[O\e[Iимя\r")
             ->expectsQuestion('Email', "\e[I w@ht.c\r\n")
             ->expectsChoice('Роль', '0', ['client', 'admin'])
+            ->expectsQuestion('ID организации', (string) $this->org->id)
             ->expectsQuestion('Пароль (пусто — сгенерировать)', "\e[I\r")
             ->expectsOutputToContain('Сгенерированный пароль: ')
             ->doesntExpectOutputToContain('valid email address')
@@ -210,6 +227,7 @@ class CreateUserCommandTest extends TestCase
     public function test_garbage_in_role_is_cleaned(): void
     {
         $this->artisan('user:create', [
+            '--organization' => $this->org->id,
             'name'       => 'Role',
             'email'      => 'role@example.com',
             '--role'     => "\e[I1\r",
@@ -227,6 +245,7 @@ class CreateUserCommandTest extends TestCase
             ->expectsQuestion('Имя', $cp1251Name)
             ->expectsQuestion('Email', 'w@ht.c')
             ->expectsChoice('Роль', 'client', ['client', 'admin'])
+            ->expectsQuestion('ID организации', (string) $this->org->id)
             ->expectsQuestion('Пароль (пусто — сгенерировать)', '')
             ->expectsOutputToContain('Некорректная кодировка ввода, используйте аргументы команды')
             ->expectsOutputToContain('hex:c8ecff')
@@ -239,6 +258,7 @@ class CreateUserCommandTest extends TestCase
     public function test_validation_errors_show_received_value_visibly(): void
     {
         $this->artisan('user:create', [
+            '--organization' => $this->org->id,
             'name'       => 'Bad',
             'email'      => "w@ht\u{200B}",
             '--role'     => 'client',
@@ -254,6 +274,7 @@ class CreateUserCommandTest extends TestCase
     public function test_short_manual_password_error_shows_received_value(): void
     {
         $this->artisan('user:create', [
+            '--organization' => $this->org->id,
             'name'       => 'Short',
             'email'      => 'short2@example.com',
             '--role'     => 'client',
@@ -270,6 +291,7 @@ class CreateUserCommandTest extends TestCase
             ->expectsQuestion('Имя', "\e[Iя")
             ->expectsQuestion('Email', 'd@ht.c')
             ->expectsChoice('Роль', '0', ['client', 'admin'])
+            ->expectsQuestion('ID организации', (string) $this->org->id)
             ->expectsQuestion('Пароль (пусто — сгенерировать)', "\r")
             ->expectsOutputToContain('[debug-input] name: raw 5 байт hex=1b5b49d18f, clean 2 байт hex=d18f')
             ->expectsOutputToContain('[debug-input] email: raw 6 байт hex=644068742e63, clean 6 байт hex=644068742e63')
@@ -281,6 +303,7 @@ class CreateUserCommandTest extends TestCase
     public function test_without_debug_input_no_debug_lines(): void
     {
         $this->artisan('user:create', [
+            '--organization' => $this->org->id,
             'name'                => 'Quiet',
             'email'               => 'quiet@example.com',
             '--role'              => 'client',
@@ -296,6 +319,7 @@ class CreateUserCommandTest extends TestCase
             ->expectsQuestion('Имя', 'Manual')
             ->expectsQuestion('Email', 'manual@example.com')
             ->expectsChoice('Роль', 'client', ['client', 'admin'])
+            ->expectsQuestion('ID организации', (string) $this->org->id)
             ->expectsQuestion('Пароль (пусто — сгенерировать)', 'Manual-pass-123')
             ->expectsOutputToContain('Установлен пароль, введённый вручную (15 симв.)')
             ->doesntExpectOutputToContain('Сгенерированный пароль')
@@ -310,6 +334,7 @@ class CreateUserCommandTest extends TestCase
             ->expectsQuestion('Имя', 'Space')
             ->expectsQuestion('Email', 'space@example.com')
             ->expectsChoice('Роль', 'client', ['client', 'admin'])
+            ->expectsQuestion('ID организации', (string) $this->org->id)
             ->expectsQuestion('Пароль (пусто — сгенерировать)', "  \r")
             ->expectsOutputToContain('Сгенерированный пароль')
             ->assertSuccessful();
@@ -323,6 +348,7 @@ class CreateUserCommandTest extends TestCase
             ->expectsQuestion('Имя', 'Short')
             ->expectsQuestion('Email', 'short@example.com')
             ->expectsChoice('Роль', 'client', ['client', 'admin'])
+            ->expectsQuestion('ID организации', (string) $this->org->id)
             ->expectsQuestion('Пароль (пусто — сгенерировать)', '1234567')
             ->expectsOutputToContain('at least 8 characters')
             ->doesntExpectOutputToContain('Сгенерированный пароль')
@@ -338,6 +364,7 @@ class CreateUserCommandTest extends TestCase
             ->expectsQuestion('Имя', 'Index')
             ->expectsQuestion('Email', 'index@example.com')
             ->expectsChoice('Роль', '0', ['client', 'admin'])
+            ->expectsQuestion('ID организации', (string) $this->org->id)
             ->expectsQuestion('Пароль (пусто — сгенерировать)', 'Manual-pass-123')
             ->assertSuccessful();
 
@@ -347,6 +374,7 @@ class CreateUserCommandTest extends TestCase
     public function test_role_choice_by_index_saves_admin(): void
     {
         $this->artisan('user:create', [
+            '--organization' => $this->org->id,
             'name'       => 'Index Admin',
             'email'      => 'index-admin@example.com',
             '--role'     => '1',
@@ -385,6 +413,7 @@ class CreateUserCommandTest extends TestCase
     public function test_non_interactive_defaults_to_client_and_generated_password(): void
     {
         $this->artisan('user:create', [
+            '--organization' => $this->org->id,
             'name'             => 'Default',
             'email'            => 'default@example.com',
             '--no-interaction' => true,
@@ -398,6 +427,7 @@ class CreateUserCommandTest extends TestCase
     public function test_rejects_unknown_role(): void
     {
         $this->artisan('user:create', [
+            '--organization' => $this->org->id,
             'name'       => 'X',
             'email'      => 'x@example.com',
             '--role'     => 'partner',
@@ -412,6 +442,8 @@ class CreateUserCommandTest extends TestCase
         User::factory()->create(['email' => 'dup@example.com']);
 
         $this->artisan('user:create', [
+
+            '--organization' => $this->org->id,
             'name'       => 'Dup',
             'email'      => 'dup@example.com',
             '--role'     => 'client',
@@ -424,6 +456,7 @@ class CreateUserCommandTest extends TestCase
     public function test_rejects_invalid_email_and_short_password(): void
     {
         $this->artisan('user:create', [
+            '--organization' => $this->org->id,
             'name'       => 'Bad',
             'email'      => 'not-an-email',
             '--role'     => 'client',

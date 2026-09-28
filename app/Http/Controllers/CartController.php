@@ -107,6 +107,13 @@ class CartController extends Controller
     }
     public function checkout()
     {
+        $user = auth()->user();
+
+        // BR-114: заказ клиента оформляется на его организацию
+        if ($user->isClient() && ! $user->organization_id) {
+            return back()->with('error', 'Пользователь не привязан к организации');
+        }
+
         $order = Order::where('user_id', auth()->id())
             ->where('status', Order::STATUS_DRAFT)
             ->first();
@@ -148,6 +155,7 @@ class CartController extends Controller
 
         $order->total = $total;
 
+        $order->organization_id = $user->organization_id;
         $order->status = Order::STATUS_NEW;
         $order->save();
 

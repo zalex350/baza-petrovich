@@ -2,10 +2,17 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Организация (юрлицо) клиента. guid заполняется только при обмене с 1С,
+ * поэтому не входит в $fillable и в админке показывается read-only.
+ */
 class Organization extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'name',
         'legal_name',
@@ -14,7 +21,6 @@ class Organization extends Model
         'phone',
         'email',
         'comment',
-        'guid',
     ];
 
     public function users()

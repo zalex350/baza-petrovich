@@ -17,12 +17,13 @@ class CreateUser extends Command
         {name? : Имя пользователя}
         {email? : Email (логин)}
         {--role= : Роль: client или admin}
+        {--organization= : ID организации (обязательно для client)}
         {--password= : Пароль (если не задан — запрашивается или генерируется)}
         {--generate-password : Сгенерировать пароль и вывести его в консоль}
         {--debug-input : Показать длину и hex каждого введённого поля до и после очистки}';
 
     protected $description = 'Create a user account (self-registration is disabled, SRS §3). '
-        .'Example: php artisan user:create "Имя" email@example.com --role=client --generate-password. '
+        .'Example: php artisan user:create "Имя" email@example.com --role=client --organization=1 --generate-password. '
         .'Prefer arguments: interactive input in PowerShell via docker-compose exec may arrive with garbage characters';
 
     public function handle(): int
@@ -37,6 +38,15 @@ class CreateUser extends Command
                     : UserRole::Client->value)
         ));
 
+        $organization = $this->option('organization');
+
+        if ($organization === null && $role === UserRole::Client->value && $this->input->isInteractive()) {
+            $organization = $this->ask('ID организации');
+        }
+
+        $organization    = $this->cleanField('organization', $organization);
+        $organization_id = $organization === '' ? null : $organization;
+
         $password = $this->option('password');
 
         if ($password === null && ! $this->option('generate-password') && $this->input->isInteractive()) {
@@ -50,7 +60,7 @@ class CreateUser extends Command
 
         if (! mb_check_encoding($name, 'UTF-8')) {
             $this->error('Некорректная кодировка ввода, используйте аргументы команды:');
-            $this->line('  php artisan user:create "Имя Фамилия" email@example.com --role=client');
+            $this->line('  php artisan user:create "Имя Фамилия" email@example.com --role=client --organization=1');
             $this->outputRaw('Получено: '.$this->visible($name));
 
             return self::FAILURE;
@@ -60,19 +70,23 @@ class CreateUser extends Command
             $password = Str::password(12);
         }
 
-        $values = compact('name', 'email', 'role', 'password');
+        $values = compact('name', 'email', 'role', 'organization_id', 'password');
 
         $rules = [
-            'name'  => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)],
-            'role'  => ['required', Rule::enum(UserRole::class)],
+            'name'            => ['required', 'string', 'max:255'],
+            'email'           => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)],
+            'role'            => ['required', Rule::enum(UserRole::class)],
+            'organization_id' => User::organizationRules($role),
         ];
 
         if (! $generated) {
             $rules['password'] = ['required', Password::defaults()];
         }
 
-        $validator = Validator::make($values, $rules);
+        $validator = Validator::make($values, $rules, [
+            'organization_id.required' => 'Клиент должен быть привязан к организации: укажите --organization=ID.',
+            'organization_id.exists'   => 'Организация с таким ID не найдена.',
+        ]);
 
         if ($validator->fails()) {
             foreach ($validator->errors()->messages() as $field => $messages) {
@@ -90,12 +104,14 @@ class CreateUser extends Command
             'name'     => $name,
             'email'    => $email,
             'password' => $password,
+            'organization_id' => $organization_id,
         ]);
         $user->role              = UserRole::from($role);
         $user->email_verified_at = now();
         $user->save();
 
-        $this->info("Пользователь создан: #{$user->id} {$user->email} ({$user->role->value})");
+        $this->info("Пользователь создан: #{$user->id} {$user->email} ({$user->role->value})"
+            .($user->organization ? ", организация: {$user->organization->name}" : ''));
 
         if ($generated) {
             $this->printGeneratedPassword($password);
