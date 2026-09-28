@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', $organization->exists ? 'Редактирование организации' : 'Новая организация')
+@section('title', $organization->exists ? 'Редактирование клиента' : 'Новый клиент')
 
 @section('content')
 
@@ -8,11 +8,11 @@
     href="{{ $organization->exists ? '/admin/organization/'.$organization->id : '/admin/organizations' }}"
     class="text-sm text-slate-500 hover:text-blue-600"
 >
-    {{ $organization->exists ? '← Назад к карточке организации' : '← Назад к списку организаций' }}
+    {{ $organization->exists ? '← Назад к карточке клиента' : '← Назад к списку клиентов' }}
 </a>
 
 <h1 class="text-3xl font-bold mt-4 mb-6">
-    {{ $organization->exists ? 'Редактирование организации' : 'Новая организация' }}
+    {{ $organization->exists ? 'Редактирование клиента' : 'Новый клиент' }}
 </h1>
 
 @if($errors->any())
@@ -147,7 +147,7 @@
                 type="submit"
                 class="bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded"
             >
-                {{ $organization->exists ? 'Сохранить' : 'Создать организацию' }}
+                {{ $organization->exists ? 'Сохранить' : 'Создать клиента' }}
             </button>
         </div>
 

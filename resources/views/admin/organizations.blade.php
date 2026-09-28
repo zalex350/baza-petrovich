@@ -1,20 +1,20 @@
 @extends('layouts.app')
 
-@section('title', 'Админка — Организации')
+@section('title', 'Админка — Клиенты')
 
 @section('content')
 
 <div class="flex items-center justify-between mb-6">
 
     <h1 class="text-3xl font-bold">
-        Админка — Организации
+        Админка — Клиенты
     </h1>
 
     <a
         href="/admin/organization/create"
         class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded"
     >
-        Добавить организацию
+        Добавить клиента
     </a>
 
 </div>
@@ -150,9 +150,9 @@
                     <td colspan="7" class="border p-6 text-center text-slate-500">
 
                         @if($search !== '')
-                            По запросу «{{ $search }}» организаций не найдено
+                            По запросу «{{ $search }}» клиентов не найдено
                         @else
-                            Организаций пока нет
+                            Клиентов пока нет
                         @endif
 
                     </td>

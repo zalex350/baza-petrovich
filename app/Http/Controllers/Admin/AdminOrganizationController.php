@@ -44,7 +44,7 @@ class AdminOrganizationController extends Controller
         $organization = Organization::create($this->validated());
 
         return redirect("/admin/organization/{$organization->id}")
-            ->with('success', 'Организация создана');
+            ->with('success', 'Клиент создан');
     }
 
     public function show($id)
@@ -69,7 +69,7 @@ class AdminOrganizationController extends Controller
         $organization->update($this->validated($organization));
 
         return redirect("/admin/organization/{$organization->id}")
-            ->with('success', 'Организация сохранена');
+            ->with('success', 'Клиент сохранён');
     }
 
     public function destroy($id)
@@ -80,14 +80,14 @@ class AdminOrganizationController extends Controller
         if ($organization->users_count > 0 || $ordersCount > 0) {
             return back()->with(
                 'error',
-                "Нельзя удалить организацию «{$organization->name}»: "
+                "Нельзя удалить клиента «{$organization->name}»: "
                 ."пользователей — {$organization->users_count}, заказов — {$ordersCount}."
             );
         }
 
         $organization->delete();
 
-        return redirect('/admin/organizations')->with('success', 'Организация удалена');
+        return redirect('/admin/organizations')->with('success', 'Клиент удалён');
     }
 
     /**
@@ -109,7 +109,7 @@ class AdminOrganizationController extends Controller
             'comment'    => ['nullable', 'string'],
         ], [
             'unp.digits' => 'УНП должен состоять ровно из 9 цифр.',
-            'unp.unique' => 'Организация с таким УНП уже существует.',
+            'unp.unique' => 'Клиент с таким УНП уже существует.',
         ]);
     }
 }

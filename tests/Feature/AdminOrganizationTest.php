@@ -88,7 +88,7 @@ class AdminOrganizationTest extends TestCase
     {
         $this->actingAs($this->admin)->get('/admin/products')
             ->assertSee('/admin/organizations', false)
-            ->assertSee('Организации');
+            ->assertSee('Клиенты');
     }
 
     public function test_client_menu_has_no_organizations_link(): void
@@ -97,6 +97,47 @@ class AdminOrganizationTest extends TestCase
 
         $this->actingAs($client)->get('/')
             ->assertDontSee('/admin/organizations', false);
+    }
+
+    public function test_interface_uses_clients_wording(): void
+    {
+        $organization = Organization::factory()->create();
+
+        $pages = [
+            '/admin/organizations'                          => ['Админка — Клиенты', 'Добавить клиента'],
+            '/admin/organization/create'                    => ['Новый клиент', 'Назад к списку клиентов', 'Создать клиента'],
+            "/admin/organization/{$organization->id}"      => ['Клиент — ', 'Назад к списку клиентов', 'Удалить клиента'],
+            "/admin/organization/{$organization->id}/edit" => ['Редактирование клиента', 'Назад к карточке клиента'],
+        ];
+
+        foreach ($pages as $url => $texts) {
+            $response = $this->actingAs($this->admin)->get($url)->assertOk();
+
+            foreach ($texts as $text) {
+                $response->assertSee($text);
+            }
+
+            $this->assertDoesNotMatchRegularExpression('/[Оо]рганизац/u', $response->getContent(), $url);
+        }
+    }
+
+    public function test_flash_messages_use_clients_wording(): void
+    {
+        $this->actingAs($this->admin)->post('/admin/organization', ['name' => 'Новый'])
+            ->assertSessionHas('success', 'Клиент создан');
+
+        $organization = Organization::first();
+
+        $this->actingAs($this->admin)->post("/admin/organization/{$organization->id}", ['name' => 'Изменён'])
+            ->assertSessionHas('success', 'Клиент сохранён');
+
+        User::factory()->create(['organization_id' => $organization->id]);
+        $this->actingAs($this->admin)->post("/admin/organization/{$organization->id}/delete")
+            ->assertSessionHas('error', fn ($m) => str_starts_with($m, 'Нельзя удалить клиента «Изменён»'));
+
+        User::where('organization_id', $organization->id)->update(['organization_id' => null]);
+        $this->actingAs($this->admin)->post("/admin/organization/{$organization->id}/delete")
+            ->assertSessionHas('success', 'Клиент удалён');
     }
 
     // --- Список ---
@@ -169,7 +210,7 @@ class AdminOrganizationTest extends TestCase
 
         $this->actingAs($this->admin)->get('/admin/organizations?q=нет-такой')
             ->assertOk()
-            ->assertSee('организаций не найдено');
+            ->assertSee('клиентов не найдено');
     }
 
     // --- Создание / редактирование ---
@@ -274,7 +315,7 @@ class AdminOrganizationTest extends TestCase
 
         $this->actingAs($this->admin)
             ->post('/admin/organization', $this->validPayload(['unp' => '190123456']))
-            ->assertSessionHasErrors(['unp' => 'Организация с таким УНП уже существует.']);
+            ->assertSessionHasErrors(['unp' => 'Клиент с таким УНП уже существует.']);
 
         $this->assertSame(1, Organization::count());
     }
