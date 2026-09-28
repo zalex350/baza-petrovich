@@ -424,6 +424,73 @@ class CreateUserCommandTest extends TestCase
         $this->assertDatabaseHas('users', ['email' => 'default@example.com', 'role' => 'client']);
     }
 
+    public function test_client_gets_organization(): void
+    {
+        $this->artisan('user:create', [
+            'name'           => 'Org Client',
+            'email'          => 'org-client@example.com',
+            '--role'         => 'client',
+            '--organization' => $this->org->id,
+            '--password'     => 'Secret-pass-123',
+        ])
+            ->expectsOutputToContain("организация: {$this->org->name}")
+            ->assertSuccessful();
+
+        $this->assertSame($this->org->id, User::where('email', 'org-client@example.com')->first()->organization_id);
+    }
+
+    public function test_client_without_organization_is_rejected(): void
+    {
+        $this->artisan('user:create', [
+            'name'       => 'No Org',
+            'email'            => 'no-org@example.com',
+            '--role'           => 'client',
+            '--password'       => 'Secret-pass-123',
+            '--no-interaction' => true,
+        ])
+            ->expectsOutputToContain('Клиент должен быть привязан к организации')
+            ->assertFailed();
+
+        $this->assertDatabaseMissing('users', ['email' => 'no-org@example.com']);
+    }
+
+    public function test_client_with_unknown_organization_is_rejected(): void
+    {
+        $this->artisan('user:create', [
+            'name'           => 'Bad Org',
+            'email'          => 'bad-org@example.com',
+            '--role'         => 'client',
+            '--organization' => 999999,
+            '--password'     => 'Secret-pass-123',
+        ])
+            ->expectsOutputToContain('Организация с таким ID не найдена')
+            ->assertFailed();
+
+        $this->assertDatabaseMissing('users', ['email' => 'bad-org@example.com']);
+    }
+
+    public function test_admin_without_organization_is_allowed(): void
+    {
+        $this->artisan('user:create', [
+            'name'       => 'Admin',
+            'email'      => 'admin-no-org@example.com',
+            '--role'     => 'admin',
+            '--password' => 'Secret-pass-123',
+        ])->assertSuccessful();
+
+        $this->assertNull(User::where('email', 'admin-no-org@example.com')->first()->organization_id);
+    }
+
+    public function test_interactive_admin_is_not_asked_for_organization(): void
+    {
+        $this->artisan('user:create')
+            ->expectsQuestion('Имя', 'Admin')
+            ->expectsQuestion('Email', 'admin-int@example.com')
+            ->expectsChoice('Роль', 'admin', ['client', 'admin'])
+            ->expectsQuestion('Пароль (пусто — сгенерировать)', 'Secret-pass-123')
+            ->assertSuccessful();
+    }
+
     public function test_rejects_unknown_role(): void
     {
         $this->artisan('user:create', [
