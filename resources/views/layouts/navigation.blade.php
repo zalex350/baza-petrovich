@@ -117,7 +117,7 @@
                             href="/admin/organizations"
                             class="text-slate-500 hover:text-slate-900"
                         >
-                            Организации
+                            Клиенты
                         </a>
 
                     @endif

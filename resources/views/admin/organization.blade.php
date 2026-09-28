@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Организация — '.$organization->name)
+@section('title', 'Клиент — '.$organization->name)
 
 @section('content')
 
@@ -8,7 +8,7 @@
     href="/admin/organizations"
     class="text-sm text-slate-500 hover:text-blue-600"
 >
-    ← Назад к списку организаций
+    ← Назад к списку клиентов
 </a>
 
 <div class="flex items-center justify-between mt-4 mb-6">
@@ -77,7 +77,7 @@
     @if($organization->users->isEmpty())
 
         <p class="text-slate-500">
-            К организации пока не привязан ни один пользователь.
+            К клиенту пока не привязан ни один пользователь.
         </p>
 
     @else
@@ -128,15 +128,15 @@
         <button
             type="submit"
             class="text-red-600 hover:text-red-700 text-sm underline"
-            onclick="return confirm('Удалить организацию «{{ addslashes($organization->name) }}»?')"
+            onclick="return confirm('Удалить клиента «{{ addslashes($organization->name) }}»?')"
         >
-            Удалить организацию
+            Удалить клиента
         </button>
 
     </form>
 
     <p class="text-xs text-slate-400 mt-1">
-        Удаление невозможно, если к организации привязаны пользователи или заказы.
+        Удаление невозможно, если к клиенту привязаны пользователи или заказы.
     </p>
 
 </div>
