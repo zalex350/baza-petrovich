@@ -113,6 +113,13 @@
                             Заказы
                         </a>
 
+                        <a
+                            href="/admin/organizations"
+                            class="text-slate-500 hover:text-slate-900"
+                        >
+                            Организации
+                        </a>
+
                     @endif
 
                     <span class="text-slate-300">
