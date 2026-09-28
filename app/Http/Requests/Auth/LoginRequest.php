@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Http\Middleware\EnsureUserIsNotBlocked;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -47,6 +48,14 @@ class LoginRequest extends FormRequest
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
+            ]);
+        }
+
+        if (Auth::user()->isBlocked()) {
+            Auth::guard('web')->logout();
+
+            throw ValidationException::withMessages([
+                'email' => EnsureUserIsNotBlocked::MESSAGE,
             ]);
         }
 
