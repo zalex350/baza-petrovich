@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\CatalogMenu;
 use App\Models\Product;
 use App\Models\ProductStock;
 use Illuminate\Console\Command;
@@ -65,6 +66,9 @@ class FillTestCatalogData extends Command
         $activatedExisting = Product::where('is_active', false)->update(['is_active' => true]);
 
         $this->info("Done. Filled: {$imported->count()}. Additionally activated: {$activatedExisting}.");
+
+        // Массовые изменения идут мимо observer — сбрасываем кэш меню вручную
+        CatalogMenu::flush();
 
         return self::SUCCESS;
     }

@@ -1,6 +1,6 @@
 {{--
     Шапка витрины (SRS §3.4–3.6, BR-002…BR-010).
-    Данные: $cartSummary (HeaderComposer).
+    Данные: $cartSummary (HeaderComposer), $catalogMenu (CatalogMenuComposer).
 --}}
 @php
     $user = auth()->user();
@@ -50,24 +50,13 @@
     {{-- Основная строка (desktop) --}}
     <div class="hidden lg:block">
 
-        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center gap-6">
+        <div class="relative max-w-7xl mx-auto px-6 h-16 flex items-center gap-6">
 
             <a href="/" class="text-2xl font-extrabold tracking-tight text-slate-900 shrink-0" aria-label="{{ config('shop.name') }} — на главную">
                 {{ config('shop.name') }}
             </a>
 
-            <a
-                href="{{ route('catalog.index') }}"
-                @class([
-                    'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium shrink-0 transition',
-                    'bg-blue-600 text-white' => $isCatalog,
-                    'bg-slate-800 hover:bg-slate-700 text-white' => ! $isCatalog,
-                ])
-                @if($isCatalog) aria-current="page" @endif
-            >
-                @svg('heroicon-o-bars-3', 'w-5 h-5')
-                Каталог
-            </a>
+            @include('partials.header.mega-menu')
 
             @include('partials.header.search', ['id' => 'desktop'])
 
