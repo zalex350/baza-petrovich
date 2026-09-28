@@ -120,6 +120,13 @@
                             Организации
                         </a>
 
+                        <a
+                            href="/admin/users"
+                            class="text-slate-500 hover:text-slate-900"
+                        >
+                            Пользователи
+                        </a>
+
                     @endif
 
                     <span class="text-slate-300">
