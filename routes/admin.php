@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Admin\AdminProductController;
+use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminOrganizationController;
 
@@ -117,5 +118,50 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post(
         '/admin/organization/{id}/delete',
         [AdminOrganizationController::class, 'destroy']
+    );
+
+    Route::get(
+        '/admin/users',
+        [AdminUserController::class, 'index']
+    );
+
+    Route::get(
+        '/admin/user/create',
+        [AdminUserController::class, 'create']
+    );
+
+    Route::post(
+        '/admin/user',
+        [AdminUserController::class, 'store']
+    );
+
+    Route::get(
+        '/admin/user/{id}',
+        [AdminUserController::class, 'show']
+    );
+
+    Route::get(
+        '/admin/user/{id}/edit',
+        [AdminUserController::class, 'edit']
+    );
+
+    Route::post(
+        '/admin/user/{id}',
+        [AdminUserController::class, 'update']
+    );
+
+    Route::post(
+        '/admin/user/{id}/block',
+        [AdminUserController::class, 'block']
+    );
+
+    Route::post(
+        '/admin/user/{id}/unblock',
+        [AdminUserController::class, 'unblock']
+    );
+
+    Route::post(
+        '/admin/user/{id}/reset-password',
+        [AdminUserController::class, 'resetPassword']
     );
 });

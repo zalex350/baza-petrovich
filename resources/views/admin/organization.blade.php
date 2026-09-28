@@ -99,7 +99,9 @@
                 @foreach($organization->users as $user)
 
                     <tr class="hover:bg-gray-50">
-                        <td class="border p-3">{{ $user->name }}</td>
+                        <td class="border p-3">
+                            <a href="/admin/user/{{ $user->id }}" class="underline">{{ $user->name }}</a>
+                        </td>
                         <td class="border p-3">{{ $user->email }}</td>
                         <td class="border p-3">{{ $user->role?->label() }}</td>
                     </tr>

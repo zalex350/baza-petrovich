@@ -25,11 +25,11 @@
 @php
     // Пункты бокового меню админки; активный раздел выделяется (BR-008)
     $adminMenu = [
-        ['url' => '/admin/products',      'label' => 'Товары',  'icon' => 'heroicon-o-cube',              'active' => 'admin/product*'],
-        ['url' => '/admin/orders',        'label' => 'Заказы',  'icon' => 'heroicon-o-clipboard-document-list', 'active' => 'admin/order*'],
-        ['url' => '/admin/organizations', 'label' => 'Клиенты', 'icon' => 'heroicon-o-building-office-2', 'active' => 'admin/organization*'],
-        // Место под «Пользователи» (ветка feature/admin-users):
-        // ['url' => '/admin/users', 'label' => 'Пользователи', 'icon' => 'heroicon-o-users', 'active' => 'admin/user*'],
+        // 'active' — точные шаблоны: 'admin/order*' совпал бы и с admin/organizations
+        ['url' => '/admin/products',      'label' => 'Товары',       'icon' => 'heroicon-o-cube',                    'active' => ['admin/products', 'admin/product/*']],
+        ['url' => '/admin/orders',        'label' => 'Заказы',       'icon' => 'heroicon-o-clipboard-document-list', 'active' => ['admin/orders', 'admin/order/*']],
+        ['url' => '/admin/organizations', 'label' => 'Клиенты',      'icon' => 'heroicon-o-building-office-2',       'active' => ['admin/organizations', 'admin/organization/*']],
+        ['url' => '/admin/users',         'label' => 'Пользователи', 'icon' => 'heroicon-o-users',                   'active' => ['admin/users', 'admin/user/*']],
     ];
 @endphp
 
@@ -58,7 +58,7 @@
 
             @foreach($adminMenu as $item)
 
-                @php($isActive = request()->is($item['active']))
+                @php($isActive = request()->is(...$item['active']))
 
                 <a
                     href="{{ $item['url'] }}"

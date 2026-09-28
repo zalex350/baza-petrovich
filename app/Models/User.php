@@ -22,6 +22,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'phone',
         'password',
         'organization_id',
     ];
@@ -47,7 +48,16 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
+            'blocked_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Заблокированный пользователь не может войти (SRS §10.5, BR-115).
+     */
+    public function isBlocked(): bool
+    {
+        return $this->blocked_at !== null;
     }
 
     public function isAdmin(): bool
@@ -73,6 +83,11 @@ class User extends Authenticatable
             'integer',
             'exists:organizations,id',
         ];
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
     }
 
     public function organization()

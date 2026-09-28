@@ -45,7 +45,7 @@ class AdminLayoutTest extends TestCase
                 ->assertOk()
                 ->assertSee('data-layout="admin"', false)
                 ->assertSee('Админ-панель')
-                ->assertSeeInOrder(['Товары', 'Заказы', 'Клиенты'])
+                ->assertSeeInOrder(['Товары', 'Заказы', 'Клиенты', 'Пользователи'])
                 ->assertSee('На сайт')
                 // шапка витрины в админке не выводится
                 ->assertDontSee('aria-controls="mega-menu"', false);
@@ -81,6 +81,22 @@ class AdminLayoutTest extends TestCase
 
         $this->assertMatchesRegularExpression('#href="/admin/organizations"[^>]*aria-current="page"#', $html);
         $this->assertDoesNotMatchRegularExpression('#href="/admin/products"[^>]*aria-current="page"#', $html);
+        // 'admin/order*' совпадал с admin/organizations — «Заказы» подсвечивались вместе с «Клиентами»
+        $this->assertDoesNotMatchRegularExpression('#href="/admin/orders"[^>]*aria-current="page"#', $html);
+        $this->assertSame(1, substr_count($html, 'aria-current="page"'));
+    }
+
+    public function test_users_item_is_active_on_user_pages(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        foreach (['/admin/users', '/admin/user/create', "/admin/user/{$admin->id}", "/admin/user/{$admin->id}/edit"] as $url) {
+            $html = $this->actingAs($admin)->get($url)->assertOk()->getContent();
+
+            $this->assertStringContainsString('data-layout="admin"', $html, $url);
+            $this->assertMatchesRegularExpression('#href="/admin/users"[^>]*aria-current="page"#', $html, $url);
+            $this->assertSame(1, substr_count($html, 'aria-current="page"'), $url);
+        }
     }
 
     public function test_flash_messages_are_shown_in_admin_layout(): void
