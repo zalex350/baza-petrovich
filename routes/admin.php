@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminOrderController;
+use App\Http\Controllers\Admin\AdminOrganizationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -81,5 +82,40 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post(
         '/admin/product/{id}/delete',
         [AdminProductController::class, 'destroy']
+    );
+
+    Route::get(
+        '/admin/organizations',
+        [AdminOrganizationController::class, 'index']
+    );
+
+    Route::get(
+        '/admin/organization/create',
+        [AdminOrganizationController::class, 'create']
+    );
+
+    Route::post(
+        '/admin/organization',
+        [AdminOrganizationController::class, 'store']
+    );
+
+    Route::get(
+        '/admin/organization/{id}',
+        [AdminOrganizationController::class, 'show']
+    );
+
+    Route::get(
+        '/admin/organization/{id}/edit',
+        [AdminOrganizationController::class, 'edit']
+    );
+
+    Route::post(
+        '/admin/organization/{id}',
+        [AdminOrganizationController::class, 'update']
+    );
+
+    Route::post(
+        '/admin/organization/{id}/delete',
+        [AdminOrganizationController::class, 'destroy']
     );
 });

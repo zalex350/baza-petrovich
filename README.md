@@ -22,12 +22,13 @@ docker-compose exec node npm run build
 Самостоятельная регистрация отключена (SRS §3), учётные записи создаются командой `user:create`. Передавайте все данные аргументами:
 
 ```bash
-php artisan user:create "Имя" email@example.com --role=client --generate-password
+php artisan user:create "Имя" email@example.com --role=client --organization=1 --generate-password
 # в Docker:
-docker-compose exec php php artisan user:create "Имя" email@example.com --role=client --generate-password
+docker-compose exec php php artisan user:create "Имя" email@example.com --role=client --organization=1 --generate-password
 ```
 
 - `--role` — `client` или `admin`;
+- `--organization` — ID организации (раздел «Организации» в админке); обязателен для `client`, для `admin` — необязателен;
 - `--generate-password` — сгенерировать пароль; он выводится в консоль один раз;
 - вместо генерации можно задать пароль: `--password=...` (не короче 8 символов).
 
