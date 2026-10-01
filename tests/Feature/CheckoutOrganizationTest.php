@@ -83,18 +83,39 @@ class CheckoutOrganizationTest extends TestCase
             ->assertSee('Пользователь не привязан к организации');
     }
 
-    public function test_admin_without_organization_can_checkout(): void
+    // BR-121: оформляет только клиент — администратор не может, даже с организацией
+    public function test_admin_cannot_checkout(): void
     {
-        $admin = User::factory()->admin()->create(['organization_id' => null]);
+        $organization = Organization::factory()->create();
+
+        foreach ([null, $organization->id] as $organizationId) {
+            $admin = User::factory()->admin()->create(['organization_id' => $organizationId]);
+
+            $this->fillCart($admin);
+
+            $this->actingAs($admin)
+                ->from('/order')
+                ->post('/order/checkout')
+                ->assertRedirect('/order')
+                ->assertSessionHas('error', 'Оформлять заказы могут только клиенты');
+
+            $this->assertSame(1, $admin->cart->items()->count());
+        }
+
+        $this->assertSame(0, Order::count());
+        $this->assertSame(10, $this->product->fresh()->stock);
+    }
+
+    public function test_admin_sees_no_checkout_button_in_cart(): void
+    {
+        $admin = User::factory()->admin()->create();
 
         $this->fillCart($admin);
 
-        $this->actingAs($admin)->post('/order/checkout')->assertRedirect('/orders');
-
-        $order = Order::where('user_id', $admin->id)->first();
-
-        $this->assertSame(Order::STATUS_NEW, $order->status);
-        $this->assertNull($order->organization_id);
+        $this->actingAs($admin)->get('/order')
+            ->assertOk()
+            ->assertSee('Оформлять заказы могут только клиенты')
+            ->assertDontSee('action="/order/checkout"', false);
     }
 
     public function test_organization_rules_depend_on_role(): void

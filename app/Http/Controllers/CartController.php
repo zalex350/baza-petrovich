@@ -2,69 +2,84 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CartProblemType;
+use App\Exceptions\CheckoutException;
 use App\Models\Cart;
 use App\Models\CartItem;
-use App\Models\Order;
-use App\Models\OrderItem;
 use App\Models\Product;
+use App\Services\CartValidator;
+use App\Services\CheckoutService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class CartController extends Controller
 {
+    public function __construct(private readonly CartValidator $validator)
+    {
+    }
+
     public function index()
     {
         $cart = auth()->user()->cart()->with('items.product')->first();
 
-        return view('order', compact('cart'));
+        $validation = $this->validator->validate($cart);
+
+        // Одноразовый токен формы оформления — защита от двойной отправки
+        $checkoutToken = (string) Str::uuid();
+
+        return view('order', compact('cart', 'validation', 'checkoutToken'));
     }
 
     public function add($id)
     {
-        $product = Product::findOrFail($id);
-        $qty = (int) request('qty', 1);
+        $product = Product::find($id);
+        $qty = max(1, (int) request('qty', 1));
 
-        if ($qty < 1) {
-            $qty = 1;
-        }
-
-        if ($product->stock < 1) {
-            return back()->with('error', 'Товара нет в наличии');
+        if (! $product) {
+            return back()->with('error', 'Товар больше недоступен');
         }
 
         $cart = auth()->user()->cart()->firstOrCreate();
 
         // Блокировка строки корзины сериализует параллельные добавления одного товара:
         // вторая вставка не упирается в unique(cart_id, product_id), а увеличивает количество.
-        $added = DB::transaction(function () use ($cart, $product, $qty) {
+        $error = DB::transaction(function () use ($cart, $product, $qty) {
             Cart::whereKey($cart->id)->lockForUpdate()->first();
 
             $item = CartItem::where('cart_id', $cart->id)
                 ->where('product_id', $product->id)
                 ->first();
 
-            if (! $item) {
+            $inCart = $item?->quantity ?? 0;
+
+            // Проверяется итоговое количество — и для новой позиции, и для существующей
+            $problem = $this->validator->check($product, $inCart + $qty)[0] ?? null;
+
+            if ($problem) {
+                return $problem->type === CartProblemType::InsufficientStock
+                    ? "Недостаточно товара на складе: доступно {$problem->available}"
+                        . ($inCart ? ", в корзине уже {$inCart}" : '')
+                    : $problem->message;
+            }
+
+            if ($item) {
+                $item->quantity += $qty;
+                $item->save();
+            } else {
                 CartItem::create([
                     'cart_id'      => $cart->id,
                     'product_id'   => $product->id,
+                    'product_name' => $product->display_name ?: $product->name,
                     'quantity'     => $qty,
                     'price_at_add' => $product->price,
                 ]);
-
-                return true;
             }
 
-            if (($item->quantity + $qty) > $product->stock) {
-                return false;
-            }
-
-            $item->quantity += $qty;
-            $item->save();
-
-            return true;
+            return null;
         });
 
-        if (! $added) {
-            return back()->with('error', 'Недостаточно товара на складе');
+        if ($error) {
+            return back()->with('error', $error);
         }
 
         return back()->with('success', 'Товар добавлен в корзину');
@@ -74,18 +89,15 @@ class CartController extends Controller
     {
         $item = $this->ownItem($id);
 
-        if (! $item->isAvailable()) {
-            return back()->with('error', 'Товар больше недоступен. Удалите его из корзины.');
-        }
+        $quantity = max(1, (int) request('quantity'));
 
-        $quantity = (int) request('quantity');
+        // Цена здесь не сравнивается: её изменение не мешает менять количество
+        $problem = $this->validator->check($item->product, $quantity, null, $item->title())[0] ?? null;
 
-        if ($quantity < 1) {
-            $quantity = 1;
-        }
-
-        if ($quantity > $item->product->stock) {
-            return back()->with('error', 'Недостаточно товара на складе');
+        if ($problem) {
+            return back()->with('error', $problem->type === CartProblemType::InsufficientStock
+                ? "Недостаточно товара на складе: доступно {$problem->available}"
+                : $problem->fullMessage());
         }
 
         $item->quantity = $quantity;
@@ -101,70 +113,46 @@ class CartController extends Controller
         return back()->with('success', 'Товар удалён из корзины');
     }
 
-    public function checkout()
+    /**
+     * BR-125: пользователь соглашается с изменившимися ценами — price_at_add
+     * приравнивается к текущей цене товара.
+     */
+    public function acceptPrices()
     {
-        $user = auth()->user();
+        $cart = auth()->user()->cart()->with('items.product')->first();
 
-        // BR-114: заказ клиента оформляется на его организацию
-        if ($user->isClient() && ! $user->organization_id) {
-            return back()->with('error', 'Пользователь не привязан к организации');
+        $validation = $this->validator->validate($cart);
+
+        $updated = 0;
+
+        foreach ($cart?->items ?? [] as $item) {
+            $change = $validation->priceChange($item);
+
+            if ($change) {
+                $item->price_at_add = $change->newPrice;
+                $item->save();
+                $updated++;
+            }
         }
 
-        $cart = $user->cart()->with('items.product')->first();
+        return redirect('/order')->with(
+            'success',
+            $updated ? 'Новые цены приняты' : 'Цены в корзине актуальны'
+        );
+    }
 
-        if (! $cart || $cart->items->isEmpty()) {
-            return back()->with('error', 'Корзина пуста');
+    public function checkout(CheckoutService $checkout)
+    {
+        $token = request('checkout_token');
+        $token = is_string($token) && $token !== '' && strlen($token) <= 64 ? $token : null;
+
+        try {
+            $checkout->place(auth()->user(), $token);
+        } catch (CheckoutException $e) {
+            $redirect = redirect('/order')->with('error', $e->getMessage());
+
+            return $e->problems ? $redirect->withErrors($e->problems) : $redirect;
         }
-
-        foreach ($cart->items as $item) {
-
-            if (! $item->isAvailable()) {
-                return back()->with(
-                    'error',
-                    'В корзине есть недоступные товары. Удалите их, чтобы оформить заказ.'
-                );
-            }
-
-            if ($item->quantity > $item->product->stock) {
-                return back()->with(
-                    'error',
-                    'Недостаточно товара на складе: ' . ($item->product->display_name ?: $item->product->name)
-                );
-            }
-
-        }
-
-        DB::transaction(function () use ($user, $cart) {
-            $placedAt = now();
-
-            $order = Order::create([
-                'number'          => Order::nextNumber($placedAt),
-                'user_id'         => $user->id,
-                'organization_id' => $user->organization_id,
-                'status'          => Order::STATUS_NEW,
-                'total'           => $cart->items->sum('subtotal'),
-                'placed_at'       => $placedAt,
-            ]);
-
-            foreach ($cart->items as $item) {
-                $product = $item->product;
-
-                OrderItem::create([
-                    'order_id'     => $order->id,
-                    'product_id'   => $product->id,
-                    'product_name' => $product->display_name ?: $product->name,
-                    'product_sku'  => $product->sku,
-                    'quantity'     => $item->quantity,
-                    'price'        => $item->price_at_add,
-                    'vat_rate'     => $product->vat_rate,
-                ]);
-
-                $product->stock -= $item->quantity;
-                $product->save();
-            }
-
-            $cart->items()->delete();
-        });
 
         return redirect('/orders')
             ->with('success', 'Заказ оформлен');
