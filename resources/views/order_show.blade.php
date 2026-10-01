@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'Заказ #' . $order->id)
+@section('title', 'Заказ ' . $order->number)
 
 @section('content')
 
 <h1 class="text-3xl font-bold mb-6">
-    Заказ #{{ $order->id }}
+    Заказ {{ $order->number }}
 </h1>
 
 <div class="bg-white border rounded p-5 mb-6">
@@ -25,8 +25,8 @@
     </p>
 
     <p>
-        Дата:
-        {{ $order->created_at }}
+        Дата оформления:
+        {{ $order->placed_at?->format('d.m.Y H:i') }}
     </p>
 
 </div>
@@ -75,11 +75,11 @@
 
                     <td class="px-4 py-3">
 
-                        @if($item->product->image)
+                        @if($item->product?->image)
 
                             <img
                                 src="{{ asset('storage/'.$item->product->image) }}"
-                                alt="{{ $item->product->display_name ?: $item->product->name }}"
+                                alt="{{ $item->product_name }}"
                                 class="w-12 h-12 object-contain rounded border border-slate-200">
 
                         @else
@@ -94,17 +94,28 @@
 
                     <td class="px-4 py-3">
 
-                        <a
-                            href="{{ route('product.show', $item->product->id) }}"
-                            class="font-medium text-slate-800 hover:text-blue-600 transition"
-                        >
-                            {{ $item->product->display_name ?: $item->product->name }}
-                        </a>
+                        {{-- Название и артикул — из снимка заказа; ссылка только пока товар есть на витрине --}}
+                        @if($item->product && $item->product->is_active && $item->product->is_published)
+
+                            <a
+                                href="{{ route('product.show', $item->product->id) }}"
+                                class="font-medium text-slate-800 hover:text-blue-600 transition"
+                            >
+                                {{ $item->product_name }}
+                            </a>
+
+                        @else
+
+                            <span class="font-medium text-slate-800">
+                                {{ $item->product_name }}
+                            </span>
+
+                        @endif
 
                     </td>
 
                     <td class="px-4 py-3 text-sm text-slate-400">
-                        {{ $item->product->sku }}
+                        {{ $item->product_sku }}
                     </td>
 
                     <td class="px-4 py-3 text-right text-slate-700">

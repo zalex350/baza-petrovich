@@ -1,11 +1,11 @@
 @extends('layouts.admin')
 
-@section('title', 'Заказ #' . $order->id)
+@section('title', 'Заказ ' . $order->number)
 
 @section('content')
 
 <h1 class="text-3xl font-bold mb-6">
-    Заказ #{{ $order->id }}
+    Заказ {{ $order->number }}
 </h1>
 
 <div class="bg-white border rounded p-6 mb-6">
@@ -27,8 +27,8 @@
         </p>
 
         <p>
-            Дата:
-            {{ $order->created_at }}
+            Дата оформления:
+            {{ $order->placed_at?->format('d.m.Y H:i') }}
         </p>
 
     </div>
@@ -105,10 +105,15 @@
         <div class="bg-white border rounded p-5">
 
             <h3 class="text-xl font-semibold mb-3">
-                {{ $item->product->name }}
+                {{ $item->product_name }}
             </h3>
 
             <div class="space-y-2">
+
+                <p>
+                    Артикул:
+                    {{ $item->product_sku }}
+                </p>
 
                 <p>
                     Цена:

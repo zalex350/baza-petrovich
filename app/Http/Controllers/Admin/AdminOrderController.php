@@ -9,7 +9,10 @@ class AdminOrderController extends Controller
 {
     public function index()
     {
-        $orders = Order::latest()->paginate(50);
+        $orders = Order::with('user')
+            ->orderByDesc('placed_at')
+            ->orderByDesc('id')
+            ->paginate(50);
 
         return view(
             'admin.orders',
@@ -19,7 +22,7 @@ class AdminOrderController extends Controller
 
     public function show($id)
     {
-        $order = Order::findOrFail($id);
+        $order = Order::with(['user', 'items'])->findOrFail($id);
 
         return view(
             'admin.order',

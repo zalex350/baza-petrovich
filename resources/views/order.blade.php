@@ -8,7 +8,7 @@
     Мой заказ
 </h1>
 
-@if(!$order || !$order->items->count())
+@if(!$cart || !$cart->items->count())
 
     <div class="bg-white border rounded p-6">
 
@@ -61,17 +61,88 @@
 
             <tbody class="divide-y divide-slate-200">
 
-                @foreach($order->items as $item)
+                @foreach($cart->items as $item)
+
+                    @php($product = $item->product)
+
+                    @if(! $item->isAvailable())
+
+                        {{-- Товар удалён после добавления в корзину: позицию можно только убрать --}}
+                        <tr class="bg-slate-50">
+
+                            <td class="px-4 py-3">
+
+                                <div class="w-12 h-12 bg-slate-100 flex items-center justify-center rounded border border-slate-200 text-2xl opacity-50">
+                                    🚰
+                                </div>
+
+                            </td>
+
+                            <td class="px-4 py-3">
+
+                                <span class="font-medium text-slate-400">
+                                    {{ $product ? ($product->display_name ?: $product->name) : 'Товар' }}
+                                </span>
+
+                                <div class="mt-1">
+                                    <span class="inline-flex rounded-full bg-red-100 text-red-700 px-3 py-1 text-sm">
+                                        Товар больше недоступен
+                                    </span>
+                                </div>
+
+                            </td>
+
+                            <td class="px-4 py-3 text-sm text-slate-400">
+                                {{ $product?->sku }}
+                            </td>
+
+                            <td class="px-4 py-3 text-right text-slate-400">
+                                —
+                            </td>
+
+                            <td class="px-4 py-3 text-right text-slate-400">
+                                {{ $item->quantity }}
+                            </td>
+
+                            <td class="px-4 py-3 text-right text-slate-400">
+                                —
+                            </td>
+
+                            <td class="px-4 py-3">
+
+                                <form
+                                    method="POST"
+                                    action="/order/delete/{{ $item->id }}"
+                                >
+
+                                    @csrf
+
+                                    <button
+                                        type="submit"
+                                        class="text-red-600 hover:text-red-700 underline text-sm"
+                                    >
+                                        Удалить
+                                    </button>
+
+                                </form>
+
+                            </td>
+
+                        </tr>
+
+                        @continue
+
+                    @endif
 
                     <tr>
 
                         <td class="px-4 py-3">
 
-                            @if($item->product->image)
+                            @if($product->image)
 
                                 <img
-                                    src="{{ asset('storage/'.$item->product->image) }}"
-                                    alt="{{ $item->product->display_name ?: $item->product->name }}"
+                                    src="{{ asset('storage/'.$product->image) }}"
+                                    alt="{{ $product->display_name ?: $product->name }}"
                                     class="w-12 h-12 object-contain rounded border border-slate-200">
 
                             @else
@@ -87,20 +158,20 @@
                         <td class="px-4 py-3">
 
                             <a
-                                href="{{ route('product.show', $item->product->id) }}"
+                                href="{{ route('product.show', $product->id) }}"
                                 class="font-medium text-slate-800 hover:text-blue-600 transition"
                             >
-                                {{ $item->product->display_name ?: $item->product->name }}
+                                {{ $product->display_name ?: $product->name }}
                             </a>
 
                         </td>
 
                         <td class="px-4 py-3 text-sm text-slate-400">
-                            {{ $item->product->sku }}
+                            {{ $product->sku }}
                         </td>
 
                         <td class="px-4 py-3 text-right text-slate-700">
-                            {{ $item->price }} BYN
+                            {{ $item->price_at_add }} BYN
                         </td>
 
                         <td class="px-4 py-3 text-right">
@@ -133,7 +204,7 @@
                         </td>
 
                         <td class="px-4 py-3 text-right font-semibold text-slate-800">
-                            {{ $item->price * $item->quantity }} BYN
+                            {{ number_format($item->subtotal, 2, '.', '') }} BYN
                         </td>
 
                         <td class="px-4 py-3">
@@ -169,7 +240,7 @@
     <div class="mt-8 bg-white border rounded p-5">
 
         <h2 class="text-2xl font-bold mb-4">
-            Итого: {{ $order->items->sum(fn($item) => $item->price * $item->quantity) }} BYN
+            Итого: {{ number_format($cart->items->filter->isAvailable()->sum('subtotal'), 2, '.', '') }} BYN
         </h2>
 
         <form

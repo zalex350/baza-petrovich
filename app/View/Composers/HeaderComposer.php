@@ -2,7 +2,6 @@
 
 namespace App\View\Composers;
 
-use App\Models\Order;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -27,11 +26,13 @@ class HeaderComposer
             return ['count' => 0, 'total' => 0.0];
         }
 
-        $row = DB::table('order_items')
-            ->join('orders', 'orders.id', '=', 'order_items.order_id')
-            ->where('orders.user_id', $user->id)
-            ->where('orders.status', Order::STATUS_DRAFT)
-            ->selectRaw('COUNT(*) AS positions, COALESCE(SUM(order_items.quantity * order_items.price), 0) AS total')
+        // Удалённые товары в корзине помечены как недоступные и в сводку не входят
+        $row = DB::table('cart_items')
+            ->join('carts', 'carts.id', '=', 'cart_items.cart_id')
+            ->join('products', 'products.id', '=', 'cart_items.product_id')
+            ->where('carts.user_id', $user->id)
+            ->whereNull('products.deleted_at')
+            ->selectRaw('COUNT(*) AS positions, COALESCE(SUM(cart_items.quantity * cart_items.price_at_add), 0) AS total')
             ->first();
 
         return [

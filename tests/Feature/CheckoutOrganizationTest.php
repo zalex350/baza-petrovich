@@ -64,12 +64,10 @@ class CheckoutOrganizationTest extends TestCase
             ->assertRedirect('/order')
             ->assertSessionHas('error', 'Пользователь не привязан к организации');
 
-        $order = Order::where('user_id', $client->id)->first();
-
-        $this->assertSame(Order::STATUS_DRAFT, $order->status);
-        $this->assertNull($order->organization_id);
+        // Заказ не создан, корзина осталась нетронутой
+        $this->assertSame(0, Order::count());
+        $this->assertSame(1, $client->cart->items()->count());
         $this->assertSame(10, $this->product->fresh()->stock);
-        $this->assertSame(0, Order::where('status', Order::STATUS_NEW)->count());
     }
 
     public function test_error_is_shown_in_cart(): void

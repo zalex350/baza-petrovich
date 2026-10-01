@@ -36,11 +36,11 @@
                 <tr>
 
                     <td class="px-4 py-3 font-medium text-slate-800">
-                        #{{ $order->id }}
+                        {{ $order->number }}
                     </td>
 
                     <td class="px-4 py-3 text-slate-700">
-                        {{ $order->created_at->format('d.m.Y') }}
+                        {{ $order->placed_at?->format('d.m.Y') }}
                     </td>
 
                     <td class="px-4 py-3">
