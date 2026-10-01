@@ -2,76 +2,80 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Cart;
+use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use Illuminate\Support\Facades\DB;
 
 class CartController extends Controller
 {
     public function index()
     {
-        $order = Order::where('user_id', auth()->id())
-            ->where('status', Order::STATUS_DRAFT)
-            ->first();
+        $cart = auth()->user()->cart()->with('items.product')->first();
 
-        return view('order', compact('order'));
+        return view('order', compact('cart'));
     }
+
     public function add($id)
     {
         $product = Product::findOrFail($id);
         $qty = (int) request('qty', 1);
 
-            if ($qty < 1) {
+        if ($qty < 1) {
             $qty = 1;
         }
 
         if ($product->stock < 1) {
-            return back()->with('error', 'Product out of stock');
+            return back()->with('error', 'Товара нет в наличии');
         }
 
-        $order = Order::firstOrCreate(
-            [
-                'user_id' => auth()->id(),
-                'status' => Order::STATUS_DRAFT,
-            ]
-        );
+        $cart = auth()->user()->cart()->firstOrCreate();
 
-        $item = OrderItem::where('order_id', $order->id)
-            ->where('product_id', $product->id)
-            ->first();
+        // Блокировка строки корзины сериализует параллельные добавления одного товара:
+        // вторая вставка не упирается в unique(cart_id, product_id), а увеличивает количество.
+        $added = DB::transaction(function () use ($cart, $product, $qty) {
+            Cart::whereKey($cart->id)->lockForUpdate()->first();
 
-        if ($item) {
+            $item = CartItem::where('cart_id', $cart->id)
+                ->where('product_id', $product->id)
+                ->first();
+
+            if (! $item) {
+                CartItem::create([
+                    'cart_id'      => $cart->id,
+                    'product_id'   => $product->id,
+                    'quantity'     => $qty,
+                    'price_at_add' => $product->price,
+                ]);
+
+                return true;
+            }
 
             if (($item->quantity + $qty) > $product->stock) {
-                return back()->with('error', 'Not enough stock');
+                return false;
             }
 
             $item->quantity += $qty;
             $item->save();
 
-        } else {
+            return true;
+        });
 
-            OrderItem::create([
-                'order_id' => $order->id,
-                'product_id' => $product->id,
-                'quantity' => $qty,
-                'price' => $product->price,
-            ]);
-
+        if (! $added) {
+            return back()->with('error', 'Недостаточно товара на складе');
         }
 
-        return back()->with('success', 'Product added to cart');
+        return back()->with('success', 'Товар добавлен в корзину');
     }
+
     public function update($id)
     {
-        $item = OrderItem::findOrFail($id);
+        $item = $this->ownItem($id);
 
-        if ($item->order->status !== Order::STATUS_DRAFT) {
-            abort(403);
-        }
-
-        if ($item->order->user_id !== auth()->id()) {
-            abort(403);
+        if (! $item->isAvailable()) {
+            return back()->with('error', 'Товар больше недоступен. Удалите его из корзины.');
         }
 
         $quantity = (int) request('quantity');
@@ -81,30 +85,22 @@ class CartController extends Controller
         }
 
         if ($quantity > $item->product->stock) {
-            return back()->with('error', 'Not enough stock');
+            return back()->with('error', 'Недостаточно товара на складе');
         }
 
         $item->quantity = $quantity;
         $item->save();
 
-        return back()->with('success', 'Cart updated');
+        return back()->with('success', 'Корзина обновлена');
     }
+
     public function delete($id)
     {
-        $item = OrderItem::findOrFail($id);
+        $this->ownItem($id)->delete();
 
-        if ($item->order->status !== Order::STATUS_DRAFT) {
-            abort(403);
-        }
-
-        if ($item->order->user_id !== auth()->id()) {
-            abort(403);
-        }
-
-        $item->delete();
-
-        return back()->with('success', 'Item removed');
+        return back()->with('success', 'Товар удалён из корзины');
     }
+
     public function checkout()
     {
         $user = auth()->user();
@@ -114,52 +110,77 @@ class CartController extends Controller
             return back()->with('error', 'Пользователь не привязан к организации');
         }
 
-        $order = Order::where('user_id', auth()->id())
-            ->where('status', Order::STATUS_DRAFT)
-            ->first();
+        $cart = $user->cart()->with('items.product')->first();
 
-        if (!$order || !$order->items->count()) {
-            return back()->with('error', 'Cart is empty');
+        if (! $cart || $cart->items->isEmpty()) {
+            return back()->with('error', 'Корзина пуста');
         }
 
-        foreach ($order->items as $item) {
+        foreach ($cart->items as $item) {
 
-            if ($item->quantity > $item->product->stock) {
-
+            if (! $item->isAvailable()) {
                 return back()->with(
                     'error',
-                    'Not enough stock for: ' . $item->product->name
+                    'В корзине есть недоступные товары. Удалите их, чтобы оформить заказ.'
                 );
+            }
 
+            if ($item->quantity > $item->product->stock) {
+                return back()->with(
+                    'error',
+                    'Недостаточно товара на складе: ' . ($item->product->display_name ?: $item->product->name)
+                );
             }
 
         }
 
-        foreach ($order->items as $item) {
+        DB::transaction(function () use ($user, $cart) {
+            $placedAt = now();
 
-            $product = $item->product;
+            $order = Order::create([
+                'number'          => Order::nextNumber($placedAt),
+                'user_id'         => $user->id,
+                'organization_id' => $user->organization_id,
+                'status'          => Order::STATUS_NEW,
+                'total'           => $cart->items->sum('subtotal'),
+                'placed_at'       => $placedAt,
+            ]);
 
-            $product->stock -= $item->quantity;
+            foreach ($cart->items as $item) {
+                $product = $item->product;
 
-            $product->save();
+                OrderItem::create([
+                    'order_id'     => $order->id,
+                    'product_id'   => $product->id,
+                    'product_name' => $product->display_name ?: $product->name,
+                    'product_sku'  => $product->sku,
+                    'quantity'     => $item->quantity,
+                    'price'        => $item->price_at_add,
+                    'vat_rate'     => $product->vat_rate,
+                ]);
 
-        }
+                $product->stock -= $item->quantity;
+                $product->save();
+            }
 
-        $total = 0;
-
-        foreach ($order->items as $item) {
-
-            $total += $item->quantity * $item->price;
-
-        }
-
-        $order->total = $total;
-
-        $order->organization_id = $user->organization_id;
-        $order->status = Order::STATUS_NEW;
-        $order->save();
+            $cart->items()->delete();
+        });
 
         return redirect('/orders')
-            ->with('success', 'Order created');
+            ->with('success', 'Заказ оформлен');
+    }
+
+    /**
+     * Позиция корзины текущего пользователя; чужая — 403.
+     */
+    private function ownItem($id): CartItem
+    {
+        $item = CartItem::with(['cart', 'product'])->findOrFail($id);
+
+        if ($item->cart->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        return $item;
     }
 }

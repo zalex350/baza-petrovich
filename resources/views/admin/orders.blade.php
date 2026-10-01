@@ -29,7 +29,7 @@
                 <tr>
 
                     <th class="border p-3 text-left">
-                        ID
+                        № заказа
                     </th>
 
                     <th class="border p-3 text-left">
@@ -45,7 +45,7 @@
                     </th>
 
                     <th class="border p-3 text-left">
-                        Дата
+                        Дата оформления
                     </th>
 
                     <th class="border p-3 text-left">
@@ -63,7 +63,7 @@
                     <tr class="hover:bg-gray-50">
 
                         <td class="border p-3">
-                            #{{ $order->id }}
+                            {{ $order->number }}
                         </td>
 
                         <td class="border p-3">
@@ -84,7 +84,7 @@
                         </td>
 
                         <td class="border p-3">
-                            {{ $order->created_at }}
+                            {{ $order->placed_at?->format('d.m.Y H:i') }}
                         </td>
 
                         <td class="border p-3">

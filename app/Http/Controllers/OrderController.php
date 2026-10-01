@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CartItem;
 use App\Models\Order;
-use App\Models\OrderItem;
 
 class OrderController extends Controller
 {
@@ -11,12 +11,14 @@ class OrderController extends Controller
     {
         $activeOrders = Order::where('user_id', auth()->id())
             ->whereIn('status', [Order::STATUS_NEW, Order::STATUS_PROCESSING])
-            ->latest()
+            ->orderByDesc('placed_at')
+            ->orderByDesc('id')
             ->get();
 
         $archivedOrders = Order::where('user_id', auth()->id())
             ->where('status', Order::STATUS_SHIPPED)
-            ->latest()
+            ->orderByDesc('placed_at')
+            ->orderByDesc('id')
             ->get();
 
         return view('orders', compact('activeOrders', 'archivedOrders'));
@@ -24,7 +26,8 @@ class OrderController extends Controller
 
     public function show($id)
     {
-        $order = Order::where('user_id', auth()->id())
+        $order = Order::with('items.product')
+            ->where('user_id', auth()->id())
             ->where('id', $id)
             ->firstOrFail();
 
@@ -43,13 +46,18 @@ class OrderController extends Controller
 
             return back()->with(
                 'error',
-                'Only new orders can be deleted'
+                'Удалить можно только новый заказ'
             );
 
         }
         foreach ($order->items as $item) {
 
             $product = $item->product;
+
+            // Товар мог быть удалён после оформления — возвращать остаток некуда
+            if (! $product) {
+                continue;
+            }
 
             $product->stock += $item->quantity;
 
@@ -61,7 +69,7 @@ class OrderController extends Controller
         $order->save();
 
         return redirect('/orders')
-            ->with('success', 'Order deleted');
+            ->with('success', 'Заказ удалён');
     }
 
     public function reorder($id)
@@ -72,10 +80,7 @@ class OrderController extends Controller
             abort(403);
         }
 
-        $draft = Order::firstOrCreate([
-            'user_id' => auth()->id(),
-            'status' => Order::STATUS_DRAFT,
-        ]);
+        $cart = auth()->user()->cart()->firstOrCreate();
 
         $warnings = [];
 
@@ -85,7 +90,7 @@ class OrderController extends Controller
 
             if (!$product || !$product->is_active) {
 
-                $warnings[] = 'недоступен: ' . ($product?->name ?? 'Товар');
+                $warnings[] = 'недоступен: ' . ($item->product_name ?? $product?->name ?? 'Товар');
 
                 continue;
 
@@ -103,7 +108,7 @@ class OrderController extends Controller
 
             $qtyToAdd = min($requestedQty, $product->stock);
 
-            $existingItem = OrderItem::where('order_id', $draft->id)
+            $existingItem = CartItem::where('cart_id', $cart->id)
                 ->where('product_id', $product->id)
                 ->first();
 
@@ -123,17 +128,17 @@ class OrderController extends Controller
 
                 $existingItem->quantity += $qtyToAdd;
 
-                $existingItem->price = $product->price;
+                $existingItem->price_at_add = $product->price;
 
                 $existingItem->save();
 
             } else {
 
-                OrderItem::create([
-                    'order_id' => $draft->id,
+                CartItem::create([
+                    'cart_id' => $cart->id,
                     'product_id' => $product->id,
                     'quantity' => $qtyToAdd,
-                    'price' => $product->price,
+                    'price_at_add' => $product->price,
                 ]);
 
             }

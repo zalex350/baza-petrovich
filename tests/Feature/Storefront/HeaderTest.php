@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Storefront;
 
+use App\Models\Cart;
+use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Organization;
@@ -116,11 +118,11 @@ class HeaderTest extends TestCase
     public function test_cart_shows_positions_count_and_sum(): void
     {
         $client = $this->client();
-        $order = Order::create(['user_id' => $client->id, 'status' => Order::STATUS_DRAFT]);
+        $cart = Cart::create(['user_id' => $client->id]);
 
         foreach ([['A-1', 2, 100], ['A-2', 1, 50.5]] as [$sku, $qty, $price]) {
             $product = Product::create(['name' => $sku, 'sku' => $sku, 'price' => $price, 'stock' => 10]);
-            OrderItem::create(['order_id' => $order->id, 'product_id' => $product->id, 'quantity' => $qty, 'price' => $price]);
+            CartItem::create(['cart_id' => $cart->id, 'product_id' => $product->id, 'quantity' => $qty, 'price_at_add' => $price]);
         }
 
         // Оформленный заказ в корзину не входит
