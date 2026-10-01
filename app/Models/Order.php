@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class Order extends Model
 {
@@ -15,6 +16,7 @@ class Order extends Model
         'is_paid',
         'organization_id',
         'placed_at',
+        'checkout_token',
     ];
 
     protected $casts = [
@@ -38,20 +40,23 @@ class Order extends Model
 
     /**
      * Следующий номер заказа вида SM-ГГГГ-000001 (BR-132), сквозной в пределах года.
-     * Вызывать только внутри транзакции, создающей заказ: lockForUpdate сериализует
-     * параллельные оформления, unique-индекс на number — страховка.
+     * Вызывать только внутри транзакции, создающей заказ: upsert атомарно увеличивает
+     * счётчик года и держит его строку до коммита, поэтому параллельные оформления
+     * получают разные номера, а при откате номер не теряется.
      */
     public static function nextNumber(Carbon $placedAt): string
     {
-        $prefix = 'SM-' . $placedAt->format('Y') . '-';
+        $year = (int) $placedAt->format('Y');
 
-        $last = static::where('number', 'like', $prefix . '%')
-            ->lockForUpdate()
-            ->max('number');
+        DB::table('order_sequences')->upsert(
+            [['year' => $year, 'last_number' => 1]],
+            ['year'],
+            ['last_number' => DB::raw('order_sequences.last_number + 1')]
+        );
 
-        $next = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
+        $next = (int) DB::table('order_sequences')->where('year', $year)->value('last_number');
 
-        return $prefix . str_pad((string) $next, 6, '0', STR_PAD_LEFT);
+        return sprintf('SM-%d-%06d', $year, $next);
     }
 
     public const STATUS_NEW = 'new';
