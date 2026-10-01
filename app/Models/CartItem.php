@@ -9,6 +9,7 @@ class CartItem extends Model
     protected $fillable = [
         'cart_id',
         'product_id',
+        'product_name',
         'quantity',
         'price_at_add',
     ];
@@ -19,17 +20,25 @@ class CartItem extends Model
     }
 
     /**
-     * withTrashed: удалённый товар остаётся в корзине помеченным,
-     * а не превращается в null (см. isAvailable()).
+     * withTrashed: удалённый (soft delete) товар остаётся доступен для показа
+     * названия. После физического удаления product_id = null и товара нет вовсе —
+     * доступность позиции определяет CartValidator.
      */
     public function product()
     {
         return $this->belongsTo(Product::class)->withTrashed();
     }
 
-    public function isAvailable(): bool
+    /**
+     * Название для показа: актуальное, пока товар существует, иначе — запомненное при добавлении.
+     */
+    public function title(): string
     {
-        return $this->product !== null && ! $this->product->trashed();
+        if ($this->product) {
+            return $this->product->display_name ?: $this->product->name;
+        }
+
+        return $this->product_name ?? 'Товар';
     }
 
     public function getSubtotalAttribute(): float
