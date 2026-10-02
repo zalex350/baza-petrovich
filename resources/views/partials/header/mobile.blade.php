@@ -146,6 +146,9 @@
 
                     <a href="/orders" class="block px-4 py-3 pl-12 hover:bg-slate-50">Кабинет</a>
                     <a href="/orders" class="block px-4 py-3 pl-12 hover:bg-slate-50">Мои заказы</a>
+                    @if($user->isClient())
+                        <a href="/addresses" class="block px-4 py-3 pl-12 hover:bg-slate-50">Адреса доставки</a>
+                    @endif
                     <a href="{{ route('profile.edit') }}" class="block px-4 py-3 pl-12 hover:bg-slate-50">Профиль</a>
 
                     @if($user->isAdmin())
