@@ -32,4 +32,15 @@ class Organization extends Model
     {
         return $this->hasMany(Order::class);
     }
+
+    /**
+     * Адреса доставки: адрес по умолчанию первым, остальные по названию.
+     */
+    public function deliveryAddresses()
+    {
+        return $this->hasMany(DeliveryAddress::class)
+            ->orderByDesc('is_default')
+            ->orderBy('title')
+            ->orderBy('id');
+    }
 }
