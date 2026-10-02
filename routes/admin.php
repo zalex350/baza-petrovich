@@ -30,6 +30,11 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         [AdminOrderController::class, 'update']
     );
 
+    Route::post(
+        '/admin/order/{id}/status',
+        [AdminOrderController::class, 'changeStatus']
+    );
+
     Route::get(
         '/admin/products',
         [AdminProductController::class, 'index']

@@ -8,21 +8,28 @@
     Заказ {{ $order->number }}
 </h1>
 
-<div class="bg-white border rounded p-6 mb-6">
+<div class="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
 
     <div class="space-y-2">
 
         <p>
+            Клиент:
+            <strong>
+                {{ $order->organization->name ?? '—' }}
+            </strong>
+        </p>
+
+        <p>
             Пользователь:
             <strong>
-                {{ $order->user->name ?? 'Unknown' }}
+                {{ $order->user->name ?? '—' }}
             </strong>
         </p>
 
         <p>
             Email:
             <strong>
-                {{ $order->user->email ?? '-' }}
+                {{ $order->user->email ?? '—' }}
             </strong>
         </p>
 
@@ -35,10 +42,96 @@
 
 </div>
 
-<div class="bg-white border rounded p-6 mb-6">
+<div class="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
 
-    <h2 class="text-2xl font-semibold mb-4">
+    <h2 class="text-xl font-semibold mb-4">
         Статус заказа
+    </h2>
+
+    <p class="mb-4">
+        @include('partials.order_status', ['status' => $order->status])
+    </p>
+
+    @if(! $manualStatus)
+
+        <p class="text-slate-500">
+            Ручная смена статусов отключена.
+        </p>
+
+    @elseif($order->status->isFinal())
+
+        <p class="text-slate-500">
+            Заказ завершён — статус больше не меняется.
+        </p>
+
+    @else
+
+        {{-- Только допустимые переходы из текущего статуса --}}
+        <form
+            method="POST"
+            action="/admin/order/{{ $order->id }}/status"
+            class="space-y-4 max-w-xl"
+        >
+
+            @csrf
+
+            <div>
+
+                <label for="status" class="block text-sm font-medium text-slate-600 mb-1">
+                    Новый статус
+                </label>
+
+                <select
+                    id="status"
+                    name="status"
+                    class="border border-slate-300 rounded px-3 py-2 w-full"
+                >
+
+                    @foreach($order->status->allowedTransitions() as $next)
+
+                        <option value="{{ $next->value }}" @selected(old('status') === $next->value)>
+                            {{ $next->label() }}
+                        </option>
+
+                    @endforeach
+
+                </select>
+
+            </div>
+
+            <div>
+
+                <label for="comment" class="block text-sm font-medium text-slate-600 mb-1">
+                    Комментарий (необязательно)
+                </label>
+
+                <textarea
+                    id="comment"
+                    name="comment"
+                    rows="2"
+                    maxlength="1000"
+                    class="border border-slate-300 rounded px-3 py-2 w-full"
+                >{{ old('comment') }}</textarea>
+
+            </div>
+
+            <button
+                type="submit"
+                class="bg-slate-800 hover:bg-slate-700 text-white px-5 py-2 rounded-xl transition"
+            >
+                Сменить статус
+            </button>
+
+        </form>
+
+    @endif
+
+</div>
+
+<div class="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
+
+    <h2 class="text-xl font-semibold mb-4">
+        Оплата
     </h2>
 
     <form
@@ -48,34 +141,6 @@
     >
 
         @csrf
-
-        <select
-            name="status"
-            class="border rounded px-3 py-2"
-        >
-
-            <option
-                value="new"
-                @selected($order->status === 'new')
-            >
-                New
-            </option>
-
-            <option
-                value="processing"
-                @selected($order->status === 'processing')
-            >
-                Processing
-            </option>
-
-            <option
-                value="shipped"
-                @selected($order->status === 'shipped')
-            >
-                Shipped
-            </option>
-
-        </select>
 
         <label class="flex items-center gap-2">
             <input
@@ -89,14 +154,16 @@
 
         <button
             type="submit"
-            class="bg-black text-white px-5 py-2 rounded"
+            class="bg-slate-800 hover:bg-slate-700 text-white px-5 py-2 rounded-xl transition"
         >
-            Обновить
+            Сохранить
         </button>
 
     </form>
 
 </div>
+
+@include('partials.order_history', ['order' => $order, 'showAuthor' => true])
 
 <div class="space-y-4">
 

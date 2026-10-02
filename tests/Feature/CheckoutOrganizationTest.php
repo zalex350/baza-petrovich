@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\Organization;
 use App\Models\Product;
@@ -46,7 +47,7 @@ class CheckoutOrganizationTest extends TestCase
 
         $order = Order::where('user_id', $client->id)->first();
 
-        $this->assertSame(Order::STATUS_NEW, $order->status);
+        $this->assertSame(OrderStatus::New, $order->status);
         $this->assertSame($organization->id, $order->organization_id);
         $this->assertEquals(200, $order->total);
         $this->assertSame(8, $this->product->fresh()->stock);

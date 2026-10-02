@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\Organization;
 use App\Models\User;
@@ -421,7 +422,7 @@ class AdminOrganizationTest extends TestCase
     {
         $organization = Organization::factory()->create();
         $buyer = User::factory()->create();
-        $order = Order::create(['user_id' => $buyer->id, 'status' => Order::STATUS_NEW, 'total' => 100]);
+        $order = Order::create(['user_id' => $buyer->id, 'status' => OrderStatus::New, 'total' => 100]);
         $order->forceFill(['organization_id' => $organization->id])->save();
 
         $this->actingAs($this->admin)

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Storefront;
 
+use App\Enums\OrderStatus;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Order;
@@ -126,7 +127,7 @@ class HeaderTest extends TestCase
         }
 
         // Оформленный заказ в корзину не входит
-        $done = Order::create(['user_id' => $client->id, 'status' => Order::STATUS_NEW]);
+        $done = Order::create(['user_id' => $client->id, 'status' => OrderStatus::New]);
         OrderItem::create(['order_id' => $done->id, 'product_id' => $product->id, 'quantity' => 5, 'price' => 1000]);
 
         $this->actingAs($client)->get('/')

@@ -18,6 +18,10 @@
                     Статус
                 </th>
 
+                <th class="px-4 py-3 text-sm font-semibold text-slate-600">
+                    Оформил
+                </th>
+
                 <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
                     Сумма
                 </th>
@@ -47,31 +51,7 @@
 
                         <div class="flex items-center gap-2">
 
-                            @if($order->status === 'new')
-
-                                <span class="inline-flex rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-sm">
-                                    Новый
-                                </span>
-
-                            @elseif($order->status === 'processing')
-
-                                <span class="inline-flex rounded-full bg-yellow-100 text-yellow-700 px-3 py-1 text-sm">
-                                    В обработке
-                                </span>
-
-                            @elseif($order->status === 'shipped')
-
-                                <span class="inline-flex rounded-full bg-purple-100 text-purple-700 px-3 py-1 text-sm">
-                                    Отправлен
-                                </span>
-
-                            @else
-
-                                <span class="inline-flex rounded-full bg-slate-100 text-slate-700 px-3 py-1 text-sm">
-                                    {{ $order->status }}
-                                </span>
-
-                            @endif
+                            @include('partials.order_status', ['status' => $order->status])
 
                             @if($order->is_paid)
 
@@ -83,6 +63,10 @@
 
                         </div>
 
+                    </td>
+
+                    <td class="px-4 py-3 text-slate-700">
+                        {{ $order->user->name ?? '—' }}
                     </td>
 
                     <td class="px-4 py-3 text-right font-semibold text-slate-800">
@@ -117,11 +101,12 @@
 
                             </form>
 
-                            @if($showDelete)
+                            {{-- Отменить можно только свой заказ и только пока он «Новый» --}}
+                            @if($order->status === \App\Enums\OrderStatus::New && $order->user_id === auth()->id())
 
                                 <form
                                     method="POST"
-                                    action="/order/{{ $order->id }}/delete"
+                                    action="/order/{{ $order->id }}/cancel"
                                     class="inline"
                                 >
 
@@ -130,9 +115,9 @@
                                     <button
                                         type="submit"
                                         class="text-red-600 hover:text-red-700 text-sm underline"
-                                        onclick="return confirm('Удалить заказ?')"
+                                        onclick="return confirm('Отменить заказ {{ $order->number }}?')"
                                     >
-                                        Удалить
+                                        Отменить
                                     </button>
 
                                 </form>

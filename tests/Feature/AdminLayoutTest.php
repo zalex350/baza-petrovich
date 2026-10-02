@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\Organization;
 use App\Models\Product;
@@ -21,7 +22,7 @@ class AdminLayoutTest extends TestCase
         $product = Product::create(['name' => 'Grohe', 'sku' => 'GR-1', 'price' => 10, 'stock' => 1]);
         $organization = Organization::factory()->create();
         $buyer = User::factory()->create(['organization_id' => $organization->id]);
-        $order = Order::create(['user_id' => $buyer->id, 'status' => Order::STATUS_NEW, 'total' => 10]);
+        $order = Order::create(['user_id' => $buyer->id, 'status' => OrderStatus::New, 'total' => 10]);
 
         return [
             '/admin/products',

@@ -21,9 +21,10 @@ Route::middleware('auth')->group(function () {
         '/order/{id}',
         [OrderController::class, 'show']
     );
+
     Route::post(
-        '/order/{id}/delete',
-        [OrderController::class, 'delete']
+        '/order/{id}/cancel',
+        [OrderController::class, 'cancel']
     );
 
     Route::post(

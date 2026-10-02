@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\OrderStatus;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Order;
@@ -239,7 +240,7 @@ class CartOrderSplitTest extends TestCase
             ->assertSee('GR-001');
     }
 
-    public function test_client_can_delete_order_with_deleted_product(): void
+    public function test_client_can_cancel_order_with_deleted_product(): void
     {
         $this->addToCart($this->product, 2);
         $order = $this->checkout();
@@ -247,10 +248,10 @@ class CartOrderSplitTest extends TestCase
         $this->product->delete();
 
         $this->actingAs($this->client)
-            ->post("/order/{$order->id}/delete")
+            ->post("/order/{$order->id}/cancel")
             ->assertRedirect('/orders');
 
-        $this->assertSame(Order::STATUS_DELETED, $order->fresh()->status);
+        $this->assertSame(OrderStatus::Cancelled, $order->fresh()->status);
     }
 
     // --- Оформление ---
@@ -266,7 +267,7 @@ class CartOrderSplitTest extends TestCase
 
         $this->assertSame('SM-2026-000001', $order->number);
         $this->assertSame('2026-10-01 12:30:00', $order->placed_at->format('Y-m-d H:i:s'));
-        $this->assertSame(Order::STATUS_NEW, $order->status);
+        $this->assertSame(OrderStatus::New, $order->status);
         $this->assertEquals(200, $order->total);
         $this->assertSame(8, $this->product->fresh()->stock);
 
