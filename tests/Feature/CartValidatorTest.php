@@ -123,9 +123,9 @@ class CartValidatorTest extends TestCase
         $this->assertCount(9, $result->all());
         $this->assertSame(CartState::NeedsCorrection, $result->state());
 
-        $this->assertContains('Смеситель DEL: товар больше недоступен', $result->messages());
-        $this->assertContains('Смеситель LOW: недостаточно на складе: доступно 3, в корзине 5', $result->messages());
-        $this->assertContains('Смеситель PRC: цена изменилась: было 100.00 BYN, стало 120.00 BYN', $result->messages());
+        $this->assertContains('Смеситель DEL: Товар отсутствует в каталоге', $result->messages());
+        $this->assertContains('Смеситель LOW: Недостаточный остаток товара (доступно 3, в корзине 5)', $result->messages());
+        $this->assertContains('Смеситель PRC: Цена товара изменилась (было 100.00 BYN, стало 120.00 BYN)', $result->messages());
     }
 
     public function test_only_price_changes_mean_needs_update(): void
@@ -176,7 +176,42 @@ class CartValidatorTest extends TestCase
 
         $this->assertNull($item->product_id);
         $this->assertSame([CartProblemType::Missing], $this->types($result, $item));
-        $this->assertSame(['Смеситель A-1: товар больше недоступен'], $result->messages());
+        $this->assertSame(['Смеситель A-1: Товар отсутствует в каталоге'], $result->messages());
+    }
+
+    public function test_problem_types_carry_srs_codes_and_titles(): void
+    {
+        $expected = [
+            'missing'            => ['ERR-013', 'Товар отсутствует в каталоге'],
+            'out_of_stock'       => ['ERR-014', 'Недостаточный остаток товара'],
+            'insufficient_stock' => ['ERR-014', 'Недостаточный остаток товара'],
+            'below_min_quantity' => ['ERR-015', 'Количество меньше минимально допустимого'],
+            'step_mismatch'      => ['ERR-016', 'Количество не соответствует шагу заказа'],
+            'price_changed'      => ['ERR-017', 'Цена товара изменилась'],
+            'inactive'           => ['ERR-018', 'Товар больше недоступен для заказа'],
+            'unpublished'        => ['ERR-018', 'Товар больше недоступен для заказа'],
+            'no_price'           => ['ERR-018', 'Товар больше недоступен для заказа'],
+        ];
+
+        $this->assertCount(count($expected), CartProblemType::cases());
+
+        foreach (CartProblemType::cases() as $type) {
+            $this->assertSame($expected[$type->value], [$type->code(), $type->title()]);
+        }
+    }
+
+    public function test_problem_has_srs_title_and_detail_on_second_line(): void
+    {
+        $item = $this->inCart($this->product('A-1', ['stock' => 3, 'price' => 120]), 5);
+
+        [$stock, $price] = $this->validate()->for($item);
+
+        $this->assertSame('Недостаточный остаток товара', $stock->title());
+        $this->assertSame('доступно 3, в корзине 5', $stock->detail);
+        $this->assertSame('Недостаточный остаток товара: доступно 3, в корзине 5', $stock->text());
+
+        $this->assertSame('Цена товара изменилась', $price->title());
+        $this->assertSame('было 100.00 BYN, стало 120.00 BYN', $price->detail);
     }
 
     public function test_price_is_compared_to_cents(): void

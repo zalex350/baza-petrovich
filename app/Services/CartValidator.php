@@ -44,28 +44,28 @@ class CartValidator
         $name ??= $product ? ($product->display_name ?: $product->name) : 'Товар';
 
         $unavailable = match (true) {
-            ! $product || $product->trashed() => [CartProblemType::Missing, 'Товар больше недоступен'],
-            ! $product->is_active             => [CartProblemType::Inactive, 'Товар снят с продажи'],
-            ! $product->is_published          => [CartProblemType::Unpublished, 'Товар недоступен для заказа'],
-            $product->price === null          => [CartProblemType::NoPrice, 'У товара не указана цена'],
+            ! $product || $product->trashed() => CartProblemType::Missing,
+            ! $product->is_active             => CartProblemType::Inactive,
+            ! $product->is_published          => CartProblemType::Unpublished,
+            $product->price === null          => CartProblemType::NoPrice,
             default                           => null,
         };
 
         // Недоступный товар: остаток и цена уже не имеют значения
         if ($unavailable) {
-            return [new CartProblem($unavailable[0], $unavailable[1], $name)];
+            return [new CartProblem($unavailable, $name)];
         }
 
         $problems = [];
         $stock = (int) $product->stock;
 
         if ($stock < 1) {
-            $problems[] = new CartProblem(CartProblemType::OutOfStock, 'Нет в наличии', $name, available: 0);
+            $problems[] = new CartProblem(CartProblemType::OutOfStock, $name, 'нет в наличии', available: 0);
         } elseif ($quantity > $stock) {
             $problems[] = new CartProblem(
                 CartProblemType::InsufficientStock,
-                "Недостаточно на складе: доступно {$stock}, в корзине {$quantity}",
                 $name,
+                "доступно {$stock}, в корзине {$quantity}",
                 available: $stock,
             );
         }
@@ -73,8 +73,8 @@ class CartValidator
         if ($priceAtAdd !== null && $this->money($priceAtAdd) !== $this->money($product->price)) {
             $problems[] = new CartProblem(
                 CartProblemType::PriceChanged,
-                'Цена изменилась: было ' . $this->money($priceAtAdd) . ' BYN, стало ' . $this->money($product->price) . ' BYN',
                 $name,
+                'было ' . $this->money($priceAtAdd) . ' BYN, стало ' . $this->money($product->price) . ' BYN',
                 oldPrice: (float) $priceAtAdd,
                 newPrice: (float) $product->price,
             );

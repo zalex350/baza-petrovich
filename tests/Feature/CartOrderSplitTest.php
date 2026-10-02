@@ -169,7 +169,7 @@ class CartOrderSplitTest extends TestCase
 
         $this->actingAs($this->client)->get('/order')
             ->assertOk()
-            ->assertSee('Товар больше недоступен')
+            ->assertSee('Товар отсутствует в каталоге')
             ->assertSee('Grohe Start')
             // недоступная позиция в итог не входит
             ->assertSee('Итого: 30.00 BYN');
@@ -186,7 +186,7 @@ class CartOrderSplitTest extends TestCase
 
         $this->actingAs($this->client)->get('/order')
             ->assertOk()
-            ->assertDontSee('Товар больше недоступен');
+            ->assertDontSee('Товар отсутствует в каталоге');
     }
 
     public function test_header_summary_skips_deleted_product(): void

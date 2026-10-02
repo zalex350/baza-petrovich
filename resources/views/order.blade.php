@@ -139,7 +139,7 @@
 
                                 <div class="mt-1">
                                     <span class="inline-flex rounded-full bg-red-100 text-red-700 px-3 py-1 text-sm">
-                                        {{ $problems[0]->message }}
+                                        {{ $problems[0]->title() }}
                                     </span>
                                 </div>
 
@@ -221,9 +221,19 @@
                             @foreach($problems as $problem)
 
                                 <div class="mt-1">
+
                                     <span class="inline-flex rounded-full px-3 py-1 text-sm {{ $problem->type->needsCorrection() ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700' }}">
-                                        {{ $problem->message }}
+                                        {{ $problem->title() }}
                                     </span>
+
+                                    @if($problem->detail)
+
+                                        <div class="mt-1 text-sm text-slate-500">
+                                            {{ \Illuminate\Support\Str::ucfirst($problem->detail) }}
+                                        </div>
+
+                                    @endif
+
                                 </div>
 
                             @endforeach

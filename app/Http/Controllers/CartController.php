@@ -11,6 +11,7 @@ use App\Services\CartValidator;
 use App\Services\CheckoutService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Throwable;
 
 class CartController extends Controller
 {
@@ -36,7 +37,7 @@ class CartController extends Controller
         $qty = max(1, (int) request('qty', 1));
 
         if (! $product) {
-            return back()->with('error', 'Товар больше недоступен');
+            return back()->with('error', CartProblemType::Missing->title());
         }
 
         $cart = auth()->user()->cart()->firstOrCreate();
@@ -57,9 +58,9 @@ class CartController extends Controller
 
             if ($problem) {
                 return $problem->type === CartProblemType::InsufficientStock
-                    ? "Недостаточно товара на складе: доступно {$problem->available}"
+                    ? $problem->title() . ": доступно {$problem->available}"
                         . ($inCart ? ", в корзине уже {$inCart}" : '')
-                    : $problem->message;
+                    : $problem->text();
             }
 
             if ($item) {
@@ -96,7 +97,7 @@ class CartController extends Controller
 
         if ($problem) {
             return back()->with('error', $problem->type === CartProblemType::InsufficientStock
-                ? "Недостаточно товара на складе: доступно {$problem->available}"
+                ? $problem->title() . ": доступно {$problem->available}"
                 : $problem->fullMessage());
         }
 
@@ -152,6 +153,11 @@ class CartController extends Controller
             $redirect = redirect('/order')->with('error', $e->getMessage());
 
             return $e->problems ? $redirect->withErrors($e->problems) : $redirect;
+        } catch (Throwable $e) {
+            // Транзакция уже откатилась: заказа нет, корзина и остатки не тронуты
+            report($e);
+
+            return redirect('/order')->with('error', CheckoutException::CREATION_FAILED);
         }
 
         return redirect('/orders')

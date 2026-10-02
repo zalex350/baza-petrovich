@@ -75,10 +75,10 @@ class CheckoutValidationTest extends TestCase
     public static function unavailableProducts(): array
     {
         return [
-            'скрыт'               => [['is_active' => false], 'Товар снят с продажи'],
-            'снят с публикации'   => [['is_published' => false], 'Товар недоступен для заказа'],
-            'без цены'            => [['price' => null], 'У товара не указана цена'],
-            'нет остатка'         => [['stock' => 0], 'Нет в наличии'],
+            'скрыт'               => [['is_active' => false], 'Товар больше недоступен для заказа'],
+            'снят с публикации'   => [['is_published' => false], 'Товар больше недоступен для заказа'],
+            'без цены'            => [['price' => null], 'Товар больше недоступен для заказа'],
+            'нет остатка'         => [['stock' => 0], 'Недостаточный остаток товара: нет в наличии'],
         ];
     }
 
@@ -99,11 +99,11 @@ class CheckoutValidationTest extends TestCase
         $product = $this->product('A-1');
         $product->delete();
 
-        $this->add($product)->assertSessionHas('error', 'Товар больше недоступен');
+        $this->add($product)->assertSessionHas('error', 'Товар отсутствует в каталоге');
 
         $this->actingAs($this->client)
             ->post('/order/add/999999')
-            ->assertSessionHas('error', 'Товар больше недоступен');
+            ->assertSessionHas('error', 'Товар отсутствует в каталоге');
 
         $this->assertSame(0, CartItem::count());
     }
@@ -113,7 +113,7 @@ class CheckoutValidationTest extends TestCase
         $product = $this->product('A-1', ['stock' => 3]);
 
         $this->add($product, 4)
-            ->assertSessionHas('error', 'Недостаточно товара на складе: доступно 3');
+            ->assertSessionHas('error', 'Недостаточный остаток товара: доступно 3');
 
         $this->assertSame(0, CartItem::count());
 
@@ -128,7 +128,7 @@ class CheckoutValidationTest extends TestCase
         $this->add($product, 2)->assertSessionHas('success');
 
         $this->add($product, 2)
-            ->assertSessionHas('error', 'Недостаточно товара на складе: доступно 3, в корзине уже 2');
+            ->assertSessionHas('error', 'Недостаточный остаток товара: доступно 3, в корзине уже 2');
 
         $this->assertSame(2, CartItem::sole()->quantity);
     }
@@ -143,7 +143,7 @@ class CheckoutValidationTest extends TestCase
 
         $this->actingAs($this->client)
             ->post("/order/update/{$item->id}", ['quantity' => 3])
-            ->assertSessionHas('error', 'Смеситель A-1: товар снят с продажи');
+            ->assertSessionHas('error', 'Смеситель A-1: Товар больше недоступен для заказа');
 
         $this->assertSame(2, $item->fresh()->quantity);
     }
@@ -188,11 +188,11 @@ class CheckoutValidationTest extends TestCase
             ->assertOk()
             ->assertSee('data-cart-state="needs_correction"', false)
             ->assertSee('Требует корректировки')
-            ->assertSee('Товар снят с продажи')
-            ->assertSee('Товар недоступен для заказа')
-            ->assertSee('Товар больше недоступен')
+            ->assertSee('Товар больше недоступен для заказа')
+            ->assertSee('Товар отсутствует в каталоге')
             ->assertSee('Нет в наличии')
-            ->assertSee('Недостаточно на складе: доступно 2, в корзине 5')
+            ->assertSee('Недостаточный остаток товара')
+            ->assertSee('Доступно 2, в корзине 5')
             // недоступные в итог не входят: OUT 100 + LOW 500 + OK 30
             ->assertSee('Итого: 630.00 BYN');
 
@@ -211,7 +211,8 @@ class CheckoutValidationTest extends TestCase
             ->assertOk()
             ->assertSee('data-cart-state="needs_update"', false)
             ->assertSee('Требует обновления')
-            ->assertSee('Цена изменилась: было 100.00 BYN, стало 120.00 BYN')
+            ->assertSee('Цена товара изменилась')
+            ->assertSee('Было 100.00 BYN, стало 120.00 BYN')
             ->assertSee('Принять новые цены')
             ->assertSee('action="/order/accept-prices"', false);
     }
@@ -238,7 +239,7 @@ class CheckoutValidationTest extends TestCase
 
         $this->actingAs($this->client)->get('/order')
             ->assertSee('data-cart-state="ready"', false)
-            ->assertDontSee('Цена изменилась')
+            ->assertDontSee('Цена товара изменилась')
             ->assertSee('Итого: 290.00 BYN');
     }
 
@@ -275,11 +276,11 @@ class CheckoutValidationTest extends TestCase
     public static function blockingChanges(): array
     {
         return [
-            'скрыт'              => [['is_active' => false], 'Смеситель A-1: товар снят с продажи'],
-            'снят с публикации'  => [['is_published' => false], 'Смеситель A-1: товар недоступен для заказа'],
-            'остаток 0'          => [['stock' => 0], 'Смеситель A-1: нет в наличии'],
-            'недостаток остатка' => [['stock' => 1], 'Смеситель A-1: недостаточно на складе: доступно 1, в корзине 2'],
-            'изменение цены'     => [['price' => 120], 'Смеситель A-1: цена изменилась: было 100.00 BYN, стало 120.00 BYN'],
+            'скрыт'              => [['is_active' => false], 'Смеситель A-1: Товар больше недоступен для заказа'],
+            'снят с публикации'  => [['is_published' => false], 'Смеситель A-1: Товар больше недоступен для заказа'],
+            'остаток 0'          => [['stock' => 0], 'Смеситель A-1: Недостаточный остаток товара (нет в наличии)'],
+            'недостаток остатка' => [['stock' => 1], 'Смеситель A-1: Недостаточный остаток товара (доступно 1, в корзине 2)'],
+            'изменение цены'     => [['price' => 120], 'Смеситель A-1: Цена товара изменилась (было 100.00 BYN, стало 120.00 BYN)'],
         ];
     }
 
@@ -294,7 +295,7 @@ class CheckoutValidationTest extends TestCase
 
         $response = $this->checkout()
             ->assertRedirect('/order')
-            ->assertSessionHas('error', 'Заказ не оформлен. Исправьте корзину:');
+            ->assertSessionHas('error', 'Оформление заказа невозможно до устранения выявленных ошибок');
 
         $this->assertSame([$problem], $this->listedProblems($response));
 
@@ -317,7 +318,7 @@ class CheckoutValidationTest extends TestCase
         $response = $this->checkout()->assertRedirect('/order');
 
         $this->assertSame(
-            ['Смеситель A-1: товар больше недоступен', 'Смеситель B-1: товар больше недоступен'],
+            ['Смеситель A-1: Товар отсутствует в каталоге', 'Смеситель B-1: Товар отсутствует в каталоге'],
             $this->listedProblems($response)
         );
         $this->assertSame(0, Order::count());
@@ -347,12 +348,12 @@ class CheckoutValidationTest extends TestCase
         $response = $this->checkout()->assertRedirect('/order');
 
         $this->assertSame([
-            'Смеситель HID: товар снят с продажи',
-            'Смеситель UNP: товар недоступен для заказа',
-            'Смеситель DEL: товар больше недоступен',
-            'Смеситель PRC: цена изменилась: было 100.00 BYN, стало 120.00 BYN',
-            'Смеситель LOW: недостаточно на складе: доступно 3, в корзине 5',
-            'Смеситель LOW: цена изменилась: было 100.00 BYN, стало 90.00 BYN',
+            'Смеситель HID: Товар больше недоступен для заказа',
+            'Смеситель UNP: Товар больше недоступен для заказа',
+            'Смеситель DEL: Товар отсутствует в каталоге',
+            'Смеситель PRC: Цена товара изменилась (было 100.00 BYN, стало 120.00 BYN)',
+            'Смеситель LOW: Недостаточный остаток товара (доступно 3, в корзине 5)',
+            'Смеситель LOW: Цена товара изменилась (было 100.00 BYN, стало 90.00 BYN)',
         ], $this->listedProblems($response));
 
         // Ничего не создано и не списано, корзина цела
@@ -364,9 +365,9 @@ class CheckoutValidationTest extends TestCase
 
         // Перечень виден пользователю в корзине
         $this->actingAs($this->client)->get('/order')
-            ->assertSee('Заказ не оформлен. Исправьте корзину:')
-            ->assertSee('Смеситель HID: товар снят с продажи')
-            ->assertSee('Смеситель LOW: недостаточно на складе: доступно 3, в корзине 5');
+            ->assertSee('Оформление заказа невозможно до устранения выявленных ошибок')
+            ->assertSee('Смеситель HID: Товар больше недоступен для заказа')
+            ->assertSee('Смеситель LOW: Недостаточный остаток товара (доступно 3, в корзине 5)');
     }
 
     public function test_order_is_placed_at_accepted_price(): void
@@ -404,7 +405,7 @@ class CheckoutValidationTest extends TestCase
 
         $response = $this->checkout($rival)->assertRedirect('/order');
 
-        $this->assertSame(['Смеситель A-1: нет в наличии'], $this->listedProblems($response));
+        $this->assertSame(['Смеситель A-1: Недостаточный остаток товара (нет в наличии)'], $this->listedProblems($response));
         $this->assertSame(1, Order::count());
         $this->assertSame($this->client->id, Order::sole()->user_id);
         $this->assertSame(0, $product->fresh()->stock);
@@ -497,6 +498,42 @@ class CheckoutValidationTest extends TestCase
         $this->assertNotSame($tokens[0], $tokens[1]);
     }
 
+    // --- Тексты ошибок по SRS ---
+
+    public function test_error_codes_are_not_shown_to_user(): void
+    {
+        $product = $this->product('A-1');
+        $this->add($product, 2);
+        $product->update(['stock' => 1, 'price' => 120]);
+
+        $this->checkout()->assertRedirect('/order');
+
+        $this->actingAs($this->client)->get('/order')
+            ->assertOk()
+            ->assertSee('Оформление заказа невозможно до устранения выявленных ошибок')
+            ->assertSee('Недостаточный остаток товара')
+            ->assertSee('Цена товара изменилась')
+            ->assertDontSee('ERR-');
+    }
+
+    public function test_unexpected_failure_reports_order_creation_error(): void
+    {
+        $product = $this->product('A-1');
+        $this->add($product, 2);
+
+        $this->mock(\App\Services\CheckoutService::class)
+            ->shouldReceive('place')
+            ->andThrow(new \RuntimeException('connection lost'));
+
+        $this->checkout()
+            ->assertRedirect('/order')
+            ->assertSessionHas('error', 'Ошибка создания заказа');
+
+        $this->assertSame(0, Order::count());
+        $this->assertSame(2, CartItem::sole()->quantity);
+        $this->assertSame(10, $product->fresh()->stock);
+    }
+
     // --- Физическое удаление товара ---
 
     public function test_physically_deleted_product_stays_in_cart_as_unavailable(): void
@@ -513,7 +550,7 @@ class CheckoutValidationTest extends TestCase
         $this->actingAs($this->client)->get('/order')
             ->assertOk()
             ->assertSee('Смеситель A-1')
-            ->assertSee('Товар больше недоступен');
+            ->assertSee('Товар отсутствует в каталоге');
 
         $this->actingAs($this->client)
             ->post("/order/delete/{$item->id}")

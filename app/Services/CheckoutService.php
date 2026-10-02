@@ -56,7 +56,7 @@ class CheckoutService
             $items = $cart ? $cart->items()->orderBy('id')->get() : collect();
 
             if ($items->isEmpty()) {
-                throw new CheckoutException('Корзина пуста');
+                throw CheckoutException::emptyCart();
             }
 
             // Блокировка в порядке id — параллельные оформления с общими товарами не взаимоблокируются.
@@ -74,7 +74,7 @@ class CheckoutService
             $validation = $this->validator->validate($cart->setRelation('items', $items));
 
             if (! $validation->isReady()) {
-                throw new CheckoutException('Заказ не оформлен. Исправьте корзину:', $validation->messages());
+                throw CheckoutException::hasProblems($validation->messages());
             }
 
             $placedAt = now();
