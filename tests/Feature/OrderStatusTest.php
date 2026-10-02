@@ -57,7 +57,7 @@ class OrderStatusTest extends TestCase
         $user ??= $this->client;
 
         $this->actingAs($user)->post("/order/add/{$this->product->id}", ['qty' => $qty]);
-        $this->actingAs($user)->post('/order/checkout')->assertRedirect('/orders');
+        $this->actingAs($user)->post('/order/checkout', $this->checkoutData($user))->assertRedirect('/orders');
 
         return Order::where('user_id', $user->id)->latest('id')->firstOrFail();
     }
@@ -378,7 +378,7 @@ class OrderStatusTest extends TestCase
 
         $this->actingAs($this->client)->post("/order/add/{$this->product->id}", ['qty' => 3]);
         $this->actingAs($this->client)->post("/order/add/{$second->id}", ['qty' => 5]);
-        $this->actingAs($this->client)->post('/order/checkout');
+        $this->actingAs($this->client)->post('/order/checkout', $this->checkoutData($this->client));
 
         $this->assertSame(7, $this->product->fresh()->stock);
         $this->assertSame(0, $second->fresh()->stock);

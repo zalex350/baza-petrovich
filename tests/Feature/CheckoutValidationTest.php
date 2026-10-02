@@ -59,7 +59,7 @@ class CheckoutValidationTest extends TestCase
     {
         return $this->actingAs($user ?? $this->client)
             ->from('/order')
-            ->post('/order/checkout', array_filter(['checkout_token' => $token]));
+            ->post('/order/checkout', $this->checkoutData($user ?? $this->client, array_filter(['checkout_token' => $token])));
     }
 
     /**
@@ -152,6 +152,9 @@ class CheckoutValidationTest extends TestCase
 
     public function test_ready_cart_shows_state_and_active_checkout_button(): void
     {
+        // Без адреса доставки кнопка оформления неактивна — заводим адрес организации
+        $this->checkoutData($this->client);
+
         $this->add($this->product('A-1'), 2);
 
         $response = $this->actingAs($this->client)->get('/order')

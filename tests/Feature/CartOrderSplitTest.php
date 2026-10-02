@@ -59,7 +59,7 @@ class CartOrderSplitTest extends TestCase
     {
         $user ??= $this->client;
 
-        $this->actingAs($user)->post('/order/checkout')->assertRedirect('/orders');
+        $this->actingAs($user)->post('/order/checkout', $this->checkoutData($user))->assertRedirect('/orders');
 
         return Order::where('user_id', $user->id)->latest('id')->firstOrFail();
     }
@@ -210,7 +210,7 @@ class CartOrderSplitTest extends TestCase
 
         $this->actingAs($this->client)
             ->from('/order')
-            ->post('/order/checkout')
+            ->post('/order/checkout', $this->checkoutData($this->client))
             ->assertRedirect('/order')
             ->assertSessionHas('error');
 
@@ -305,7 +305,7 @@ class CartOrderSplitTest extends TestCase
 
         $this->actingAs($this->client)
             ->from('/order')
-            ->post('/order/checkout')
+            ->post('/order/checkout', $this->checkoutData($this->client))
             ->assertRedirect('/order')
             ->assertSessionHas('error', 'Корзина пуста');
 
