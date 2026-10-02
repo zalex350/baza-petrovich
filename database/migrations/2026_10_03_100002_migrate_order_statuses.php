@@ -6,8 +6,11 @@ use Illuminate\Support\Facades\DB;
 /**
  * Перевод строковых статусов в значения App\Enums\OrderStatus:
  *   new → new, processing → in_progress, shipped → shipped, deleted → cancelled.
- * У бывших deleted остаток уже был возвращён при удалении — ставим stock_returned_at.
- * Каждому заказу добавляется первая запись истории с его текущим статусом.
+ * Остатки товаров миграция не трогает: у бывших deleted остаток уже был возвращён
+ * при удалении клиентом — им только ставится отметка stock_returned_at, чтобы
+ * повторная отмена не вернула его второй раз.
+ * Каждому заказу добавляется первая запись истории с его текущим статусом:
+ * без автора, с комментарием «Перенос статуса при обновлении системы».
  */
 return new class extends Migration
 {
@@ -16,7 +19,7 @@ return new class extends Migration
         'deleted'    => 'cancelled',
     ];
 
-    private const BACKFILL_COMMENT = 'Статус на момент перехода на историю статусов';
+    private const BACKFILL_COMMENT = 'Перенос статуса при обновлении системы';
 
     public function up(): void
     {
@@ -43,9 +46,9 @@ return new class extends Migration
                         'order_id'    => $order->id,
                         'from_status' => null,
                         'to_status'   => $order->status,
-                        // Кто менял статус раньше, неизвестно; оформил заказ — его автор
-                        'user_id'     => $isNew && $this->userExists($order->user_id) ? $order->user_id : null,
-                        'comment'     => $isNew ? null : self::BACKFILL_COMMENT,
+                        // Запись создана миграцией, а не человеком: автора нет
+                        'user_id'     => null,
+                        'comment'     => self::BACKFILL_COMMENT,
                         'created_at'  => $isNew ? $order->placed_at : ($order->updated_at ?? $order->placed_at),
                     ]);
                 });
@@ -74,10 +77,5 @@ return new class extends Migration
                 DB::table('orders')->where('status', $new)->update(['status' => $old]);
             }
         });
-    }
-
-    private function userExists(?int $userId): bool
-    {
-        return $userId !== null && DB::table('users')->where('id', $userId)->exists();
     }
 };

@@ -82,20 +82,41 @@ class OrderStatusMigrationTest extends TestCase
 
         $this->assertCount(3, $history);
 
-        $this->assertNull($history[$new]->from_status);
+        // Записи созданы миграцией: без автора, с одинаковым комментарием
+        foreach ([$new, $deleted, $orphan] as $id) {
+            $this->assertNull($history[$id]->from_status);
+            $this->assertNull($history[$id]->user_id);
+            $this->assertSame('Перенос статуса при обновлении системы', $history[$id]->comment);
+        }
+
         $this->assertSame('new', $history[$new]->to_status);
-        $this->assertSame($this->user->id, (int) $history[$new]->user_id);
-        $this->assertNull($history[$new]->comment);
         $this->assertSame('2026-09-01 10:00:00', $history[$new]->created_at);
 
-        // Кто и когда отменил — неизвестно: автор пуст, дата — последнее изменение заказа
+        // Когда отменили — неизвестно: берётся дата последнего изменения заказа
         $this->assertSame('cancelled', $history[$deleted]->to_status);
-        $this->assertNull($history[$deleted]->user_id);
         $this->assertSame('2026-09-05 12:00:00', $history[$deleted]->created_at);
-        $this->assertNotNull($history[$deleted]->comment);
+    }
 
-        // Автор заказа удалён — запись без пользователя, а не ошибка внешнего ключа
-        $this->assertNull($history[$orphan]->user_id);
+    public function test_migration_does_not_touch_product_stock(): void
+    {
+        $product = \App\Models\Product::create(['name' => 'Grohe', 'sku' => 'GR-1', 'price' => 100, 'stock' => 7]);
+
+        foreach (['new', 'processing', 'shipped', 'deleted'] as $status) {
+            DB::table('order_items')->insert([
+                'order_id'   => $this->legacyOrder($status),
+                'product_id' => $product->id,
+                'quantity'   => 2,
+                'price'      => 100,
+            ]);
+        }
+
+        $this->migration()->up();
+
+        $this->assertSame(7, $product->fresh()->stock);
+
+        $this->migration()->down();
+
+        $this->assertSame(7, $product->fresh()->stock);
     }
 
     public function test_up_is_idempotent(): void
