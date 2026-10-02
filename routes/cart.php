@@ -35,6 +35,11 @@ Route::middleware('auth')->group(function () {
     );
 
     Route::post(
+        '/order/accept-prices',
+        [CartController::class, 'acceptPrices']
+    );
+
+    Route::post(
         '/order/checkout',
         [CartController::class, 'checkout']
     );

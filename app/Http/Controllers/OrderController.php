@@ -137,6 +137,7 @@ class OrderController extends Controller
                 CartItem::create([
                     'cart_id' => $cart->id,
                     'product_id' => $product->id,
+                    'product_name' => $product->display_name ?: $product->name,
                     'quantity' => $qtyToAdd,
                     'price_at_add' => $product->price,
                 ]);
