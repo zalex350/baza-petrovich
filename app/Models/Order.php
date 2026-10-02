@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\OrderStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -17,10 +19,13 @@ class Order extends Model
         'organization_id',
         'placed_at',
         'checkout_token',
+        'stock_returned_at',
     ];
 
     protected $casts = [
+        'status' => OrderStatus::class,
         'placed_at' => 'datetime',
+        'stock_returned_at' => 'datetime',
     ];
 
     public function items()
@@ -36,6 +41,22 @@ class Order extends Model
     public function organization()
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    public function statusHistory()
+    {
+        return $this->hasMany(OrderStatusHistory::class)->orderBy('id');
+    }
+
+    /**
+     * Заказы, которые видит пользователь в кабинете (BR-113, BR-114):
+     * все заказы его организации; без организации — только свои.
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        return $user->organization_id
+            ? $query->where('organization_id', $user->organization_id)
+            : $query->where('user_id', $user->id);
     }
 
     /**
@@ -58,9 +79,4 @@ class Order extends Model
 
         return sprintf('SM-%d-%06d', $year, $next);
     }
-
-    public const STATUS_NEW = 'new';
-    public const STATUS_PROCESSING = 'processing';
-    public const STATUS_SHIPPED = 'shipped';
-    const STATUS_DELETED = 'deleted';
 }

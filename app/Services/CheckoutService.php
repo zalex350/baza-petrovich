@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\OrderStatus;
 use App\Exceptions\CheckoutException;
 use App\Models\Cart;
 use App\Models\Order;
@@ -15,8 +16,10 @@ use Illuminate\Support\Facades\DB;
  */
 class CheckoutService
 {
-    public function __construct(private readonly CartValidator $validator)
-    {
+    public function __construct(
+        private readonly CartValidator $validator,
+        private readonly OrderStatusService $statuses,
+    ) {
     }
 
     /**
@@ -83,7 +86,7 @@ class CheckoutService
                 'number'          => Order::nextNumber($placedAt),
                 'user_id'         => $user->id,
                 'organization_id' => $user->organization_id,
-                'status'          => Order::STATUS_NEW,
+                'status'          => OrderStatus::New,
                 'total'           => $items->sum('subtotal'),
                 'placed_at'       => $placedAt,
                 'checkout_token'  => $token,
@@ -108,6 +111,8 @@ class CheckoutService
             }
 
             $cart->items()->delete();
+
+            $this->statuses->recordPlaced($order, $user);
 
             return $order;
         });

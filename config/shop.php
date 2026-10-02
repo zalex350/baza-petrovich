@@ -19,4 +19,10 @@ return [
     // Время жизни кэша дерева категорий для меню, секунд
     'catalog_menu_ttl' => (int) env('SHOP_CATALOG_MENU_TTL', 3600),
 
+    'orders' => [
+        // Статусы заказов меняет менеджер вручную в админке. false — ручная смена
+        // отключена (статусы приходят из внешней системы, например 1С).
+        'manual_status' => (bool) env('SHOP_ORDERS_MANUAL_STATUS', true),
+    ],
+
 ];
