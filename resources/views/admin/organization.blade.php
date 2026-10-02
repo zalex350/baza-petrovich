@@ -116,6 +116,42 @@
 
 </div>
 
+{{-- Адреса доставки --}}
+<div class="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
+
+    <div class="flex items-center justify-between mb-4">
+
+        <h2 class="text-lg font-semibold">
+            Адреса доставки
+            <span class="text-sm font-normal text-slate-400 ml-2">{{ $organization->deliveryAddresses->count() }}</span>
+        </h2>
+
+        <a
+            href="/admin/organization/{{ $organization->id }}/address/create"
+            class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded text-sm"
+        >
+            Добавить адрес
+        </a>
+
+    </div>
+
+    @if($organization->deliveryAddresses->isEmpty())
+
+        <p class="text-slate-500">
+            У клиента пока нет адресов доставки — оформить заказ он не сможет.
+        </p>
+
+    @else
+
+        @include('partials.address_list', [
+            'addresses' => $organization->deliveryAddresses,
+            'baseUrl'   => '/admin/organization/'.$organization->id.'/address',
+        ])
+
+    @endif
+
+</div>
+
 {{-- Опасная зона --}}
 <div class="mt-6">
 
