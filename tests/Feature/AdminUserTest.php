@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\OrderStatus;
 use App\Enums\UserRole;
 use App\Models\Order;
 use App\Models\Organization;
@@ -329,7 +330,7 @@ class AdminUserTest extends TestCase
         $order = Order::create([
             'user_id'         => $user->id,
             'organization_id' => $this->org->id,
-            'status'          => Order::STATUS_NEW,
+            'status'          => OrderStatus::New,
             'total'           => 150,
         ]);
         $newOrg = Organization::factory()->create();
@@ -344,7 +345,7 @@ class AdminUserTest extends TestCase
         $order->refresh();
         $this->assertSame($this->org->id, $order->organization_id);
         $this->assertSame($user->id, $order->user_id);
-        $this->assertSame(Order::STATUS_NEW, $order->status);
+        $this->assertSame(OrderStatus::New, $order->status);
         $this->assertEquals(150, $order->total);
     }
 
