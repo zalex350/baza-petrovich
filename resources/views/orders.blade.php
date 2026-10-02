@@ -40,7 +40,7 @@
 
         @else
 
-            @include('partials.orders_table', ['orders' => $activeOrders, 'showDelete' => true])
+            @include('partials.orders_table', ['orders' => $activeOrders])
 
         @endif
 
@@ -56,7 +56,7 @@
                 Архив
             </h2>
 
-            @include('partials.orders_table', ['orders' => $archivedOrders, 'showDelete' => false])
+            @include('partials.orders_table', ['orders' => $archivedOrders])
 
         </div>
 

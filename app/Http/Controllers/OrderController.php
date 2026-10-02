@@ -2,83 +2,68 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\OrderStatus;
+use App\Exceptions\InvalidStatusTransition;
 use App\Models\CartItem;
 use App\Models\Order;
+use App\Services\OrderStatusService;
 
 class OrderController extends Controller
 {
     public function index()
     {
-        $activeOrders = Order::where('user_id', auth()->id())
-            ->whereIn('status', [Order::STATUS_NEW, Order::STATUS_PROCESSING])
+        // BR-113, BR-114: клиент видит заказы всей своей организации
+        $orders = Order::visibleTo(auth()->user())
+            ->with('user')
             ->orderByDesc('placed_at')
             ->orderByDesc('id')
             ->get();
 
-        $archivedOrders = Order::where('user_id', auth()->id())
-            ->where('status', Order::STATUS_SHIPPED)
-            ->orderByDesc('placed_at')
-            ->orderByDesc('id')
-            ->get();
+        [$archivedOrders, $activeOrders] = $orders->partition(fn (Order $order) => $order->status->isFinal());
 
         return view('orders', compact('activeOrders', 'archivedOrders'));
     }
 
     public function show($id)
     {
-        $order = Order::with('items.product')
-            ->where('user_id', auth()->id())
+        $order = Order::visibleTo(auth()->user())
+            ->with(['items.product', 'user', 'statusHistory'])
             ->where('id', $id)
             ->firstOrFail();
 
         return view('order_show', compact('order'));
     }
 
-    public function delete($id)
+    /**
+     * Клиент заказ не удаляет (BR-133), но может отменить свой заказ, пока он «Новый».
+     */
+    public function cancel($id, OrderStatusService $statuses)
     {
-        $order = Order::findOrFail($id);
+        $order = Order::visibleTo(auth()->user())->where('id', $id)->firstOrFail();
 
+        // Отменить можно только заказ, который оформил сам, — не заказ коллеги по организации
         if ($order->user_id !== auth()->id()) {
             abort(403);
         }
 
-        if ($order->status !== Order::STATUS_NEW) {
-
-            return back()->with(
-                'error',
-                'Удалить можно только новый заказ'
-            );
-
+        if ($order->status !== OrderStatus::New) {
+            return back()->with('error', 'Отменить можно только заказ в статусе «Новый»');
         }
-        foreach ($order->items as $item) {
 
-            $product = $item->product;
-
-            // Товар мог быть удалён после оформления — возвращать остаток некуда
-            if (! $product) {
-                continue;
-            }
-
-            $product->stock += $item->quantity;
-
-            $product->save();
-
+        try {
+            $statuses->change($order, OrderStatus::Cancelled, auth()->user(), 'Отменён клиентом');
+        } catch (InvalidStatusTransition $e) {
+            // Статус успел измениться между проверкой и блокировкой заказа
+            return back()->with('error', 'Отменить можно только заказ в статусе «Новый»');
         }
-        $order->status = Order::STATUS_DELETED;
-
-        $order->save();
 
         return redirect('/orders')
-            ->with('success', 'Заказ удалён');
+            ->with('success', "Заказ {$order->number} отменён");
     }
 
     public function reorder($id)
     {
-        $oldOrder = Order::findOrFail($id);
-
-        if ($oldOrder->user_id !== auth()->id()) {
-            abort(403);
-        }
+        $oldOrder = Order::visibleTo(auth()->user())->where('id', $id)->firstOrFail();
 
         $cart = auth()->user()->cart()->firstOrCreate();
 

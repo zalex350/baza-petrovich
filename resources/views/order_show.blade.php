@@ -12,7 +12,12 @@
 
     <p class="mb-2">
         Статус:
-        <strong>{{ $order->status }}</strong>
+        @include('partials.order_status', ['status' => $order->status])
+    </p>
+
+    <p class="mb-2">
+        Оформил:
+        {{ $order->user->name ?? '—' }}
     </p>
 
     <p class="mb-2">
@@ -149,6 +154,30 @@
 
     </div>
 
+    <div class="flex items-center gap-3">
+
+    {{-- Отменить можно только свой заказ и только пока он «Новый» --}}
+    @if($order->status === \App\Enums\OrderStatus::New && $order->user_id === auth()->id())
+
+        <form
+            method="POST"
+            action="/order/{{ $order->id }}/cancel"
+        >
+
+            @csrf
+
+            <button
+                type="submit"
+                class="rounded-xl border border-red-300 text-red-700 hover:bg-red-50 px-5 py-2.5 transition"
+                onclick="return confirm('Отменить заказ {{ $order->number }}?')"
+            >
+                Отменить заказ
+            </button>
+
+        </form>
+
+    @endif
+
     <form
         method="POST"
         action="/order/{{ $order->id }}/reorder"
@@ -164,6 +193,14 @@
         </button>
 
     </form>
+
+    </div>
+
+</div>
+
+<div class="mt-8">
+
+    @include('partials.order_history', ['order' => $order, 'showAuthor' => false])
 
 </div>
 
