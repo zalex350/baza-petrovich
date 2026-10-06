@@ -36,6 +36,8 @@
 
 </div>
 
+@include('partials.order_delivery', ['order' => $order])
+
 <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
 
     <table class="w-full text-left">

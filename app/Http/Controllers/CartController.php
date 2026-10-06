@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Services\CartValidator;
 use App\Services\CheckoutService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -28,7 +29,10 @@ class CartController extends Controller
         // Одноразовый токен формы оформления — защита от двойной отправки
         $checkoutToken = (string) Str::uuid();
 
-        return view('order', compact('cart', 'validation', 'checkoutToken'));
+        // Адреса доставки организации для выбора при оформлении (BR-128)
+        $addresses = auth()->user()->organization?->deliveryAddresses ?? collect();
+
+        return view('order', compact('cart', 'validation', 'checkoutToken', 'addresses'));
     }
 
     public function add($id)
@@ -147,17 +151,37 @@ class CartController extends Controller
         $token = request('checkout_token');
         $token = is_string($token) && $token !== '' && strlen($token) <= 64 ? $token : null;
 
+        $validator = Validator::make(request()->all(), [
+            'delivery_address_id' => ['nullable', 'integer'],
+            'comment'             => ['nullable', 'string', 'max:1000'],
+        ], [
+            'delivery_address_id.integer' => CheckoutException::ADDRESS_REQUIRED,
+            'comment.max'                 => 'Комментарий к заказу не длиннее 1000 символов',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect('/order')->withErrors($validator)->withInput();
+        }
+
+        $data = $validator->validated();
+
         try {
-            $checkout->place(auth()->user(), $token);
+            $checkout->place(
+                auth()->user(),
+                $token,
+                isset($data['delivery_address_id']) ? (int) $data['delivery_address_id'] : null,
+                $data['comment'] ?? null,
+            );
         } catch (CheckoutException $e) {
-            $redirect = redirect('/order')->with('error', $e->getMessage());
+            // withInput: выбранный адрес и комментарий не теряются
+            $redirect = redirect('/order')->with('error', $e->getMessage())->withInput();
 
             return $e->problems ? $redirect->withErrors($e->problems) : $redirect;
         } catch (Throwable $e) {
             // Транзакция уже откатилась: заказа нет, корзина и остатки не тронуты
             report($e);
 
-            return redirect('/order')->with('error', CheckoutException::CREATION_FAILED);
+            return redirect('/order')->with('error', CheckoutException::CREATION_FAILED)->withInput();
         }
 
         return redirect('/orders')

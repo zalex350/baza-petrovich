@@ -9,7 +9,7 @@
     // Активный раздел (BR-008)
     $isCatalog = request()->is('catalog*') || request()->is('product/*');
     $isCart    = request()->is('order');
-    $isCabinet = request()->is('orders*') || request()->is('profile*');
+    $isCabinet = request()->is('orders*') || request()->is('profile*') || request()->is('addresses*');
 @endphp
 
 <header class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50" data-header>
@@ -146,6 +146,9 @@
                         <div class="px-4 pb-2 mb-1 border-b border-slate-100 text-xs text-slate-400">Личный кабинет</div>
                         <a href="/orders" class="block px-4 py-2 hover:bg-slate-50" role="menuitem">Кабинет</a>
                         <a href="/orders" class="block px-4 py-2 hover:bg-slate-50" role="menuitem">Мои заказы</a>
+                        @if($user->isClient())
+                            <a href="/addresses" class="block px-4 py-2 hover:bg-slate-50" role="menuitem">Адреса доставки</a>
+                        @endif
                         <a href="{{ route('profile.edit') }}" class="block px-4 py-2 hover:bg-slate-50" role="menuitem">Профиль</a>
                         <form method="POST" action="{{ route('logout') }}" class="border-t border-slate-100 mt-1 pt-1">
                             @csrf

@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminOrganizationController;
+use App\Http\Controllers\Admin\AdminDeliveryAddressController;
 
 /*
 |--------------------------------------------------------------------------
@@ -123,6 +124,36 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post(
         '/admin/organization/{id}/delete',
         [AdminOrganizationController::class, 'destroy']
+    );
+
+    Route::get(
+        '/admin/organization/{organization}/address/create',
+        [AdminDeliveryAddressController::class, 'create']
+    );
+
+    Route::post(
+        '/admin/organization/{organization}/address',
+        [AdminDeliveryAddressController::class, 'store']
+    );
+
+    Route::get(
+        '/admin/organization/{organization}/address/{id}/edit',
+        [AdminDeliveryAddressController::class, 'edit']
+    );
+
+    Route::post(
+        '/admin/organization/{organization}/address/{id}',
+        [AdminDeliveryAddressController::class, 'update']
+    );
+
+    Route::post(
+        '/admin/organization/{organization}/address/{id}/default',
+        [AdminDeliveryAddressController::class, 'makeDefault']
+    );
+
+    Route::post(
+        '/admin/organization/{organization}/address/{id}/delete',
+        [AdminDeliveryAddressController::class, 'destroy']
     );
 
     Route::get(

@@ -42,6 +42,8 @@
 
 </div>
 
+@include('partials.order_delivery', ['order' => $order])
+
 <div class="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
 
     <h2 class="text-xl font-semibold mb-4">

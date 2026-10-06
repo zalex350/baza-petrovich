@@ -352,8 +352,104 @@
 
                 <input type="hidden" name="checkout_token" value="{{ $checkoutToken }}">
 
+                {{-- Адрес доставки: выбор обязателен (BR-128), только адреса своей организации (BR-129) --}}
+                <fieldset class="mb-6">
+
+                    <legend class="font-semibold mb-2">
+                        Адрес доставки <span class="text-red-600">*</span>
+                    </legend>
+
+                    @if($addresses->isEmpty())
+
+                        <p class="text-slate-600">
+                            У организации нет адресов доставки.
+                            <a href="/addresses/create" class="text-blue-600 hover:text-blue-700 underline">Добавьте адрес</a>,
+                            чтобы оформить заказ.
+                        </p>
+
+                    @else
+
+                        @php
+                            $selectedAddress = old('delivery_address_id', $addresses->firstWhere('is_default', true)?->id);
+                        @endphp
+
+                        <div class="space-y-2">
+
+                            @foreach($addresses as $address)
+
+                                <label class="flex items-start gap-3 border border-slate-200 rounded-xl p-3 cursor-pointer hover:bg-slate-50">
+
+                                    <input
+                                        type="radio"
+                                        name="delivery_address_id"
+                                        value="{{ $address->id }}"
+                                        class="mt-1"
+                                        @checked((string) $selectedAddress === (string) $address->id)
+                                        required
+                                    >
+
+                                    <span>
+
+                                        <span class="font-medium text-slate-800">
+                                            {{ $address->title }}
+                                        </span>
+
+                                        @if($address->is_default)
+
+                                            <span class="inline-flex rounded-full bg-green-100 text-green-700 px-2 py-0.5 text-xs ml-1">
+                                                По умолчанию
+                                            </span>
+
+                                        @endif
+
+                                        <span class="block text-slate-600">
+                                            {{ $address->address }}
+                                        </span>
+
+                                        @if($address->contact_name || $address->contact_phone)
+
+                                            <span class="block text-sm text-slate-500">
+                                                {{ collect([$address->contact_name, $address->contact_phone])->filter()->implode(', ') }}
+                                            </span>
+
+                                        @endif
+
+                                    </span>
+
+                                </label>
+
+                            @endforeach
+
+                        </div>
+
+                        <a href="/addresses" class="inline-block mt-2 text-sm text-blue-600 hover:text-blue-700 underline">
+                            Управление адресами
+                        </a>
+
+                    @endif
+
+                </fieldset>
+
+                {{-- Комментарий к заказу — необязательный (BR-130) --}}
+                <div class="mb-6">
+
+                    <label for="comment" class="block font-semibold mb-2">
+                        Комментарий к заказу
+                    </label>
+
+                    <textarea
+                        id="comment"
+                        name="comment"
+                        rows="3"
+                        maxlength="1000"
+                        placeholder="Необязательно"
+                        class="w-full max-w-2xl border border-slate-300 rounded px-3 py-2"
+                    >{{ old('comment') }}</textarea>
+
+                </div>
+
                 <button
-                    @disabled(! $validation->isReady())
+                    @disabled(! $validation->isReady() || $addresses->isEmpty())
                     class="bg-green-600 text-white px-6 py-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Оформить заказ

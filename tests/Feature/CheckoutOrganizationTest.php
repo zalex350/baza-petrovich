@@ -43,7 +43,7 @@ class CheckoutOrganizationTest extends TestCase
 
         $this->fillCart($client);
 
-        $this->actingAs($client)->post('/order/checkout')->assertRedirect('/orders');
+        $this->actingAs($client)->post('/order/checkout', $this->checkoutData($client))->assertRedirect('/orders');
 
         $order = Order::where('user_id', $client->id)->first();
 
@@ -61,7 +61,7 @@ class CheckoutOrganizationTest extends TestCase
 
         $this->actingAs($client)
             ->from('/order')
-            ->post('/order/checkout')
+            ->post('/order/checkout', $this->checkoutData($client))
             ->assertRedirect('/order')
             ->assertSessionHas('error', 'Пользователь не привязан к организации');
 
@@ -80,7 +80,7 @@ class CheckoutOrganizationTest extends TestCase
         $this->actingAs($client)
             ->from('/order')
             ->followingRedirects()
-            ->post('/order/checkout')
+            ->post('/order/checkout', $this->checkoutData($client))
             ->assertSee('Пользователь не привязан к организации');
     }
 
@@ -96,7 +96,7 @@ class CheckoutOrganizationTest extends TestCase
 
             $this->actingAs($admin)
                 ->from('/order')
-                ->post('/order/checkout')
+                ->post('/order/checkout', $this->checkoutData($admin))
                 ->assertRedirect('/order')
                 ->assertSessionHas('error', 'Оформлять заказы могут только клиенты');
 
