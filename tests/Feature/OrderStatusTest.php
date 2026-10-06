@@ -16,7 +16,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * Статусы заказа: переходы, история, возврат остатка, отмена клиентом (SRS §10.7, BR-133).
+ * Статусы заказа: переходы, история, возврат остатка; клиент сам не отменяет (SRS §10.7, BR-133).
  */
 class OrderStatusTest extends TestCase
 {
@@ -57,7 +57,7 @@ class OrderStatusTest extends TestCase
         $user ??= $this->client;
 
         $this->actingAs($user)->post("/order/add/{$this->product->id}", ['qty' => $qty]);
-        $this->actingAs($user)->post('/order/checkout', $this->checkoutData($user))->assertRedirect('/orders');
+        $this->actingAs($user)->post('/order/checkout', $this->checkoutData($user))->assertRedirectContains('/placed');
 
         return Order::where('user_id', $user->id)->latest('id')->firstOrFail();
     }
@@ -422,82 +422,23 @@ class OrderStatusTest extends TestCase
         $this->assertSame(1, Order::count());
     }
 
-    public function test_client_cancels_own_new_order(): void
+    public function test_client_cannot_cancel_order_directly(): void
     {
         $order = $this->placeOrder();
 
-        $this->actingAs($this->client)
-            ->post("/order/{$order->id}/cancel")
-            ->assertRedirect('/orders')
-            ->assertSessionHas('success');
+        // Маршрута прямой отмены нет — только запрос (OrderCancelRequestTest)
+        $response = $this->actingAs($this->client)->post("/order/{$order->id}/cancel");
 
-        $this->assertSame(OrderStatus::Cancelled, $order->fresh()->status);
-        $this->assertSame(10, $this->product->fresh()->stock);
-
-        $record = $order->statusHistory()->get()->last();
-        $this->assertSame(OrderStatus::New, $record->from_status);
-        $this->assertSame(OrderStatus::Cancelled, $record->to_status);
-        $this->assertSame($this->client->id, $record->user_id);
-        $this->assertSame('Отменён клиентом', $record->comment);
-
-        // Отменённый заказ остаётся виден клиенту
-        $this->actingAs($this->client)->get('/orders')
-            ->assertOk()
-            ->assertSee($order->number)
-            ->assertSee('Отменён');
-    }
-
-    public function test_client_cannot_cancel_order_that_is_not_new(): void
-    {
-        foreach ([OrderStatus::Confirmed, OrderStatus::SentTo1c, OrderStatus::Shipped, OrderStatus::Cancelled] as $status) {
-            $order = $this->orderIn($status);
-            $stock = $this->product->fresh()->stock;
-
-            $this->actingAs($this->client)
-                ->from('/orders')
-                ->post("/order/{$order->id}/cancel")
-                ->assertRedirect('/orders')
-                ->assertSessionHas('error', 'Отменить можно только заказ в статусе «Новый»');
-
-            $this->assertSame($status, $order->fresh()->status);
-            $this->assertSame($stock, $this->product->fresh()->stock);
-        }
-    }
-
-    public function test_client_cannot_cancel_colleagues_or_foreign_order(): void
-    {
-        $order = $this->placeOrder();
-
-        $colleague = User::factory()->create(['organization_id' => $this->client->organization_id]);
-        $stranger = User::factory()->create(['organization_id' => Organization::factory()->create()->id]);
-
-        $this->actingAs($colleague)->post("/order/{$order->id}/cancel")->assertForbidden();
-        $this->actingAs($stranger)->post("/order/{$order->id}/cancel")->assertNotFound();
-
+        $this->assertContains($response->status(), [404, 405]);
         $this->assertSame(OrderStatus::New, $order->fresh()->status);
         $this->assertSame(8, $this->product->fresh()->stock);
-    }
-
-    public function test_cancel_button_is_shown_with_confirmation_only_for_own_new_order(): void
-    {
-        $order = $this->placeOrder();
-        $colleague = User::factory()->create(['organization_id' => $this->client->organization_id]);
 
         foreach (['/orders', "/order/{$order->id}"] as $url) {
             $this->actingAs($this->client)->get($url)
                 ->assertOk()
-                ->assertSee("/order/{$order->id}/cancel", false)
-                ->assertSee("confirm('Отменить заказ {$order->number}?')", false);
-
-            $this->actingAs($colleague)->get($url)
-                ->assertOk()
-                ->assertDontSee("/order/{$order->id}/cancel", false);
+                ->assertDontSee("/order/{$order->id}/cancel\"", false)
+                ->assertDontSee('Отменить заказ');
         }
-
-        $this->changeStatus($order, 'confirmed');
-
-        $this->actingAs($this->client)->get('/orders')
-            ->assertDontSee("/order/{$order->id}/cancel", false);
     }
 
     // --- Статусы в интерфейсе ---

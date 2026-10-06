@@ -13,6 +13,7 @@
     <p class="mb-2">
         Статус:
         @include('partials.order_status', ['status' => $order->status])
+        @include('partials.cancel_request_badge', ['order' => $order])
     </p>
 
     <p class="mb-2">
@@ -38,147 +39,81 @@
 
 @include('partials.order_delivery', ['order' => $order])
 
-<div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+@include('partials.order_items', ['order' => $order, 'admin' => false])
 
-    <table class="w-full text-left">
+{{-- Отмена — только запросом; решает менеджер --}}
+@if($order->hasOpenCancelRequest())
 
-        <thead class="bg-slate-50 border-b border-slate-200">
+    <div class="mt-6 bg-orange-50 rounded-2xl border border-orange-200 p-6" data-cancel-request>
 
-            <tr>
+        <h2 class="text-lg font-semibold text-orange-800 mb-1">
+            Запрошена отмена
+        </h2>
 
-                <th class="px-4 py-3 text-sm font-semibold text-slate-600">
-                    Фото
-                </th>
+        <p class="text-slate-700">
+            {{ $order->cancel_requested_at?->format('d.m.Y H:i') }}
+            @if($order->cancelRequester)
+                — {{ $order->cancelRequester->name }}
+            @endif
+        </p>
 
-                <th class="px-4 py-3 text-sm font-semibold text-slate-600">
-                    Товар
-                </th>
+        <p class="text-slate-700 whitespace-pre-line mt-1">Причина: {{ $order->cancel_reason }}</p>
 
-                <th class="px-4 py-3 text-sm font-semibold text-slate-600">
-                    Артикул
-                </th>
-
-                <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
-                    Цена
-                </th>
-
-                <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
-                    Количество
-                </th>
-
-                <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
-                    Сумма
-                </th>
-
-            </tr>
-
-        </thead>
-
-        <tbody class="divide-y divide-slate-200">
-
-            @foreach($order->items as $item)
-
-                <tr>
-
-                    <td class="px-4 py-3">
-
-                        @if($item->product?->image)
-
-                            <img
-                                src="{{ asset('storage/'.$item->product->image) }}"
-                                alt="{{ $item->product_name }}"
-                                class="w-12 h-12 object-contain rounded border border-slate-200">
-
-                        @else
-
-                            <div class="w-12 h-12 bg-slate-100 flex items-center justify-center rounded border border-slate-200 text-2xl">
-                                🚰
-                            </div>
-
-                        @endif
-
-                    </td>
-
-                    <td class="px-4 py-3">
-
-                        {{-- Название и артикул — из снимка заказа; ссылка только пока товар есть на витрине --}}
-                        @if($item->product && $item->product->is_active && $item->product->is_published)
-
-                            <a
-                                href="{{ route('product.show', $item->product->id) }}"
-                                class="font-medium text-slate-800 hover:text-blue-600 transition"
-                            >
-                                {{ $item->product_name }}
-                            </a>
-
-                        @else
-
-                            <span class="font-medium text-slate-800">
-                                {{ $item->product_name }}
-                            </span>
-
-                        @endif
-
-                    </td>
-
-                    <td class="px-4 py-3 text-sm text-slate-400">
-                        {{ $item->product_sku }}
-                    </td>
-
-                    <td class="px-4 py-3 text-right text-slate-700">
-                        {{ $item->price }} BYN
-                    </td>
-
-                    <td class="px-4 py-3 text-right text-slate-700">
-                        {{ $item->quantity }}
-                    </td>
-
-                    <td class="px-4 py-3 text-right font-semibold text-slate-800">
-                        {{ $item->price * $item->quantity }} BYN
-                    </td>
-
-                </tr>
-
-            @endforeach
-
-        </tbody>
-
-    </table>
-
-</div>
-
-<div class="mt-8 flex items-center justify-between">
-
-    <div class="text-2xl font-bold">
-
-        Итого:
-        {{ $order->total }} BYN
+        <p class="text-sm text-slate-500 mt-2">
+            Менеджер рассмотрит запрос; решение появится в истории заказа.
+        </p>
 
     </div>
 
-    <div class="flex items-center gap-3">
+@elseif($order->canRequestCancel(auth()->user()))
 
-    {{-- Отменить можно только свой заказ и только пока он «Новый» --}}
-    @if($order->status === \App\Enums\OrderStatus::New && $order->user_id === auth()->id())
+    <details class="mt-6 bg-white rounded-2xl border border-slate-200 p-6" @if($errors->has('cancel_reason')) open @endif>
+
+        <summary class="cursor-pointer font-semibold text-red-700">
+            Запросить отмену
+        </summary>
 
         <form
             method="POST"
-            action="/order/{{ $order->id }}/cancel"
+            action="/order/{{ $order->id }}/cancel-request"
+            class="mt-4 space-y-3 max-w-xl"
         >
 
             @csrf
 
+            <label for="cancel_reason" class="block text-sm font-medium text-slate-600">
+                Причина отмены <span class="text-red-600">*</span>
+            </label>
+
+            <textarea
+                id="cancel_reason"
+                name="cancel_reason"
+                rows="3"
+                maxlength="1000"
+                required
+                class="border border-slate-300 rounded px-3 py-2 w-full"
+            >{{ old('cancel_reason') }}</textarea>
+
+            @error('cancel_reason')
+                <p class="text-red-600 text-sm">{{ $message }}</p>
+            @enderror
+
             <button
                 type="submit"
                 class="rounded-xl border border-red-300 text-red-700 hover:bg-red-50 px-5 py-2.5 transition"
-                onclick="return confirm('Отменить заказ {{ $order->number }}?')"
             >
-                Отменить заказ
+                Запросить отмену
             </button>
 
         </form>
 
-    @endif
+    </details>
+
+@endif
+
+<div class="mt-8 flex items-center justify-end">
+
+    <div class="flex items-center gap-3">
 
     <form
         method="POST"

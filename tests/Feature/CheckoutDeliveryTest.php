@@ -101,7 +101,7 @@ class CheckoutDeliveryTest extends TestCase
 
     public function test_order_stores_address_snapshot(): void
     {
-        $this->checkout(['delivery_address_id' => $this->address->id])->assertRedirect('/orders');
+        $this->checkout(['delivery_address_id' => $this->address->id])->assertRedirectContains('/placed');
 
         $order = Order::sole();
 
@@ -113,7 +113,7 @@ class CheckoutDeliveryTest extends TestCase
 
     public function test_snapshot_does_not_change_after_address_is_edited_or_deleted(): void
     {
-        $this->checkout(['delivery_address_id' => $this->address->id])->assertRedirect('/orders');
+        $this->checkout(['delivery_address_id' => $this->address->id])->assertRedirectContains('/placed');
         $order = Order::sole();
 
         $this->actingAs($this->client)->post("/addresses/{$this->address->id}", [
@@ -143,7 +143,7 @@ class CheckoutDeliveryTest extends TestCase
             'title' => 'Магазин', 'address' => 'г. Минск, пр. Независимости, 50',
         ]);
 
-        $this->checkout(['delivery_address_id' => $second->id])->assertRedirect('/orders');
+        $this->checkout(['delivery_address_id' => $second->id])->assertRedirectContains('/placed');
 
         $this->assertSame('Магазин', Order::sole()->delivery_title);
     }
@@ -155,7 +155,7 @@ class CheckoutDeliveryTest extends TestCase
         $this->checkout([
             'delivery_address_id' => $this->address->id,
             'comment'             => "  Позвонить за час до доставки.\nВъезд со двора.  ",
-        ])->assertRedirect('/orders');
+        ])->assertRedirectContains('/placed');
 
         $this->assertSame("Позвонить за час до доставки.\nВъезд со двора.", Order::sole()->comment);
     }
@@ -163,7 +163,7 @@ class CheckoutDeliveryTest extends TestCase
     public function test_comment_is_optional(): void
     {
         $this->checkout(['delivery_address_id' => $this->address->id, 'comment' => '   '])
-            ->assertRedirect('/orders');
+            ->assertRedirectContains('/placed');
 
         $this->assertNull(Order::sole()->comment);
     }
@@ -242,7 +242,7 @@ class CheckoutDeliveryTest extends TestCase
     public function test_address_and_comment_are_shown_in_client_and_admin_cards(): void
     {
         $this->checkout(['delivery_address_id' => $this->address->id, 'comment' => 'Въезд со двора'])
-            ->assertRedirect('/orders');
+            ->assertRedirectContains('/placed');
 
         $order = Order::sole();
 

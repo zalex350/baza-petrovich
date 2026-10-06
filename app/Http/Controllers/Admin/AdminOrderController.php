@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\OrderStatus;
+use App\Exceptions\CancelRequestException;
 use App\Exceptions\InvalidStatusTransition;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
@@ -21,6 +22,7 @@ class AdminOrderController extends Controller
             'status'    => ['nullable', Rule::enum(OrderStatus::class)],
             'date_from' => ['nullable', 'date'],
             'date_to'   => ['nullable', 'date'],
+            'cancel_request' => ['nullable', 'boolean'],
         ]);
 
         $q = trim((string) ($filters['q'] ?? ''));
@@ -44,6 +46,8 @@ class AdminOrderController extends Controller
                 });
             })
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
+            // Только заказы с открытым запросом на отмену
+            ->when($filters['cancel_request'] ?? null, fn ($query) => $query->whereNotNull('cancel_requested_at'))
             ->when($filters['date_from'] ?? null, fn ($query, $date) => $query->whereDate('placed_at', '>=', $date))
             ->when($filters['date_to'] ?? null, fn ($query, $date) => $query->whereDate('placed_at', '<=', $date))
             ->orderByDesc('placed_at')
@@ -63,7 +67,7 @@ class AdminOrderController extends Controller
 
     public function show($id)
     {
-        $order = Order::with(['user', 'organization', 'items', 'statusHistory.user'])->findOrFail($id);
+        $order = Order::with(['user', 'organization', 'items.product', 'statusHistory.user', 'cancelRequester'])->findOrFail($id);
 
         return view(
             'admin.order',
@@ -120,6 +124,51 @@ class AdminOrderController extends Controller
         }
 
         return back()->with('success', "Статус изменён: «{$to->label()}»");
+    }
+
+    /**
+     * Подтверждение запроса клиента на отмену: заказ отменяется, остаток возвращается.
+     */
+    public function approveCancel($id, OrderStatusService $statuses)
+    {
+        $order = Order::findOrFail($id);
+
+        $data = request()->validate([
+            'comment' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'comment.max' => 'Комментарий не длиннее 1000 символов',
+        ]);
+
+        try {
+            $statuses->approveCancel($order, auth()->user(), $data['comment'] ?? null);
+        } catch (CancelRequestException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', "Заказ {$order->number} отменён по запросу клиента");
+    }
+
+    /**
+     * Отклонение запроса на отмену: комментарий обязателен, статус не меняется.
+     */
+    public function rejectCancel($id, OrderStatusService $statuses)
+    {
+        $order = Order::findOrFail($id);
+
+        $data = request()->validate([
+            'reject_comment' => ['required', 'string', 'max:1000'],
+        ], [
+            'reject_comment.required' => 'Укажите причину отклонения',
+            'reject_comment.max'      => 'Комментарий не длиннее 1000 символов',
+        ]);
+
+        try {
+            $statuses->rejectCancel($order, auth()->user(), $data['reject_comment']);
+        } catch (CancelRequestException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Запрос на отмену отклонён');
     }
 
     private function manualStatus(): bool

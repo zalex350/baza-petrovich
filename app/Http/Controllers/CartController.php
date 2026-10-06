@@ -35,13 +35,23 @@ class CartController extends Controller
         return view('order', compact('cart', 'validation', 'checkoutToken', 'addresses'));
     }
 
+    /**
+     * Добавление из карточки и из списков товаров. Обычная форма возвращает на ту же
+     * страницу (с фильтрами и пагинацией); запрос с Accept: application/json получает
+     * JSON — для будущей отправки через fetch без переделки разметки.
+     */
     public function add($id)
     {
+        // BR-121: оформлять заказы могут только клиенты — корзина администратору не нужна
+        if (! auth()->user()->isClient()) {
+            return $this->addResult('Оформлять заказы могут только клиенты');
+        }
+
         $product = Product::find($id);
         $qty = max(1, (int) request('qty', 1));
 
         if (! $product) {
-            return back()->with('error', CartProblemType::Missing->title());
+            return $this->addResult(CartProblemType::Missing->title());
         }
 
         $cart = auth()->user()->cart()->firstOrCreate();
@@ -83,11 +93,26 @@ class CartController extends Controller
             return null;
         });
 
-        if ($error) {
-            return back()->with('error', $error);
+        return $this->addResult($error);
+    }
+
+    /**
+     * Ответ на добавление в корзину: $error = null — успех.
+     */
+    private function addResult(?string $error)
+    {
+        if (request()->expectsJson()) {
+            return response()->json(
+                ['ok' => $error === null, 'message' => $error ?? 'Товар добавлен в корзину'],
+                $error === null ? 200 : 422,
+                [],
+                JSON_UNESCAPED_UNICODE
+            );
         }
 
-        return back()->with('success', 'Товар добавлен в корзину');
+        return $error
+            ? back()->with('error', $error)
+            : back()->with('success', 'Товар добавлен в корзину');
     }
 
     public function update($id)
@@ -166,7 +191,7 @@ class CartController extends Controller
         $data = $validator->validated();
 
         try {
-            $checkout->place(
+            $order = $checkout->place(
                 auth()->user(),
                 $token,
                 isset($data['delivery_address_id']) ? (int) $data['delivery_address_id'] : null,
@@ -184,7 +209,7 @@ class CartController extends Controller
             return redirect('/order')->with('error', CheckoutException::CREATION_FAILED)->withInput();
         }
 
-        return redirect('/orders')
+        return redirect("/order/{$order->id}/placed")
             ->with('success', 'Заказ оформлен');
     }
 

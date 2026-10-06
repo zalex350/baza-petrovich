@@ -84,8 +84,12 @@
                     </p>
 
                     <p class="text-slate-600">
-                        НДС ({{ rtrim(rtrim(number_format($product->vat_rate, 2), '0'), '.') }}%):
-                        {{ number_format($product->vat_amount, 2) }} BYN
+                        @if($product->vat_rate === null)
+                            НДС: Без НДС
+                        @else
+                            НДС ({{ $product->vat_rate_label }}):
+                            {{ number_format($product->vat_amount, 2) }} BYN
+                        @endif
                     </p>
 
                     <h2 class="text-4xl font-semibold text-green-800">
@@ -99,7 +103,11 @@
                     В наличии: {{ $product->stock }}
                 </p>
 
-                @if($product->stock > 0 && $product->is_active)
+                @if(! auth()->user()->isClient())
+
+                    {{-- BR-121: оформлять заказы могут только клиенты --}}
+
+                @elseif($product->stock > 0 && $product->is_active)
 
                     <form
                         method="POST"

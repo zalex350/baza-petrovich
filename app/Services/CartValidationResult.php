@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Enums\CartProblemType;
 use App\Enums\CartState;
 use App\Models\CartItem;
+use App\Services\Vat\VatCalculator;
+use App\Services\Vat\VatTotal;
 use Illuminate\Support\Collection;
 
 /**
@@ -101,13 +103,25 @@ class CartValidationResult
     }
 
     /**
-     * Сумма корзины по ценам на момент добавления; недоступные товары не входят.
+     * Сумма корзины без НДС по ценам на момент добавления; недоступные товары не входят.
+     *
+     * @deprecated На экранах — totals() (без НДС / НДС / с НДС, НДС по позициям).
      */
     public function total(): float
     {
         return round(
             $this->items->reject(fn (CartItem $item) => $this->isUnavailable($item))->sum('subtotal'),
             2
+        );
+    }
+
+    /**
+     * Итог корзины с НДС — сумма позиций; недоступные товары не входят.
+     */
+    public function totals(): VatTotal
+    {
+        return app(VatCalculator::class)->total(
+            $this->items->reject(fn (CartItem $item) => $this->isUnavailable($item))->map->vatLine()
         );
     }
 }

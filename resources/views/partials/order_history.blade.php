@@ -58,6 +58,15 @@
 
                         <td class="py-2 pr-4">
 
+                            @if($record->event)
+
+                                {{-- Событие без смены статуса: запрос на отмену и решение по нему --}}
+                                <span class="inline-flex rounded-full px-3 py-1 text-sm {{ $record->event->color() }}">
+                                    {{ $record->event->label() }}
+                                </span>
+
+                            @else
+
                             @if($record->from_status)
 
                                 <span class="text-slate-500">
@@ -67,6 +76,8 @@
                             @endif
 
                             @include('partials.order_status', ['status' => $record->to_status])
+
+                            @endif
 
                         </td>
 

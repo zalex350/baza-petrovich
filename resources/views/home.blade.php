@@ -205,6 +205,8 @@
 
             </a>
 
+            @include('partials.product_buy', ['product' => $product])
+
         </div>
 
     </div>

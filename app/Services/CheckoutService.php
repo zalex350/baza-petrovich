@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\Vat\VatCalculator;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -20,6 +21,7 @@ class CheckoutService
     public function __construct(
         private readonly CartValidator $validator,
         private readonly OrderStatusService $statuses,
+        private readonly VatCalculator $vat,
     ) {
     }
 
@@ -97,6 +99,12 @@ class CheckoutService
 
             $placedAt = now();
 
+            // Снимок НДС: ставка товара на момент оформления, расчёт по позиции, итог — сумма позиций
+            $lines = $items->mapWithKeys(fn ($item) => [
+                $item->id => $this->vat->line($item->price_at_add, (int) $item->quantity, $products->get($item->product_id)->vat_rate),
+            ]);
+            $totals = $this->vat->total($lines);
+
             $order = Order::create([
                 'number'          => Order::nextNumber($placedAt),
                 'user_id'         => $user->id,
@@ -108,7 +116,10 @@ class CheckoutService
                 'delivery_contact_phone' => $address->contact_phone,
                 'comment'         => ($comment = trim((string) $comment)) !== '' ? $comment : null,
                 'status'          => OrderStatus::New,
-                'total'           => $items->sum('subtotal'),
+                'total'             => $totals->net,
+                'total_without_vat' => $totals->net,
+                'total_vat'         => $totals->vat,
+                'total_with_vat'    => $totals->gross,
                 'placed_at'       => $placedAt,
                 'checkout_token'  => $token,
             ]);
@@ -124,6 +135,9 @@ class CheckoutService
                     'quantity'     => $item->quantity,
                     'price'        => $item->price_at_add,
                     'vat_rate'     => $product->vat_rate,
+                    'amount_without_vat' => $lines[$item->id]->net,
+                    'vat_amount'         => $lines[$item->id]->vat,
+                    'amount_with_vat'    => $lines[$item->id]->gross,
                 ]);
 
                 // Остаток прочитан под блокировкой и проверен валидатором — в минус не уйдёт

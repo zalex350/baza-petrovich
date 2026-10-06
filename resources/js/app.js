@@ -1,5 +1,6 @@
 import './bootstrap';
 import './search-suggest';
+import './cart-add';
 
 import Alpine from 'alpinejs';
 import megaMenu from './mega-menu';

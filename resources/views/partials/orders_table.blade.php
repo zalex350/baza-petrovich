@@ -23,7 +23,15 @@
                 </th>
 
                 <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
-                    Сумма
+                    Без НДС
+                </th>
+
+                <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
+                    НДС
+                </th>
+
+                <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
+                    С НДС
                 </th>
 
                 <th class="px-4 py-3 text-sm font-semibold text-slate-600">
@@ -52,6 +60,7 @@
                         <div class="flex items-center gap-2">
 
                             @include('partials.order_status', ['status' => $order->status])
+                            @include('partials.cancel_request_badge', ['order' => $order])
 
                             @if($order->is_paid)
 
@@ -69,8 +78,16 @@
                         {{ $order->user->name ?? '—' }}
                     </td>
 
-                    <td class="px-4 py-3 text-right font-semibold text-slate-800">
-                        {{ $order->total }} BYN
+                    <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
+                        {{ number_format($order->total_without_vat, 2, '.', '') }} BYN
+                    </td>
+
+                    <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
+                        {{ number_format($order->total_vat, 2, '.', '') }} BYN
+                    </td>
+
+                    <td class="px-4 py-3 text-right font-semibold text-slate-800 whitespace-nowrap">
+                        {{ number_format($order->total_with_vat, 2, '.', '') }} BYN
                     </td>
 
                     <td class="px-4 py-3">
@@ -100,29 +117,6 @@
                                 </button>
 
                             </form>
-
-                            {{-- Отменить можно только свой заказ и только пока он «Новый» --}}
-                            @if($order->status === \App\Enums\OrderStatus::New && $order->user_id === auth()->id())
-
-                                <form
-                                    method="POST"
-                                    action="/order/{{ $order->id }}/cancel"
-                                    class="inline"
-                                >
-
-                                    @csrf
-
-                                    <button
-                                        type="submit"
-                                        class="text-red-600 hover:text-red-700 text-sm underline"
-                                        onclick="return confirm('Отменить заказ {{ $order->number }}?')"
-                                    >
-                                        Отменить
-                                    </button>
-
-                                </form>
-
-                            @endif
 
                         </div>
 

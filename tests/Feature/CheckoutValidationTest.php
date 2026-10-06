@@ -197,7 +197,7 @@ class CheckoutValidationTest extends TestCase
             ->assertSee('Недостаточный остаток товара')
             ->assertSee('Доступно 2, в корзине 5')
             // недоступные в итог не входят: OUT 100 + LOW 500 + OK 30
-            ->assertSee('Итого: 630.00 BYN');
+            ->assertSeeInOrder(['Сумма без НДС:', '630.00 BYN']);
 
         // Оформление недоступно, пока корзина не исправлена
         $this->assertMatchesRegularExpression('/<button\s+disabled/', $response->getContent());
@@ -243,7 +243,7 @@ class CheckoutValidationTest extends TestCase
         $this->actingAs($this->client)->get('/order')
             ->assertSee('data-cart-state="ready"', false)
             ->assertDontSee('Цена товара изменилась')
-            ->assertSee('Итого: 290.00 BYN');
+            ->assertSeeInOrder(['Сумма без НДС:', '290.00 BYN']);
     }
 
     public function test_accept_prices_does_not_touch_foreign_cart_or_unavailable_items(): void
@@ -385,7 +385,7 @@ class CheckoutValidationTest extends TestCase
 
         $this->actingAs($this->client)->post('/order/accept-prices');
 
-        $this->checkout()->assertRedirect('/orders');
+        $this->checkout()->assertRedirectContains('/placed');
 
         $order = Order::sole();
         $this->assertEquals(240, $order->total);
@@ -404,7 +404,7 @@ class CheckoutValidationTest extends TestCase
         $this->add($product)->assertSessionHas('success');
         $this->add($product, 1, $rival)->assertSessionHas('success');
 
-        $this->checkout()->assertRedirect('/orders');
+        $this->checkout()->assertRedirectContains('/placed');
 
         $response = $this->checkout($rival)->assertRedirect('/order');
 
@@ -423,7 +423,7 @@ class CheckoutValidationTest extends TestCase
         $this->add($product, 4);
         $this->add($product, 4, $rival);
 
-        $this->checkout()->assertRedirect('/orders');
+        $this->checkout()->assertRedirectContains('/placed');
         $this->checkout($rival)->assertRedirect('/order');
 
         $this->assertSame(1, $product->fresh()->stock);
@@ -437,10 +437,10 @@ class CheckoutValidationTest extends TestCase
         $product = $this->product('A-1');
         $this->add($product, 2);
 
-        $this->checkout(token: 'form-token-1')->assertRedirect('/orders')->assertSessionHas('success');
+        $this->checkout(token: 'form-token-1')->assertRedirectContains('/placed')->assertSessionHas('success');
 
         // Повтор той же формы — тот же результат для пользователя, без второго заказа
-        $this->checkout(token: 'form-token-1')->assertRedirect('/orders')->assertSessionHas('success');
+        $this->checkout(token: 'form-token-1')->assertRedirectContains('/placed')->assertSessionHas('success');
 
         $this->assertSame(1, Order::count());
         $this->assertSame('form-token-1', Order::sole()->checkout_token);
@@ -452,19 +452,19 @@ class CheckoutValidationTest extends TestCase
         $product = $this->product('A-1');
 
         $this->add($product, 2);
-        $this->checkout(token: 'form-token-1')->assertRedirect('/orders');
+        $this->checkout(token: 'form-token-1')->assertRedirectContains('/placed');
 
         // Новая корзина, отправленная со старым токеном (вкладка осталась открытой):
         // второго заказа нет, корзина не тронута
         $this->add($product, 1);
-        $this->checkout(token: 'form-token-1')->assertRedirect('/orders');
+        $this->checkout(token: 'form-token-1')->assertRedirectContains('/placed');
 
         $this->assertSame(1, Order::count());
         $this->assertSame(1, CartItem::count());
         $this->assertSame(8, $product->fresh()->stock);
 
         // С новым токеном — новый заказ
-        $this->checkout(token: 'form-token-2')->assertRedirect('/orders');
+        $this->checkout(token: 'form-token-2')->assertRedirectContains('/placed');
 
         $this->assertSame(2, Order::count());
         $this->assertSame(7, $product->fresh()->stock);
@@ -476,7 +476,7 @@ class CheckoutValidationTest extends TestCase
         $rival = $this->client();
 
         $this->add($product, 1, $rival);
-        $this->checkout($rival, 'rival-token')->assertRedirect('/orders');
+        $this->checkout($rival, 'rival-token')->assertRedirectContains('/placed');
 
         $this->checkout(token: 'rival-token')
             ->assertRedirect('/order')

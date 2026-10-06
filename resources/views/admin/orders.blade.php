@@ -94,6 +94,16 @@
 
     </div>
 
+    <label class="flex items-center gap-2 py-2">
+        <input
+            type="checkbox"
+            name="cancel_request"
+            value="1"
+            @checked($filters['cancel_request'] ?? false)
+        >
+        Запрос на отмену
+    </label>
+
     <button
         type="submit"
         class="bg-slate-800 hover:bg-slate-700 text-white px-5 py-2 rounded-xl transition"
@@ -155,7 +165,15 @@
                     </th>
 
                     <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
-                        Сумма
+                        Без НДС
+                    </th>
+
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
+                        НДС
+                    </th>
+
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
+                        С НДС
                     </th>
 
                     <th class="px-4 py-3 text-sm font-semibold text-slate-600">
@@ -192,6 +210,7 @@
                             <div class="flex items-center gap-2">
 
                                 @include('partials.order_status', ['status' => $order->status])
+                                @include('partials.cancel_request_badge', ['order' => $order, 'admin' => true])
 
                                 @if($order->is_paid)
 
@@ -205,8 +224,16 @@
 
                         </td>
 
-                        <td class="px-4 py-3 text-right font-semibold text-slate-800">
-                            {{ $order->total }} BYN
+                        <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
+                            {{ number_format($order->total_without_vat, 2, '.', '') }} BYN
+                        </td>
+
+                        <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
+                            {{ number_format($order->total_vat, 2, '.', '') }} BYN
+                        </td>
+
+                        <td class="px-4 py-3 text-right font-semibold text-slate-800 whitespace-nowrap">
+                            {{ number_format($order->total_with_vat, 2, '.', '') }} BYN
                         </td>
 
                         <td class="px-4 py-3">
