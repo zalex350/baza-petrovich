@@ -14,8 +14,16 @@ class AuthenticatedSessionController extends Controller
     /**
      * Display the login view.
      */
-    public function create(): View
+    public function create(Request $request): View
     {
+        // «Войдите, чтобы заказать» из списка товаров: после входа — обратно на ту же страницу.
+        // Только относительный путь сайта: внешний адрес или //host не принимаются.
+        $return = $request->query('return');
+
+        if (is_string($return) && str_starts_with($return, '/') && ! str_starts_with($return, '//') && ! str_contains($return, '\\')) {
+            $request->session()->put('url.intended', url($return));
+        }
+
         return view('auth.login');
     }
 

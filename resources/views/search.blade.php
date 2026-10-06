@@ -151,33 +151,16 @@
 
                         </td>
 
-                        <td class="px-4 py-3">
+                        <td class="px-4 py-3 w-60">
 
-                            @auth
+                            <a
+                                href="{{ route('product.show', $product->id) }}"
+                                class="block rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-center px-3 py-2 text-sm transition"
+                            >
+                                Подробнее
+                            </a>
 
-                                <form action="/order/add/{{ $product->id }}" method="POST" class="inline">
-
-                                    @csrf
-
-                                    <button
-                                        type="submit"
-                                        class="rounded-lg bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 text-sm transition"
-                                    >
-                                        В корзину
-                                    </button>
-
-                                </form>
-
-                            @else
-
-                                <a
-                                    href="{{ route('product.show', $product->id) }}"
-                                    class="inline-block rounded-lg bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 text-sm transition"
-                                >
-                                    Подробнее
-                                </a>
-
-                            @endauth
+                            @include('partials.product_buy', ['product' => $product, 'compact' => true])
 
                         </td>
 

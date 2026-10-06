@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\OrderStatus;
+use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\Organization;
 use App\Models\Product;
@@ -34,6 +35,31 @@ class CheckoutOrganizationTest extends TestCase
         $this->actingAs($user)
             ->post("/order/add/{$this->product->id}", ['qty' => $qty])
             ->assertSessionHas('success');
+    }
+
+    /**
+     * Корзина администратора, собранная до запрета (BR-121): через /order/add ему уже не добавить.
+     */
+    private function fillCartDirectly(User $user, int $qty = 2): void
+    {
+        CartItem::create([
+            'cart_id'      => $user->cart()->firstOrCreate()->id,
+            'product_id'   => $this->product->id,
+            'product_name' => $this->product->name,
+            'quantity'     => $qty,
+            'price_at_add' => $this->product->price,
+        ]);
+    }
+
+    public function test_admin_cannot_add_to_cart(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->post("/order/add/{$this->product->id}", ['qty' => 1])
+            ->assertSessionHas('error', 'Оформлять заказы могут только клиенты');
+
+        $this->assertSame(0, CartItem::count());
     }
 
     public function test_checkout_writes_user_organization_to_order(): void
@@ -92,7 +118,7 @@ class CheckoutOrganizationTest extends TestCase
         foreach ([null, $organization->id] as $organizationId) {
             $admin = User::factory()->admin()->create(['organization_id' => $organizationId]);
 
-            $this->fillCart($admin);
+            $this->fillCartDirectly($admin);
 
             $this->actingAs($admin)
                 ->from('/order')
@@ -111,7 +137,7 @@ class CheckoutOrganizationTest extends TestCase
     {
         $admin = User::factory()->admin()->create();
 
-        $this->fillCart($admin);
+        $this->fillCartDirectly($admin);
 
         $this->actingAs($admin)->get('/order')
             ->assertOk()

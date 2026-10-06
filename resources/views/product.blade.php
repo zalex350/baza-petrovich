@@ -99,7 +99,11 @@
                     В наличии: {{ $product->stock }}
                 </p>
 
-                @if($product->stock > 0 && $product->is_active)
+                @if(! auth()->user()->isClient())
+
+                    {{-- BR-121: оформлять заказы могут только клиенты --}}
+
+                @elseif($product->stock > 0 && $product->is_active)
 
                     <form
                         method="POST"
