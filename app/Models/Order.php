@@ -9,13 +9,21 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * @property string $total_without_vat Итог без НДС — сумма позиций (снимок при оформлении)
+ * @property string $total_vat Итог НДС — сумма НДС позиций
+ * @property string $total_with_vat Итог с НДС
+ * @property string $total @deprecated Прежняя сумма без НДС; у старых заказов может не совпадать
+ *                         с суммой позиций. Не показывать — использовать total_* / vatTotals().
+ *                         Пишется при оформлении только для совместимости.
+ */
 class Order extends Model
 {
     protected $fillable = [
         'number',
         'user_id',
         'status',
-        'total',
+        'total', // @deprecated — см. total_without_vat
         'total_without_vat',
         'total_vat',
         'total_with_vat',
@@ -35,8 +43,8 @@ class Order extends Model
     ];
 
     /**
-     * Итоги НДС — суммы позиций (снимок при оформлении). total — прежняя сумма
-     * без НДС, оставлена для совместимости; на экранах — total_*.
+     * Итоги НДС — суммы позиций (снимок при оформлении). total устарел (@deprecated):
+     * прежняя сумма без НДС, оставлена для совместимости; на экранах — только total_*.
      */
     protected $casts = [
         'status' => OrderStatus::class,

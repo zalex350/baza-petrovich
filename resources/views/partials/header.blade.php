@@ -90,7 +90,11 @@
                 {{-- На 1024px подписи скрыты, чтобы поиску хватило ширины --}}
                 <span class="leading-tight hidden xl:block">
                     <span class="block">Корзина</span>
-                    <span class="block text-xs text-slate-500" data-cart-total>
+                    <span
+                        class="block text-xs text-slate-500"
+                        data-cart-total
+                        title="в т.ч. НДС {{ number_format($cartSummary['vat'], 2, '.', ' ') }} BYN"
+                    >
                         {{ number_format($cartSummary['total'], 2, '.', ' ') }} BYN
                     </span>
                 </span>

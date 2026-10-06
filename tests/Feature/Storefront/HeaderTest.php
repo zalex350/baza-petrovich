@@ -130,9 +130,36 @@ class HeaderTest extends TestCase
         $done = Order::create(['user_id' => $client->id, 'status' => OrderStatus::New]);
         OrderItem::create(['order_id' => $done->id, 'product_id' => $product->id, 'quantity' => 5, 'price' => 1000]);
 
+        // Сумма с НДС 20%: 200.00 + 40.00 и 50.50 + 10.10
         $this->actingAs($client)->get('/')
             ->assertSee('Корзина: 2 поз.')
-            ->assertSee('250.50 BYN');
+            ->assertSee('300.60 BYN')
+            ->assertSee('title="в т.ч. НДС 50.10 BYN"', false);
+    }
+
+    public function test_cart_sum_is_with_vat_by_lines_and_matches_cart_page(): void
+    {
+        $client = $this->client();
+        $cart = Cart::create(['user_id' => $client->id]);
+
+        // 20%: 99.99 + 20.00 (19.998); 10%: 70.35 + 7.04 (7.035); «Без НДС»: 100.00 + 0
+        foreach ([['B-1', 3, 33.33, 20], ['B-2', 7, 10.05, 10], ['B-3', 2, 50, null]] as [$sku, $qty, $price, $rate]) {
+            $product = Product::create(['name' => $sku, 'sku' => $sku, 'price' => $price, 'vat_rate' => $rate, 'stock' => 10]);
+            CartItem::create(['cart_id' => $cart->id, 'product_id' => $product->id, 'quantity' => $qty, 'price_at_add' => $price]);
+        }
+
+        // Недоступный товар в сумму не входит
+        $hidden = Product::create(['name' => 'B-4', 'sku' => 'B-4', 'price' => 999, 'stock' => 10, 'is_active' => false]);
+        CartItem::create(['cart_id' => $cart->id, 'product_id' => $hidden->id, 'quantity' => 1, 'price_at_add' => 999]);
+
+        $this->actingAs($client)->get('/')
+            ->assertSee('Корзина: 3 поз.')
+            ->assertSee('297.38 BYN')
+            ->assertSee('title="в т.ч. НДС 27.04 BYN"', false);
+
+        // Та же сумма, что «Сумма с НДС» на странице корзины
+        $this->actingAs($client)->get('/order')
+            ->assertSeeInOrder(['Сумма с НДС:', '297.38 BYN']);
     }
 
     public function test_empty_cart_for_guest(): void
@@ -140,6 +167,7 @@ class HeaderTest extends TestCase
         $this->get('/')
             ->assertSee('Корзина: 0 поз.')
             ->assertSee('0.00 BYN')
+            ->assertSee('title="в т.ч. НДС 0.00 BYN"', false)
             ->assertDontSee('data-cart-count', false);
     }
 

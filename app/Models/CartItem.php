@@ -43,6 +43,9 @@ class CartItem extends Model
         return $this->product_name ?? 'Товар';
     }
 
+    /**
+     * @deprecated Сумма без НДС — vatLine()->net; для показа — vatLine().
+     */
     public function getSubtotalAttribute(): float
     {
         return round((float) $this->price_at_add * $this->quantity, 2);
