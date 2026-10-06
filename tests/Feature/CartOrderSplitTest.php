@@ -240,7 +240,7 @@ class CartOrderSplitTest extends TestCase
             ->assertSee('GR-001');
     }
 
-    public function test_client_can_cancel_order_with_deleted_product(): void
+    public function test_order_with_deleted_product_can_be_cancelled_by_request(): void
     {
         $this->addToCart($this->product, 2);
         $order = $this->checkout();
@@ -248,8 +248,12 @@ class CartOrderSplitTest extends TestCase
         $this->product->delete();
 
         $this->actingAs($this->client)
-            ->post("/order/{$order->id}/cancel")
-            ->assertRedirect('/orders');
+            ->post("/order/{$order->id}/cancel-request", ['cancel_reason' => 'Товар больше не нужен'])
+            ->assertRedirect("/order/{$order->id}");
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->post("/admin/order/{$order->id}/cancel-request/approve")
+            ->assertSessionHas('success');
 
         $this->assertSame(OrderStatus::Cancelled, $order->fresh()->status);
     }

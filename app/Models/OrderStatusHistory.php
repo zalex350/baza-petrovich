@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\OrderHistoryEvent;
 use App\Enums\OrderStatus;
 use Illuminate\Database\Eloquent\Model;
 
@@ -18,6 +19,7 @@ class OrderStatusHistory extends Model
         'order_id',
         'from_status',
         'to_status',
+        'event',
         'user_id',
         'comment',
         'created_at',
@@ -26,6 +28,7 @@ class OrderStatusHistory extends Model
     protected $casts = [
         'from_status' => OrderStatus::class,
         'to_status'   => OrderStatus::class,
+        'event'       => OrderHistoryEvent::class,
         'created_at'  => 'datetime',
     ];
 

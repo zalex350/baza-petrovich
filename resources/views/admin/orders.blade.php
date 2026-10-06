@@ -94,6 +94,16 @@
 
     </div>
 
+    <label class="flex items-center gap-2 py-2">
+        <input
+            type="checkbox"
+            name="cancel_request"
+            value="1"
+            @checked($filters['cancel_request'] ?? false)
+        >
+        Запрос на отмену
+    </label>
+
     <button
         type="submit"
         class="bg-slate-800 hover:bg-slate-700 text-white px-5 py-2 rounded-xl transition"
@@ -200,6 +210,7 @@
                             <div class="flex items-center gap-2">
 
                                 @include('partials.order_status', ['status' => $order->status])
+                                @include('partials.cancel_request_badge', ['order' => $order, 'admin' => true])
 
                                 @if($order->is_paid)
 

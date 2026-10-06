@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\OrderHistoryEvent;
 use App\Enums\OrderStatus;
+use App\Exceptions\CancelRequestException;
 use App\Exceptions\InvalidStatusTransition;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
@@ -12,7 +14,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Смена статуса заказа: только по допустимым переходам, с записью в историю
- * (SRS §10.7.5) и возвратом остатка при отмене.
+ * (SRS §10.7.5) и возвратом остатка при отмене. Клиент сам не отменяет —
+ * он создаёт запрос на отмену, администратор подтверждает или отклоняет его.
  */
 class OrderStatusService
 {
@@ -33,6 +36,8 @@ class OrderStatusService
 
             if ($to === OrderStatus::Cancelled) {
                 $this->returnStock($order);
+                // Заказ отменён — открытый запрос на отмену исполнен
+                $this->closeCancelRequest($order);
             }
 
             $order->status = $to;
@@ -45,11 +50,116 @@ class OrderStatusService
     }
 
     /**
+     * Запрос клиента на отмену: статус не меняется, запрос ждёт решения администратора.
+     *
+     * @throws CancelRequestException
+     */
+    public function requestCancel(Order $order, User $by, string $reason): Order
+    {
+        return DB::transaction(function () use ($order, $by, $reason) {
+            $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+            if (! $order->status->canTransitionTo(OrderStatus::Cancelled)) {
+                throw new CancelRequestException(CancelRequestException::NOT_ALLOWED);
+            }
+
+            if ($order->hasOpenCancelRequest()) {
+                throw new CancelRequestException(CancelRequestException::ALREADY_OPEN);
+            }
+
+            $order->cancel_requested_at = now();
+            $order->cancel_requested_by = $by->id;
+            $order->cancel_reason = trim($reason);
+            $order->save();
+
+            $this->recordEvent($order, OrderHistoryEvent::CancelRequested, $by, $order->cancel_reason);
+
+            return $order;
+        });
+    }
+
+    /**
+     * Администратор подтверждает запрос: заказ отменяется, остаток возвращается (один раз).
+     *
+     * @throws CancelRequestException
+     */
+    public function approveCancel(Order $order, User $by, ?string $comment = null): Order
+    {
+        return DB::transaction(function () use ($order, $by, $comment) {
+            $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+            if (! $order->hasOpenCancelRequest()) {
+                throw new CancelRequestException(CancelRequestException::NO_REQUEST);
+            }
+
+            if (! $order->status->canTransitionTo(OrderStatus::Cancelled)) {
+                throw new CancelRequestException(CancelRequestException::TOO_LATE);
+            }
+
+            $comment = trim((string) $comment);
+
+            return $this->change(
+                $order,
+                OrderStatus::Cancelled,
+                $by,
+                'Отмена по запросу клиента' . ($comment !== '' ? ": {$comment}" : '')
+            );
+        });
+    }
+
+    /**
+     * Администратор отклоняет запрос: запрос снимается, статус не меняется.
+     *
+     * @throws CancelRequestException
+     */
+    public function rejectCancel(Order $order, User $by, string $comment): Order
+    {
+        return DB::transaction(function () use ($order, $by, $comment) {
+            $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+            if (! $order->hasOpenCancelRequest()) {
+                throw new CancelRequestException(CancelRequestException::NO_REQUEST);
+            }
+
+            $this->closeCancelRequest($order);
+            $order->save();
+
+            $this->recordEvent($order, OrderHistoryEvent::CancelRejected, $by, $comment);
+
+            return $order;
+        });
+    }
+
+    /**
      * Первая запись истории: заказ оформлен.
      */
     public function recordPlaced(Order $order, User $by): void
     {
         $this->record($order, null, $order->status, $by, null);
+    }
+
+    private function closeCancelRequest(Order $order): void
+    {
+        $order->cancel_requested_at = null;
+        $order->cancel_requested_by = null;
+        $order->cancel_reason = null;
+    }
+
+    /**
+     * Событие без смены статуса: в записи текущий статус «из» и «в».
+     */
+    private function recordEvent(Order $order, OrderHistoryEvent $event, User $by, ?string $comment): void
+    {
+        $comment = trim((string) $comment);
+
+        OrderStatusHistory::create([
+            'order_id'    => $order->id,
+            'from_status' => $order->status,
+            'to_status'   => $order->status,
+            'event'       => $event,
+            'user_id'     => $by->id,
+            'comment'     => $comment !== '' ? $comment : null,
+        ]);
     }
 
     private function record(Order $order, ?OrderStatus $from, OrderStatus $to, ?User $by, ?string $comment): void

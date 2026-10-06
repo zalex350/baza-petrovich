@@ -29,6 +29,9 @@ class Order extends Model
         'placed_at',
         'checkout_token',
         'stock_returned_at',
+        'cancel_requested_at',
+        'cancel_requested_by',
+        'cancel_reason',
     ];
 
     /**
@@ -42,6 +45,7 @@ class Order extends Model
         'total_with_vat' => 'decimal:2',
         'placed_at' => 'datetime',
         'stock_returned_at' => 'datetime',
+        'cancel_requested_at' => 'datetime',
     ];
 
     public function items()
@@ -65,6 +69,30 @@ class Order extends Model
     public function vatTotals(): VatTotal
     {
         return new VatTotal((float) $this->total_without_vat, (float) $this->total_vat, (float) $this->total_with_vat);
+    }
+
+    /**
+     * Открытый запрос клиента на отмену — ждёт решения администратора.
+     */
+    public function hasOpenCancelRequest(): bool
+    {
+        return $this->cancel_requested_at !== null;
+    }
+
+    /**
+     * Запросить отмену может только оформивший заказ, пока заказ «Новый» или
+     * «Подтверждён» и открытого запроса нет.
+     */
+    public function canRequestCancel(User $user): bool
+    {
+        return $this->user_id === $user->id
+            && $this->status->canTransitionTo(OrderStatus::Cancelled)
+            && ! $this->hasOpenCancelRequest();
+    }
+
+    public function cancelRequester()
+    {
+        return $this->belongsTo(User::class, 'cancel_requested_by');
     }
 
     public function statusHistory()

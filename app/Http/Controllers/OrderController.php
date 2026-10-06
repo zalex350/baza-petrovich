@@ -2,8 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\OrderStatus;
-use App\Exceptions\InvalidStatusTransition;
+use App\Exceptions\CancelRequestException;
 use App\Models\CartItem;
 use App\Models\Order;
 use App\Services\OrderStatusService;
@@ -27,7 +26,7 @@ class OrderController extends Controller
     public function show($id)
     {
         $order = Order::visibleTo(auth()->user())
-            ->with(['items.product', 'user', 'statusHistory'])
+            ->with(['items.product', 'user', 'statusHistory.user'])
             ->where('id', $id)
             ->firstOrFail();
 
@@ -45,30 +44,33 @@ class OrderController extends Controller
     }
 
     /**
-     * Клиент заказ не удаляет (BR-133), но может отменить свой заказ, пока он «Новый».
+     * Клиент заказ не удаляет (BR-133) и сам не отменяет: он запрашивает отмену своего
+     * заказа с причиной, пока заказ «Новый» или «Подтверждён». Решает администратор.
      */
-    public function cancel($id, OrderStatusService $statuses)
+    public function requestCancel($id, OrderStatusService $statuses)
     {
         $order = Order::visibleTo(auth()->user())->where('id', $id)->firstOrFail();
 
-        // Отменить можно только заказ, который оформил сам, — не заказ коллеги по организации
+        // Запросить отмену может только оформивший — не коллега по организации
         if ($order->user_id !== auth()->id()) {
             abort(403);
         }
 
-        if ($order->status !== OrderStatus::New) {
-            return back()->with('error', 'Отменить можно только заказ в статусе «Новый»');
-        }
+        $data = request()->validate([
+            'cancel_reason' => ['required', 'string', 'max:1000'],
+        ], [
+            'cancel_reason.required' => 'Укажите причину отмены',
+            'cancel_reason.max'      => 'Причина не длиннее 1000 символов',
+        ]);
 
         try {
-            $statuses->change($order, OrderStatus::Cancelled, auth()->user(), 'Отменён клиентом');
-        } catch (InvalidStatusTransition $e) {
-            // Статус успел измениться между проверкой и блокировкой заказа
-            return back()->with('error', 'Отменить можно только заказ в статусе «Новый»');
+            $statuses->requestCancel($order, auth()->user(), $data['cancel_reason']);
+        } catch (CancelRequestException $e) {
+            return back()->with('error', $e->getMessage());
         }
 
-        return redirect('/orders')
-            ->with('success', "Заказ {$order->number} отменён");
+        return redirect("/order/{$order->id}")
+            ->with('success', "Запрос на отмену заказа {$order->number} отправлен менеджеру");
     }
 
     public function reorder($id)

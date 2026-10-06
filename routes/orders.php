@@ -28,9 +28,10 @@ Route::middleware('auth')->group(function () {
         [OrderController::class, 'placed']
     );
 
+    // Клиент не отменяет заказ сам — только запрашивает отмену
     Route::post(
-        '/order/{id}/cancel',
-        [OrderController::class, 'cancel']
+        '/order/{id}/cancel-request',
+        [OrderController::class, 'requestCancel']
     );
 
     Route::post(

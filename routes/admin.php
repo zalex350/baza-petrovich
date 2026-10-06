@@ -36,6 +36,17 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         [AdminOrderController::class, 'changeStatus']
     );
 
+    // Решение по запросу клиента на отмену
+    Route::post(
+        '/admin/order/{id}/cancel-request/approve',
+        [AdminOrderController::class, 'approveCancel']
+    );
+
+    Route::post(
+        '/admin/order/{id}/cancel-request/reject',
+        [AdminOrderController::class, 'rejectCancel']
+    );
+
     Route::get(
         '/admin/products',
         [AdminProductController::class, 'index']

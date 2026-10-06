@@ -99,12 +99,17 @@ class OrderItemWithoutProductTest extends TestCase
     public function test_status_change_and_cancel_work_for_order_with_missing_product(): void
     {
         $this->actingAs($this->client)
-            ->post("/order/{$this->order->id}/cancel")
-            ->assertRedirect('/orders');
+            ->post("/order/{$this->order->id}/cancel-request", ['cancel_reason' => 'Передумали'])
+            ->assertRedirect("/order/{$this->order->id}");
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->post("/admin/order/{$this->order->id}/cancel-request/approve")
+            ->assertSessionHas('success');
 
         $this->assertSame(OrderStatus::Cancelled, $this->order->fresh()->status);
         // Оставшемуся товару остаток возвращён; удалённому возвращать некуда
         $this->assertSame(10, $this->kept->fresh()->stock);
-        $this->assertSame(2, $this->order->statusHistory()->count());
+        // Оформлен → запрос на отмену → отменён
+        $this->assertSame(3, $this->order->statusHistory()->count());
     }
 }

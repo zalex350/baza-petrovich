@@ -60,6 +60,7 @@
                         <div class="flex items-center gap-2">
 
                             @include('partials.order_status', ['status' => $order->status])
+                            @include('partials.cancel_request_badge', ['order' => $order])
 
                             @if($order->is_paid)
 
@@ -116,29 +117,6 @@
                                 </button>
 
                             </form>
-
-                            {{-- Отменить можно только свой заказ и только пока он «Новый» --}}
-                            @if($order->status === \App\Enums\OrderStatus::New && $order->user_id === auth()->id())
-
-                                <form
-                                    method="POST"
-                                    action="/order/{{ $order->id }}/cancel"
-                                    class="inline"
-                                >
-
-                                    @csrf
-
-                                    <button
-                                        type="submit"
-                                        class="text-red-600 hover:text-red-700 text-sm underline"
-                                        onclick="return confirm('Отменить заказ {{ $order->number }}?')"
-                                    >
-                                        Отменить
-                                    </button>
-
-                                </form>
-
-                            @endif
 
                         </div>
 
