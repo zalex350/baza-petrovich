@@ -191,7 +191,7 @@ class CartController extends Controller
         $data = $validator->validated();
 
         try {
-            $checkout->place(
+            $order = $checkout->place(
                 auth()->user(),
                 $token,
                 isset($data['delivery_address_id']) ? (int) $data['delivery_address_id'] : null,
@@ -209,7 +209,7 @@ class CartController extends Controller
             return redirect('/order')->with('error', CheckoutException::CREATION_FAILED)->withInput();
         }
 
-        return redirect('/orders')
+        return redirect("/order/{$order->id}/placed")
             ->with('success', 'Заказ оформлен');
     }
 

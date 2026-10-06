@@ -59,7 +59,7 @@ class CartOrderSplitTest extends TestCase
     {
         $user ??= $this->client;
 
-        $this->actingAs($user)->post('/order/checkout', $this->checkoutData($user))->assertRedirect('/orders');
+        $this->actingAs($user)->post('/order/checkout', $this->checkoutData($user))->assertRedirectContains('/placed');
 
         return Order::where('user_id', $user->id)->latest('id')->firstOrFail();
     }
@@ -120,7 +120,7 @@ class CartOrderSplitTest extends TestCase
             ->assertOk()
             ->assertSee('Grohe Start')
             ->assertSee('Смеситель GR-002')
-            ->assertSee('Итого: 250.50 BYN');
+            ->assertSeeInOrder(['Сумма без НДС:', '250.50 BYN']);
     }
 
     public function test_update_and_delete_work_with_cart_items(): void
@@ -173,7 +173,7 @@ class CartOrderSplitTest extends TestCase
             ->assertSee('Товар отсутствует в каталоге')
             ->assertSee('Grohe Start')
             // недоступная позиция в итог не входит
-            ->assertSee('Итого: 30.00 BYN');
+            ->assertSeeInOrder(['Сумма без НДС:', '30.00 BYN']);
 
         $item = CartItem::where('product_id', $this->product->id)->sole();
 

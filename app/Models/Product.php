@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Services\Vat\VatCalculator;
+use App\Services\Vat\VatLine;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -31,14 +33,28 @@ class Product extends Model
         'vat_rate' => 20.00,
     ];
 
+    /**
+     * Цена в БД — без НДС; vat_rate = null — «Без НДС».
+     * Расчёт — VatCalculator; здесь — справочно за одну единицу.
+     */
+    public function vatLine(int $quantity = 1): VatLine
+    {
+        return app(VatCalculator::class)->line($this->price, $quantity, $this->vat_rate);
+    }
+
     public function getVatAmountAttribute(): float
     {
-        return round((float) $this->price * (float) $this->vat_rate / 100, 2);
+        return $this->vatLine()->vat;
     }
 
     public function getPriceWithVatAttribute(): float
     {
-        return round((float) $this->price + $this->vat_amount, 2);
+        return $this->vatLine()->gross;
+    }
+
+    public function getVatRateLabelAttribute(): string
+    {
+        return VatCalculator::rateLabel($this->vat_rate);
     }
 
     public function category()

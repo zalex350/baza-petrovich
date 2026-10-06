@@ -120,7 +120,11 @@
                                 </span>
 
                                 <span class="block text-xs text-slate-500">
-                                    (с НДС: {{ number_format($product->price_with_vat, 2) }} BYN)
+                                    @if($product->vat_rate === null)
+                                        (без НДС)
+                                    @else
+                                        (с НДС: {{ number_format($product->price_with_vat, 2) }} BYN)
+                                    @endif
                                 </span>
 
                             @else

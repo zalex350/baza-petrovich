@@ -23,7 +23,15 @@
                 </th>
 
                 <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
-                    Сумма
+                    Без НДС
+                </th>
+
+                <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
+                    НДС
+                </th>
+
+                <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
+                    С НДС
                 </th>
 
                 <th class="px-4 py-3 text-sm font-semibold text-slate-600">
@@ -69,8 +77,16 @@
                         {{ $order->user->name ?? '—' }}
                     </td>
 
-                    <td class="px-4 py-3 text-right font-semibold text-slate-800">
-                        {{ $order->total }} BYN
+                    <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
+                        {{ number_format($order->total_without_vat, 2, '.', '') }} BYN
+                    </td>
+
+                    <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
+                        {{ number_format($order->total_vat, 2, '.', '') }} BYN
+                    </td>
+
+                    <td class="px-4 py-3 text-right font-semibold text-slate-800 whitespace-nowrap">
+                        {{ number_format($order->total_with_vat, 2, '.', '') }} BYN
                     </td>
 
                     <td class="px-4 py-3">

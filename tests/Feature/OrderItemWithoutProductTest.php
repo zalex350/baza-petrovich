@@ -40,7 +40,7 @@ class OrderItemWithoutProductTest extends TestCase
 
         $this->actingAs($this->client)->post("/order/add/{$this->gone->id}", ['qty' => 2]);
         $this->actingAs($this->client)->post("/order/add/{$this->kept->id}", ['qty' => 1]);
-        $this->actingAs($this->client)->post('/order/checkout', $this->checkoutData($this->client))->assertRedirect('/orders');
+        $this->actingAs($this->client)->post('/order/checkout', $this->checkoutData($this->client))->assertRedirectContains('/placed');
 
         $this->order = Order::sole();
 

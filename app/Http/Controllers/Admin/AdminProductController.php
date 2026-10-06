@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductDraft;
+use App\Services\Vat\VatCalculator;
 
 class AdminProductController extends Controller
 {
@@ -34,7 +35,7 @@ class AdminProductController extends Controller
             'brand'            => 'nullable|string|max:255',
             'slug'             => 'nullable|string|max:255|unique:products,slug',
             'price'            => 'required|numeric|min:0',
-            'vat_rate'         => 'numeric|min:0|max:100',
+            'vat_rate'         => ['sometimes', 'required', VatCalculator::rateRule()],
             'stock'            => 'required|integer|min:0',
             'category_id'      => 'nullable|exists:categories,id',
             'description'      => 'nullable|string',
@@ -42,6 +43,10 @@ class AdminProductController extends Controller
             'package_contents' => 'nullable|string',
             'is_active'        => 'boolean',
         ]);
+
+        if (array_key_exists('vat_rate', $data)) {
+            $data['vat_rate'] = VatCalculator::normalizeRate($data['vat_rate']);
+        }
 
         $data['is_active']    = request()->has('is_active');
         $data['is_published'] = false;
@@ -90,7 +95,7 @@ class AdminProductController extends Controller
         request()->validate([
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
-            'vat_rate' => 'numeric|min:0|max:100',
+            'vat_rate' => ['sometimes', 'required', VatCalculator::rateRule()],
         ]);
 
         $product->update([
@@ -99,7 +104,7 @@ class AdminProductController extends Controller
             'brand'       => request('brand'),
             'slug'        => request('slug'),
             'price'       => request('price'),
-            'vat_rate'    => request('vat_rate', $product->vat_rate),
+            'vat_rate'    => request()->has('vat_rate') ? VatCalculator::normalizeRate(request('vat_rate')) : $product->vat_rate,
             'stock'       => request('stock'),
             'category_id' => request('category_id'),
         ]);

@@ -35,6 +35,16 @@ class OrderController extends Controller
     }
 
     /**
+     * Страница после оформления: номер, доставка и итог с НДС.
+     */
+    public function placed($id)
+    {
+        $order = Order::visibleTo(auth()->user())->where('id', $id)->firstOrFail();
+
+        return view('order_placed', compact('order'));
+    }
+
+    /**
      * Клиент заказ не удаляет (BR-133), но может отменить свой заказ, пока он «Новый».
      */
     public function cancel($id, OrderStatusService $statuses)

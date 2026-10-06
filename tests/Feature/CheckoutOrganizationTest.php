@@ -69,7 +69,7 @@ class CheckoutOrganizationTest extends TestCase
 
         $this->fillCart($client);
 
-        $this->actingAs($client)->post('/order/checkout', $this->checkoutData($client))->assertRedirect('/orders');
+        $this->actingAs($client)->post('/order/checkout', $this->checkoutData($client))->assertRedirectContains('/placed');
 
         $order = Order::where('user_id', $client->id)->first();
 

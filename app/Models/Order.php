@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\OrderStatus;
+use App\Services\Vat\VatTotal;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -15,6 +16,9 @@ class Order extends Model
         'user_id',
         'status',
         'total',
+        'total_without_vat',
+        'total_vat',
+        'total_with_vat',
         'is_paid',
         'organization_id',
         'delivery_title',
@@ -27,8 +31,15 @@ class Order extends Model
         'stock_returned_at',
     ];
 
+    /**
+     * Итоги НДС — суммы позиций (снимок при оформлении). total — прежняя сумма
+     * без НДС, оставлена для совместимости; на экранах — total_*.
+     */
     protected $casts = [
         'status' => OrderStatus::class,
+        'total_without_vat' => 'decimal:2',
+        'total_vat' => 'decimal:2',
+        'total_with_vat' => 'decimal:2',
         'placed_at' => 'datetime',
         'stock_returned_at' => 'datetime',
     ];
@@ -46,6 +57,14 @@ class Order extends Model
     public function organization()
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    /**
+     * Итоги НДС из снимка заказа.
+     */
+    public function vatTotals(): VatTotal
+    {
+        return new VatTotal((float) $this->total_without_vat, (float) $this->total_vat, (float) $this->total_with_vat);
     }
 
     public function statusHistory()

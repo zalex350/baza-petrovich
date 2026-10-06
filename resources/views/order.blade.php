@@ -90,7 +90,7 @@
                     </th>
 
                     <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
-                        Цена
+                        Цена без НДС
                     </th>
 
                     <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
@@ -98,7 +98,15 @@
                     </th>
 
                     <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
-                        Сумма
+                        Сумма без НДС
+                    </th>
+
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
+                        НДС
+                    </th>
+
+                    <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
+                        Сумма с НДС
                     </th>
 
                     <th class="px-4 py-3 text-sm font-semibold text-slate-600">
@@ -116,6 +124,7 @@
                         $product = $item->product;
                         $problems = $validation->for($item);
                         $priceChange = $validation->priceChange($item);
+                        $line = $item->vatLine();
                     @endphp
 
                     @if($validation->isUnavailable($item))
@@ -155,6 +164,14 @@
 
                             <td class="px-4 py-3 text-right text-slate-400">
                                 {{ $item->quantity }}
+                            </td>
+
+                            <td class="px-4 py-3 text-right text-slate-400">
+                                —
+                            </td>
+
+                            <td class="px-4 py-3 text-right text-slate-400">
+                                —
                             </td>
 
                             <td class="px-4 py-3 text-right text-slate-400">
@@ -258,7 +275,7 @@
 
                             @else
 
-                                {{ $item->price_at_add }} BYN
+                                {{ number_format($item->price_at_add, 2, '.', '') }} BYN
 
                             @endif
 
@@ -293,8 +310,17 @@
 
                         </td>
 
-                        <td class="px-4 py-3 text-right font-semibold text-slate-800">
-                            {{ number_format($item->subtotal, 2, '.', '') }} BYN
+                        <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
+                            {{ number_format($line->net, 2, '.', '') }} BYN
+                        </td>
+
+                        <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
+                            <span class="block text-xs text-slate-500">{{ $line->rateLabel() }}</span>
+                            {{ number_format($line->vat, 2, '.', '') }} BYN
+                        </td>
+
+                        <td class="px-4 py-3 text-right font-semibold text-slate-800 whitespace-nowrap">
+                            {{ number_format($line->gross, 2, '.', '') }} BYN
                         </td>
 
                         <td class="px-4 py-3">
@@ -329,9 +355,7 @@
 
     <div class="mt-8 bg-white border rounded p-5">
 
-        <h2 class="text-2xl font-bold mb-4">
-            Итого: {{ number_format($validation->total(), 2, '.', '') }} BYN
-        </h2>
+        @include('partials.vat_totals', ['totals' => $validation->totals()])
 
         @if(! auth()->user()->isClient())
 

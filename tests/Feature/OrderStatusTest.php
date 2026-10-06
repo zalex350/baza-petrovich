@@ -57,7 +57,7 @@ class OrderStatusTest extends TestCase
         $user ??= $this->client;
 
         $this->actingAs($user)->post("/order/add/{$this->product->id}", ['qty' => $qty]);
-        $this->actingAs($user)->post('/order/checkout', $this->checkoutData($user))->assertRedirect('/orders');
+        $this->actingAs($user)->post('/order/checkout', $this->checkoutData($user))->assertRedirectContains('/placed');
 
         return Order::where('user_id', $user->id)->latest('id')->firstOrFail();
     }

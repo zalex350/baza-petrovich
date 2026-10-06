@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Services\Vat\VatCalculator;
+use App\Services\Vat\VatLine;
 use Illuminate\Database\Eloquent\Model;
 
 class CartItem extends Model
@@ -44,5 +46,14 @@ class CartItem extends Model
     public function getSubtotalAttribute(): float
     {
         return round((float) $this->price_at_add * $this->quantity, 2);
+    }
+
+    /**
+     * Позиция с НДС: цена на момент добавления, ставка — текущая ставка товара
+     * (в заказ она попадёт снимком при оформлении).
+     */
+    public function vatLine(): VatLine
+    {
+        return app(VatCalculator::class)->line($this->price_at_add, (int) $this->quantity, $this->product?->vat_rate);
     }
 }

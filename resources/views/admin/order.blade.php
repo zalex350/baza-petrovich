@@ -167,53 +167,6 @@
 
 @include('partials.order_history', ['order' => $order, 'showAuthor' => true])
 
-<div class="space-y-4">
-
-    @foreach($order->items as $item)
-
-        <div class="bg-white border rounded p-5">
-
-            <h3 class="text-xl font-semibold mb-3">
-                {{ $item->product_name }}
-            </h3>
-
-            <div class="space-y-2">
-
-                <p>
-                    Артикул:
-                    {{ $item->product_sku }}
-                </p>
-
-                <p>
-                    Цена:
-                    {{ $item->price }} BYN
-                </p>
-
-                <p>
-                    Количество:
-                    {{ $item->quantity }}
-                </p>
-
-                <p>
-                    Сумма:
-                    <strong>
-                        {{ $item->price * $item->quantity }} BYN
-                    </strong>
-                </p>
-
-            </div>
-
-        </div>
-
-    @endforeach
-
-</div>
-
-<div class="mt-8 text-2xl font-bold">
-
-    Итого:
-    {{ $order->total }} BYN
-
-</div>
+@include('partials.order_items', ['order' => $order, 'admin' => true])
 
 @endsection

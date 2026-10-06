@@ -22,6 +22,12 @@ Route::middleware('auth')->group(function () {
         [OrderController::class, 'show']
     );
 
+    // Страница успешного оформления
+    Route::get(
+        '/order/{id}/placed',
+        [OrderController::class, 'placed']
+    );
+
     Route::post(
         '/order/{id}/cancel',
         [OrderController::class, 'cancel']
