@@ -16,8 +16,8 @@ class CheckoutException extends RuntimeException
     public const EMPTY_CART = 'Корзина пуста';                                                  // ERR-028
     public const CREATION_FAILED = 'Ошибка создания заказа';                                    // ERR-033
 
-    // Формулировки не из SRS (текста ERR-032 нет) — при необходимости заменить здесь
-    public const ADDRESS_REQUIRED = 'Выберите адрес доставки';                                  // ERR-032, BR-128
+    // ERR-032 — текст из чек-листа задачи; BR-129 — формулировка не из SRS
+    public const ADDRESS_REQUIRED = 'Не выбран адрес доставки';                                 // ERR-032, BR-128
     public const ADDRESS_FOREIGN = 'Выбранный адрес доставки недоступен. Выберите адрес своей организации'; // BR-129
 
     /**

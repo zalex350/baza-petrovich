@@ -64,7 +64,7 @@ class CheckoutDeliveryTest extends TestCase
     {
         $this->checkout([])
             ->assertRedirect('/order')
-            ->assertSessionHas('error', 'Выберите адрес доставки');
+            ->assertSessionHas('error', 'Не выбран адрес доставки');
 
         $this->assertNothingPlaced();
     }
