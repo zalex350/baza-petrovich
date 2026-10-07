@@ -9,13 +9,36 @@
 
 ## Локальная разработка
 
-Приложение работает в Docker: `http://localhost:8090`, MySQL на порту 3307. Подробнее о командах — в `CLAUDE.md` в корне репозитория.
+Приложение работает в Docker: `http://localhost:8090`, MySQL на порту 3307.
+
+Инфраструктура лежит в репозитории: `docker-compose.yml` и `docker/` (php — Dockerfile с GD
+JPEG/WebP и php.ini, nginx — default.conf). **Все команды `docker-compose` запускаются из корня
+репозитория** (папка с `artisan` и `docker-compose.yml`), а не из папки выше.
+
+Пароли и имена БД — только в `.env` (не в git). Перед первым запуском скопируйте `.env.example`
+в `.env` и задайте `DB_PASSWORD` и `DB_ROOT_PASSWORD` — без них compose не стартует. Порты
+меняются через `APP_PORT` и `FORWARD_DB_PORT`.
 
 ```bash
-docker-compose up -d
+cp .env.example .env            # первый раз; заполнить пароли
+docker-compose up -d --build    # --build — после изменений в docker/php
+docker-compose exec php composer install
+docker-compose exec php php artisan key:generate   # первый раз
 docker-compose exec php php artisan migrate
+docker-compose exec php php artisan storage:link   # внутри контейнера: на Windows-томе так создаётся рабочая ссылка
+docker-compose exec node npm install
 docker-compose exec node npm run build
 ```
+
+Имя compose-проекта зафиксировано (`name: smesitel_by`): контейнеры `smesitel_by-*` и том
+`smesitel_by_dbdata` не зависят от имени папки.
+
+### Фото товаров
+
+Хранятся на диске из `SHOP_IMAGES_DISK` (по умолчанию `public` — `storage/app/public`,
+нужна ссылка `public/storage`, см. `storage:link` выше). Если на хостинге symlink недоступен —
+`SHOP_IMAGES_DISK=public_media`: файлы лежат прямо в `public/media`, ссылка не нужна
+(при переключении перенести папку `products/` из `storage/app/public/` в `public/media/`).
 
 ### Создание пользователей
 
