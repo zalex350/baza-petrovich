@@ -96,6 +96,24 @@ class ProductImage extends Model
     }
 
     /**
+     * URL и размеры для галереи карточки (product-gallery.js).
+     *
+     * @return array<string, string|int>
+     */
+    public function toGalleryItem(): array
+    {
+        [$mw, $mh] = $this->dimensions('medium');
+        [$lw, $lh] = $this->dimensions('large');
+
+        return [
+            'thumb'  => $this->url('thumb'),
+            'medium' => $this->url('medium'),
+            'large'  => $this->url('large'),
+            'mw' => $mw, 'mh' => $mh, 'lw' => $lw, 'lh' => $lh,
+        ];
+    }
+
+    /**
      * Загружено через галерею — есть webp-версии всех размеров.
      */
     public function hasVariants(): bool

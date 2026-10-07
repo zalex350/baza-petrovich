@@ -70,6 +70,16 @@ class Product extends Model
     }
 
     /**
+     * Галерея карточки: основное фото первым, остальные — в порядке из админки (BR-051, BR-052).
+     *
+     * @return \Illuminate\Support\Collection<int, ProductImage>
+     */
+    public function gallery()
+    {
+        return $this->images->sortByDesc('is_main')->values();
+    }
+
+    /**
      * Основное фото (BR-051) — для списков товаров, корзины, заказов.
      */
     public function mainImage()

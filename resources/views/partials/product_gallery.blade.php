@@ -1,9 +1,11 @@
 {{--
     Галерея карточки товара (SRS §4.7): основное фото medium, миниатюры (при двух и более фото),
     увеличенный просмотр — product-gallery.js. Без JS: основное фото и ссылки на большие версии.
-    Данные: $product, $gallery (ProductImage, основное первым), $galleryData (URL и размеры для JS).
+    Данные: $product (с images).
 --}}
 @php
+    $gallery = $product->gallery();
+    $galleryData = $gallery->map->toGalleryItem()->all();
     $alt = $product->display_name ?: $product->name;
     $placeholder = \App\Models\ProductImage::placeholderUrl();
     $first = $gallery->first();
