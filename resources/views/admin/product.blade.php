@@ -15,11 +15,16 @@
     Редактирование товара
 </h1>
 
-@if($errors->any())
+{{-- Ошибки фото показываются в блоке «Изображения» --}}
+@php
+    $formErrors = collect($errors->getMessages())->except('images')->flatten();
+@endphp
+
+@if($formErrors->isNotEmpty())
 
     <div class="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6">
         <ul class="list-disc list-inside text-red-700 space-y-1">
-            @foreach($errors->all() as $error)
+            @foreach($formErrors as $error)
                 <li>{{ $error }}</li>
             @endforeach
         </ul>
@@ -154,6 +159,8 @@
     </form>
 
 </div>
+
+@include('partials.admin_product_images', ['product' => $product])
 
 {{-- Текстовые поля черновика --}}
 <div class="bg-white rounded-2xl border border-slate-200 p-6 mb-6">

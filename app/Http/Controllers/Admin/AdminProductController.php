@@ -77,7 +77,7 @@ class AdminProductController extends Controller
 
     public function show($id)
     {
-        $product = Product::findOrFail($id);
+        $product = Product::with('images')->findOrFail($id);
         $draft   = $product->draft;
 
         $categories = Category::all();

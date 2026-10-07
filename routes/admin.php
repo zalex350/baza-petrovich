@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Admin\AdminProductController;
+use App\Http\Controllers\Admin\AdminProductImageController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminOrganizationController;
@@ -15,6 +16,37 @@ use App\Http\Controllers\Admin\AdminDeliveryAddressController;
 */
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
+
+    // Фото товара (SRS §10.4.8): загрузка, порядок, основное, замена, удаление
+    Route::post(
+        '/admin/product/{id}/images',
+        [AdminProductImageController::class, 'store']
+    );
+
+    Route::post(
+        '/admin/product/{id}/images/reorder',
+        [AdminProductImageController::class, 'reorder']
+    );
+
+    Route::post(
+        '/admin/product/{id}/images/{image}/main',
+        [AdminProductImageController::class, 'makeMain']
+    );
+
+    Route::post(
+        '/admin/product/{id}/images/{image}/move',
+        [AdminProductImageController::class, 'move']
+    );
+
+    Route::post(
+        '/admin/product/{id}/images/{image}/replace',
+        [AdminProductImageController::class, 'replace']
+    );
+
+    Route::post(
+        '/admin/product/{id}/images/{image}/delete',
+        [AdminProductImageController::class, 'destroy']
+    );
 
     Route::get(
         '/admin/orders',
