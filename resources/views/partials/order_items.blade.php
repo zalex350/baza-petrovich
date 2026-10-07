@@ -58,20 +58,11 @@
 
                     <td class="px-4 py-3">
 
-                        @if($item->product?->image)
-
-                            <img
-                                src="{{ asset('storage/'.$item->product->image) }}"
-                                alt="{{ $item->product_name }}"
-                                class="w-12 h-12 object-contain rounded border border-slate-200">
-
-                        @else
-
-                            <div class="w-12 h-12 bg-slate-100 flex items-center justify-center rounded border border-slate-200 text-2xl">
-                                🚰
-                            </div>
-
-                        @endif
+                        @include('partials.product_image', [
+                            'image' => $item->product?->mainImage,
+                            'alt'   => $item->product_name,
+                            'class' => 'w-12 h-12 object-contain rounded border border-slate-200 bg-white',
+                        ])
 
                     </td>
 

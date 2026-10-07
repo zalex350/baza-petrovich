@@ -111,7 +111,7 @@
 
                     <span class="w-6 text-slate-500 text-sm text-right" data-position>{{ $loop->iteration }}</span>
 
-                    @php [$w, $h] = $image->dimensions('thumb'); @endphp
+                    @php([$w, $h] = $image->dimensions('thumb'))
 
                     <img
                         src="{{ $image->url('thumb') }}"

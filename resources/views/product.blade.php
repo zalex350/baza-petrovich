@@ -6,55 +6,21 @@
 
 <div class="max-w-6xl mx-auto">
 
-    <div class="flex gap-10">
+    <div class="flex flex-col md:flex-row gap-6 md:gap-10">
 
         <!-- Images -->
-        <div class="flex-1">
+        <div class="flex-1 min-w-0">
 
-            <div class="border p-5 rounded">
+            <div class="border border-slate-200 bg-white p-5 rounded-2xl">
 
-                @if($product->images && $product->images->count())
-
-                    <div>
-
-                        <img
-                            id="main-image"
-                            src="/storage/products/{{ $product->images->first()->path }}"
-                            class="w-full rounded-xl object-contain max-h-[520px]"
-                        >
-
-                        <div class="flex gap-2 mt-4 flex-wrap">
-
-                            @foreach($product->images as $img)
-
-                                <img
-                                    src="/storage/products/{{ $img->path }}"
-                                    width="80"
-                                    class="cursor-pointer border rounded"
-                                    onclick="document.getElementById('main-image').src=this.src"
-                                >
-
-                            @endforeach
-
-                        </div>
-
-                    </div>
-
-                @else
-
-                    <img
-                        src="https://via.placeholder.com/400"
-                        class="rounded"
-                    >
-
-                @endif
+                @include('partials.product_gallery')
 
             </div>
 
         </div>
 
         <!-- Product Info -->
-        <div class="flex-1">
+        <div class="flex-1 min-w-0">
 
             <p class="mb-4">
                 <a
@@ -75,6 +41,14 @@
             </p>
 
             @auth
+
+                @if($product->price === null)
+
+                <p class="mb-6 text-2xl font-semibold text-slate-500" data-price-tbd>
+                    Цена уточняется
+                </p>
+
+                @else
 
                 <div class="mb-6 space-y-1">
 
@@ -99,6 +73,8 @@
 
                 </div>
 
+                @endif
+
                 <p class="mb-4">
                     В наличии: {{ $product->stock }}
                 </p>
@@ -106,6 +82,10 @@
                 @if(! auth()->user()->isClient())
 
                     {{-- BR-121: оформлять заказы могут только клиенты --}}
+
+                @elseif($product->price === null)
+
+                    {{-- Цена уточняется (показано выше) — заказать нельзя --}}
 
                 @elseif($product->stock > 0 && $product->is_active)
 

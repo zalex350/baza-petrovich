@@ -26,7 +26,7 @@ class OrderController extends Controller
     public function show($id)
     {
         $order = Order::visibleTo(auth()->user())
-            ->with(['items.product', 'user', 'statusHistory.user'])
+            ->with(['items.product.mainImage', 'user', 'statusHistory.user'])
             ->where('id', $id)
             ->firstOrFail();
 

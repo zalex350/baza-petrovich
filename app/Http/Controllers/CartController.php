@@ -22,7 +22,7 @@ class CartController extends Controller
 
     public function index()
     {
-        $cart = auth()->user()->cart()->with('items.product')->first();
+        $cart = auth()->user()->cart()->with('items.product.mainImage')->first();
 
         $validation = $this->validator->validate($cart);
 

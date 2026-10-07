@@ -13,7 +13,8 @@ class HomeController extends Controller
             ->with('children')
             ->get();
 
-        $featuredProducts = Product::where('is_active', 1)
+        $featuredProducts = Product::with('mainImage')
+            ->where('is_active', 1)
             ->where('is_published', true)
             ->latest()
             ->take(4)

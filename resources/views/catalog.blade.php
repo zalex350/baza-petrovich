@@ -33,28 +33,11 @@
 
                 <div class="aspect-square bg-slate-100 flex items-center justify-center">
 
-                    @if($product->image)
-
-                        <img
-                            src="{{ asset('storage/'.$product->image) }}"
-                            alt="{{ $product->display_name ?: $product->name }}"
-                            class="w-full h-full object-contain p-6">
-
-                    @else
-
-                        <div class="text-center">
-
-                            <div class="text-6xl mb-4">
-                                🚰
-                            </div>
-
-                            <div class="text-sm text-slate-500">
-                                Фото появится позже
-                            </div>
-
-                        </div>
-
-                    @endif
+                    @include('partials.product_image', [
+                        'image' => $product->mainImage,
+                        'alt'   => $product->display_name ?: $product->name,
+                        'class' => 'w-full h-full object-contain p-6',
+                    ])
 
                 </div>
 
@@ -92,6 +75,14 @@
 
                     @auth
 
+                        @if($product->price === null)
+
+                        <div class="text-lg font-semibold text-slate-500" data-price-tbd>
+                            Цена уточняется
+                        </div>
+
+                        @else
+
                         <div class="text-3xl font-bold text-slate-800">
 
                             {{ number_format($product->price,2) }} BYN
@@ -105,6 +96,8 @@
                             </span>
 
                         </div>
+
+                        @endif
 
                     @else
 
