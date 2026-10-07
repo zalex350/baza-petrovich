@@ -70,8 +70,9 @@ class SearchController extends Controller
                     });
                 }
             })
+            ->with('mainImage')
             ->limit(5)
-            ->get(['id', 'name', 'display_name', 'sku', 'price', 'image']);
+            ->get(['id', 'name', 'display_name', 'sku', 'price']);
 
         $categories = Category::query()
             ->where(function ($outer) use ($words) {
@@ -88,7 +89,7 @@ class SearchController extends Controller
                 'name' => $p->display_name ?: $p->name,
                 'sku' => $p->sku,
                 'price' => $p->price ? number_format($p->price, 2) : null,
-                'image' => $p->image ? asset('storage/' . $p->image) : null,
+                'image' => $p->mainImage?->url('thumb'),
                 'url' => route('product.show', $p->id),
             ]),
             'categories' => $categories->map(fn ($c) => [
