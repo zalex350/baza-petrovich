@@ -19,6 +19,37 @@ return [
     // Время жизни кэша дерева категорий для меню, секунд
     'catalog_menu_ttl' => (int) env('SHOP_CATALOG_MENU_TTL', 3600),
 
+    /*
+    | Фото товаров (SRS §4.7, §10.4.8). Диск — любой из config/filesystems.php:
+    | public — storage/app/public, нужен symlink public/storage (php artisan storage:link);
+    | public_media — public/media, без symlink (хостинг, где symlink недоступен).
+    | При смене диска файлы переносятся вместе с папкой products/.
+    */
+    'images' => [
+        'disk' => env('SHOP_IMAGES_DISK', 'public'),
+
+        // products/{product_id}/{случайное имя}-{размер}.webp
+        'directory' => 'products',
+
+        // Размеры: длинная сторона не больше, пропорции сохраняются, маленькие не растягиваются
+        'sizes' => [
+            'thumb'  => 300,   // каталог, поиск, корзина, миниатюры
+            'medium' => 800,   // карточка товара
+            'large'  => 1600,  // увеличенный просмотр
+        ],
+
+        'quality' => (int) env('SHOP_IMAGES_QUALITY', 82),
+
+        // Максимум на файл, КБ (10 МБ)
+        'max_kb' => 10240,
+
+        // Проверяется MIME по содержимому файла, а не расширение
+        'mimetypes' => ['image/jpeg', 'image/png', 'image/webp'],
+
+        // Заглушка: нет фото или файл не загрузился
+        'placeholder' => '/images/no-photo.svg',
+    ],
+
     'orders' => [
         // Статусы заказов меняет менеджер вручную в админке. false — ручная смена
         // отключена (статусы приходят из внешней системы, например 1С).

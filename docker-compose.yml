@@ -1,0 +1,50 @@
+# Локальное окружение. Запуск — из этой папки (src/): docker-compose up -d
+# Пароли и имена БД — только из .env (DB_DATABASE, DB_USERNAME, DB_PASSWORD, DB_ROOT_PASSWORD).
+
+# Имя проекта фиксировано: контейнеры smesitel_by-*, том smesitel_by_dbdata — те же,
+# что при прежнем запуске из корня, данные MySQL сохраняются
+name: smesitel_by
+
+services:
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "${APP_PORT:-8090}:80"
+    volumes:
+      - .:/var/www
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - php
+
+  php:
+    build:
+      context: ./docker/php
+    volumes:
+      - .:/var/www
+      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini
+    depends_on:
+      - mysql
+
+  mysql:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:?DB_DATABASE не задан в .env}
+      MYSQL_USER: ${DB_USERNAME:?DB_USERNAME не задан в .env}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD не задан в .env}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD не задан в .env}
+    ports:
+      - "${FORWARD_DB_PORT:-3307}:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+
+  node:
+    image: node:22
+    working_dir: /var/www
+    volumes:
+      - .:/var/www
+    command: tail -f /dev/null
+
+volumes:
+  dbdata:

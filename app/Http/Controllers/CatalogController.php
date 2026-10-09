@@ -42,7 +42,7 @@ class CatalogController extends Controller
             $slug
         )->firstOrFail();
 
-        $products = Product::with('category')
+        $products = Product::with(['category', 'mainImage'])
             ->whereIn('category_id', $menu->descendantIds($category))
             ->where('is_active', 1)
             ->where('is_published', true)

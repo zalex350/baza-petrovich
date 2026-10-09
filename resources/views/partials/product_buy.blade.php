@@ -2,6 +2,7 @@
     «В корзину» в списках товаров (каталог, поиск, главная).
     Данные: $product, $compact — узкая колонка таблицы (поиск).
 
+    Нет цены — «Цена уточняется» (SRS §3.11.4, AC-040).
     Форма — обычный POST на /order/add/{id}; data-cart-add, data-cart-qty и
     data-cart-message — точки подключения для отправки через fetch (CartController::add
     отвечает JSON на Accept: application/json), разметку менять не придётся.
@@ -33,7 +34,7 @@
                     disabled
                     class="w-full rounded-xl bg-slate-200 text-slate-500 cursor-not-allowed {{ $compact ? 'px-3 py-2 text-sm' : 'py-3' }}"
                 >
-                    Цена по запросу
+                    Цена уточняется
                 </button>
 
             @elseif($product->stock < 1)

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductImage;
 use Illuminate\Support\Facades\DB;
 
 class SearchController extends Controller
@@ -22,6 +23,7 @@ class SearchController extends Controller
         $words = preg_split('/\s+/', $query, -1, PREG_SPLIT_NO_EMPTY);
 
         $products = Product::query()
+            ->with('mainImage')
             ->where('is_active', 1)
             ->where('is_published', true)
             ->where(function ($outer) use ($words) {
@@ -70,8 +72,9 @@ class SearchController extends Controller
                     });
                 }
             })
+            ->with('mainImage')
             ->limit(5)
-            ->get(['id', 'name', 'display_name', 'sku', 'price', 'image']);
+            ->get(['id', 'name', 'display_name', 'sku', 'price']);
 
         $categories = Category::query()
             ->where(function ($outer) use ($words) {
@@ -88,7 +91,8 @@ class SearchController extends Controller
                 'name' => $p->display_name ?: $p->name,
                 'sku' => $p->sku,
                 'price' => $p->price ? number_format($p->price, 2) : null,
-                'image' => $p->image ? asset('storage/' . $p->image) : null,
+                'image' => $p->mainImage?->url('thumb') ?? ProductImage::placeholderUrl(),
+                'placeholder' => ProductImage::placeholderUrl(),
                 'url' => route('product.show', $p->id),
             ]),
             'categories' => $categories->map(fn ($c) => [

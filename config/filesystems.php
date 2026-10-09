@@ -41,7 +41,19 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            // Относительный URL: не зависит от APP_URL и порта (localhost:8090)
+            'url' => env('PUBLIC_DISK_URL', '/storage'),
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
+        // Публичные файлы прямо в public/media — для хостинга без symlink storage:link
+        // (SHOP_IMAGES_DISK=public_media)
+        'public_media' => [
+            'driver' => 'local',
+            'root' => public_path('media'),
+            'url' => env('PUBLIC_MEDIA_URL', '/media'),
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

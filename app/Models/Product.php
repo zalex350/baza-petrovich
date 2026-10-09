@@ -20,7 +20,6 @@ class Product extends Model
         'stock',
         'description',
         'category_id',
-        'image',
         'specifications',
         'brand',
         'slug',
@@ -62,9 +61,30 @@ class Product extends Model
         return $this->belongsTo(\App\Models\Category::class);
     }
 
+    /**
+     * Галерея в порядке показа (BR-052).
+     */
     public function images()
     {
-        return $this->hasMany(\App\Models\ProductImage::class);
+        return $this->hasMany(ProductImage::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /**
+     * Галерея карточки: основное фото первым, остальные — в порядке из админки (BR-051, BR-052).
+     *
+     * @return \Illuminate\Support\Collection<int, ProductImage>
+     */
+    public function gallery()
+    {
+        return $this->images->sortByDesc('is_main')->values();
+    }
+
+    /**
+     * Основное фото (BR-051) — для списков товаров, корзины, заказов.
+     */
+    public function mainImage()
+    {
+        return $this->hasOne(ProductImage::class)->where('is_main', true);
     }
 
     public function draft()

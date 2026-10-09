@@ -28,9 +28,8 @@ function render(data, query) {
         html += '<div class="grid grid-cols-1 sm:grid-cols-2 gap-1 px-2">';
         data.products.forEach((prod) => {
             html += `<a href="${escapeHtml(prod.url)}" class="flex items-center gap-3 hover:bg-slate-50 rounded-lg p-2">`;
-            html += prod.image
-                ? `<img src="${escapeHtml(prod.image)}" alt="${escapeHtml(prod.name)}" class="w-12 h-12 object-contain rounded border border-slate-200">`
-                : '<div class="w-12 h-12 bg-slate-100 flex items-center justify-center rounded border border-slate-200 text-2xl">🚰</div>';
+            // Нет фото — заглушка с сервера; файл не загрузился — та же заглушка
+            html += `<img src="${escapeHtml(prod.image)}" alt="${escapeHtml(prod.name)}" width="48" height="48" loading="lazy" class="w-12 h-12 object-contain rounded border border-slate-200 bg-white" onerror="this.onerror=null;this.src='${escapeHtml(prod.placeholder)}'">`;
             html += '<div class="flex-1 min-w-0">';
             html += `<div class="text-sm text-slate-800 truncate">${escapeHtml(prod.name)}</div>`;
             html += prod.price

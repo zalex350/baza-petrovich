@@ -134,9 +134,11 @@
 
                             <td class="px-4 py-3">
 
-                                <div class="w-12 h-12 bg-slate-100 flex items-center justify-center rounded border border-slate-200 text-2xl opacity-50">
-                                    🚰
-                                </div>
+                                @include('partials.product_image', [
+                                    'image' => $product?->mainImage,
+                                    'alt'   => $item->title(),
+                                    'class' => 'w-12 h-12 object-contain rounded border border-slate-200 bg-white opacity-50',
+                                ])
 
                             </td>
 
@@ -208,20 +210,11 @@
 
                         <td class="px-4 py-3">
 
-                            @if($product->image)
-
-                                <img
-                                    src="{{ asset('storage/'.$product->image) }}"
-                                    alt="{{ $item->title() }}"
-                                    class="w-12 h-12 object-contain rounded border border-slate-200">
-
-                            @else
-
-                                <div class="w-12 h-12 bg-slate-100 flex items-center justify-center rounded border border-slate-200 text-2xl">
-                                    🚰
-                                </div>
-
-                            @endif
+                            @include('partials.product_image', [
+                                'image' => $product->mainImage,
+                                'alt'   => $item->title(),
+                                'class' => 'w-12 h-12 object-contain rounded border border-slate-200 bg-white',
+                            ])
 
                         </td>
 

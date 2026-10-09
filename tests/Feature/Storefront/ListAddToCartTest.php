@@ -134,7 +134,7 @@ class ListAddToCartTest extends TestCase
 
         $this->actingAs($this->client)->get('/search?q=Grohe')
             ->assertOk()
-            ->assertSeeInOrder(['Grohe Запрос', 'Цена по запросу'])
+            ->assertSeeInOrder(['Grohe Запрос', 'Цена уточняется'])
             ->assertSeeInOrder(['Grohe Пусто', 'Нет в наличии']);
 
         $html = $this->actingAs($this->client)->get('/catalog/smesiteli')->getContent();
