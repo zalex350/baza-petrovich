@@ -12,6 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function ($middleware) {
 
+        // Staging/production работают за nginx-прокси с HTTPS:
+        // доверяем заголовкам X-Forwarded-*, чтобы ссылки генерировались через https.
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureUserHasRole::class,
         ]);
