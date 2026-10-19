@@ -1,4 +1,5 @@
-// Галерея карточки товара (SRS §4.7): основное фото medium, миниатюры, увеличенный просмотр.
+// Галерея карточки товара и предпросмотра в админке (SRS §4.7): основное фото medium со стрелками
+// и свайпом, миниатюры с подсветкой текущей, увеличенный просмотр — один компонент на всё.
 // Без библиотек: Alpine уже есть, а lightbox — это оверлей, листание, клавиши и свайп.
 // Без JS: показано основное фото, миниатюры — ссылки на большие версии.
 //
@@ -12,6 +13,8 @@ export default (images, placeholder) => ({
     current: 0,
     open: false,
     touchX: null,
+    touchY: null,
+    swiped: false,
     lastFocus: null,
 
     get image() {
@@ -36,6 +39,7 @@ export default (images, placeholder) => ({
 
     close() {
         this.open = false;
+        this.swiped = false;
         document.documentElement.classList.remove('overflow-hidden');
         this.lastFocus?.focus();
     },
@@ -61,20 +65,41 @@ export default (images, placeholder) => ({
         }
     },
 
-    touchStart(event) {
-        this.touchX = event.changedTouches[0].clientX;
+    get multiple() {
+        return this.images.length > 1;
     },
 
-    touchEnd(event) {
-        if (this.touchX === null) {
+    // Клик по основному фото открывает просмотр, но не сразу после свайпа
+    zoom() {
+        if (this.swiped) {
+            this.swiped = false;
             return;
         }
 
-        const delta = event.changedTouches[0].clientX - this.touchX;
+        this.show();
+    },
+
+    touchStart(event) {
+        this.touchX = event.changedTouches[0].clientX;
+        this.touchY = event.changedTouches[0].clientY;
+        this.swiped = false;
+    },
+
+    // Свайп — на основном фото и в увеличенном просмотре. Вертикальное движение —
+    // прокрутка страницы, не листание.
+    touchEnd(event) {
+        if (this.touchX === null || ! this.multiple) {
+            this.touchX = null;
+            return;
+        }
+
+        const dx = event.changedTouches[0].clientX - this.touchX;
+        const dy = event.changedTouches[0].clientY - this.touchY;
         this.touchX = null;
 
-        if (Math.abs(delta) >= SWIPE_MIN) {
-            delta < 0 ? this.next() : this.prev();
+        if (Math.abs(dx) >= SWIPE_MIN && Math.abs(dx) > Math.abs(dy)) {
+            this.swiped = true;
+            dx < 0 ? this.next() : this.prev();
         }
     },
 

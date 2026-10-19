@@ -1,6 +1,7 @@
 {{--
-    Галерея карточки товара (SRS §4.7): основное фото medium, миниатюры (при двух и более фото),
-    увеличенный просмотр — product-gallery.js. Без JS: основное фото и ссылки на большие версии.
+    Галерея карточки товара и предпросмотра в админке (SRS §4.7): основное фото medium со стрелками
+    и свайпом, миниатюры с подсветкой текущей (при двух и более фото), увеличенный просмотр —
+    один компонент product-gallery.js. Без JS: основное фото и ссылки на большие версии.
     Данные: $product (с images).
 --}}
 @php
@@ -31,27 +32,62 @@
         data-gallery
     >
 
-        {{-- Основное фото: клик — увеличенный просмотр --}}
-        <a
-            href="{{ $first->url('large') }}"
-            class="block cursor-zoom-in"
-            @click.prevent="show()"
-            aria-label="Увеличить фото"
+        {{-- Основное фото: клик — увеличенный просмотр; стрелки и свайп — соседние фото --}}
+        <div
+            class="relative"
+            @touchstart.passive="touchStart($event)"
+            @touchend="touchEnd($event)"
         >
-            <img
-                src="{{ $first->url('medium') }}"
-                :src="image.medium"
-                :width="image.mw"
-                :height="image.mh"
-                alt="{{ $alt }}"
-                width="{{ $mw }}"
-                height="{{ $mh }}"
-                decoding="async"
-                class="w-full h-auto max-h-[520px] rounded-xl object-contain"
-                onerror="this.onerror=null;this.src='{{ $placeholder }}'"
-                data-gallery-main
+
+            <a
+                href="{{ $first->url('large') }}"
+                class="block cursor-zoom-in"
+                @click.prevent="zoom()"
+                aria-label="Увеличить фото"
             >
-        </a>
+                <img
+                    src="{{ $first->url('medium') }}"
+                    :src="image.medium"
+                    :width="image.mw"
+                    :height="image.mh"
+                    alt="{{ $alt }}"
+                    width="{{ $mw }}"
+                    height="{{ $mh }}"
+                    decoding="async"
+                    class="w-full h-auto max-h-[520px] rounded-xl object-contain select-none"
+                    onerror="this.onerror=null;this.src='{{ $placeholder }}'"
+                    data-gallery-main
+                >
+            </a>
+
+            @if($gallery->count() > 1)
+
+                {{-- Без JS стрелки не нужны: миниатюры — ссылки на фото --}}
+                <button
+                    type="button"
+                    x-cloak
+                    x-show="multiple"
+                    @click="prev()"
+                    class="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 hover:bg-white border border-slate-200 shadow-sm text-slate-700 text-2xl leading-none"
+                    aria-label="Предыдущее фото"
+                    data-gallery-prev
+                >‹</button>
+
+                <button
+                    type="button"
+                    x-cloak
+                    x-show="multiple"
+                    @click="next()"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 hover:bg-white border border-slate-200 shadow-sm text-slate-700 text-2xl leading-none"
+                    aria-label="Следующее фото"
+                    data-gallery-next
+                >›</button>
+
+                <div x-cloak x-show="multiple" class="absolute bottom-2 right-2 rounded-full bg-black/50 text-white text-xs px-2 py-0.5" x-text="counter" aria-live="polite"></div>
+
+            @endif
+
+        </div>
 
         {{-- Миниатюры — только если фото больше одного --}}
         @if($gallery->count() > 1)
@@ -67,8 +103,10 @@
                             href="{{ $image->url('large') }}"
                             @click.prevent="select({{ $index }})"
                             class="block rounded-lg border-2 p-0.5 transition"
-                            :class="current === {{ $index }} ? 'border-slate-800' : 'border-transparent hover:border-slate-300'"
+                            :class="current === {{ $index }} ? 'border-slate-800 ring-2 ring-slate-800/20' : 'border-transparent hover:border-slate-300'"
+                            :aria-current="current === {{ $index }} ? 'true' : 'false'"
                             aria-label="Фото {{ $index + 1 }} из {{ $gallery->count() }}"
+                            data-gallery-thumb
                         >
                             <img
                                 src="{{ $image->url('thumb') }}"

@@ -1,9 +1,8 @@
 // Блок «Изображения» на странице товара в админке.
 // Без JS всё работает формами: загрузка, «вверх/вниз», основное, замена, удаление.
-// С JS: предпросмотр выбранных файлов и перетаскивание с сохранением порядка без перезагрузки.
+// С JS: перетаскивание с сохранением порядка без перезагрузки. Очередь фото до загрузки — image-queue.js.
 
 export default (reorderUrl) => ({
-    previews: [],
     status: '',
     statusError: false,
 
@@ -23,17 +22,6 @@ export default (reorderUrl) => ({
             animation: 150,
             onEnd: () => this.saveOrder(),
         });
-    },
-
-    // Предпросмотр выбранных файлов до загрузки
-    preview(event) {
-        this.previews.forEach((item) => URL.revokeObjectURL(item.url));
-
-        this.previews = Array.from(event.target.files).map((file) => ({
-            name: file.name,
-            size: (file.size / 1024 / 1024).toFixed(1) + ' МБ',
-            url: URL.createObjectURL(file),
-        }));
     },
 
     async saveOrder() {

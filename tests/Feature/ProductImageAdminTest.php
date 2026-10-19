@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Admin\AdminProductImageController;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\User;
@@ -9,6 +10,7 @@ use App\Services\Images\ProductImageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Js;
 use Tests\TestCase;
 
 /**
@@ -348,6 +350,28 @@ class ProductImageAdminTest extends TestCase
             ->assertSee('data-main-badge', false)
             ->assertSee('Сделать основным')
             ->assertSee("confirm('Удалить фото «a.jpg»? Файлы всех размеров будут удалены.')", false);
+    }
+
+    public function test_upload_form_has_queue_with_remove_button(): void
+    {
+        $html = $this->actingAs($this->admin)->get("/admin/product/{$this->product->id}")
+            ->assertOk()
+            ->assertSee('data-image-queue', false)
+            ->assertSee('x-ref="input"', false)
+            ->assertSee('@change="add($event)"', false)
+            ->assertSee('@click="remove(item.id)"', false)
+            ->assertSee('Очистить очередь')
+            ->getContent();
+
+        // Ограничения очереди — те же, что на сервере
+        $this->assertStringContainsString(
+            'imageQueue(' . Js::from([
+                'max'   => AdminProductImageController::MAX_FILES,
+                'maxKb' => config('shop.images.max_kb'),
+                'types' => config('shop.images.mimetypes'),
+            ])->toHtml(),
+            $html
+        );
     }
 
     // --- Замена ---
