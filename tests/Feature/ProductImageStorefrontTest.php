@@ -175,6 +175,41 @@ class ProductImageStorefrontTest extends TestCase
         $this->assertStringContainsString('href="/storage/products/' . $this->product->id . '/third-large.webp"', $html);
     }
 
+    public function test_main_photo_has_arrows_swipe_and_active_thumbnail(): void
+    {
+        $this->addImage($this->product, 'main', main: true, order: 1);
+        $this->addImage($this->product, 'second', order: 2);
+
+        $html = $this->actingAs($this->client)->get("/product/{$this->product->id}")
+            ->assertOk()
+            ->assertSee('data-gallery-prev', false)
+            ->assertSee('data-gallery-next', false)
+            ->assertSee('@touchend="touchEnd($event)"', false)
+            ->assertSee('@click.prevent="zoom()"', false)
+            ->assertSee(':aria-current="current === 1 ? \'true\' : \'false\'"', false)
+            ->getContent();
+
+        // Стрелки и на основном фото, и в увеличенном просмотре — один компонент
+        $this->assertSame(2, substr_count($html, 'aria-label="Следующее фото"'));
+        $this->assertSame(1, substr_count($html, 'x-data="productGallery('));
+        $this->assertSame(2, preg_match_all('#\sdata-gallery-thumb\s#', $html));
+    }
+
+    public function test_admin_preview_has_same_gallery(): void
+    {
+        $this->product->update(['is_published' => false]);
+        $this->addImage($this->product, 'main', main: true, order: 1);
+        $this->addImage($this->product, 'second', order: 2);
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->get("/admin/product/{$this->product->id}/preview")
+            ->assertOk()
+            ->assertSee('x-data="productGallery(', false)
+            ->assertSee('data-gallery-next', false)
+            ->assertSee('data-gallery-thumbs', false)
+            ->assertSee('data-lightbox', false);
+    }
+
     public function test_single_photo_has_no_thumbnails_or_arrows(): void
     {
         $this->addImage($this->product, 'main', main: true);

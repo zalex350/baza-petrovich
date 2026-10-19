@@ -1,6 +1,7 @@
 {{--
     Блок «Изображения» на странице товара в админке (SRS §10.4.8). Применяется сразу.
-    Без JS — формы и кнопки «вверх/вниз»; с JS — предпросмотр и перетаскивание (admin-images.js).
+    Без JS — формы и кнопки «вверх/вниз»; с JS — очередь до загрузки (image-queue.js)
+    и перетаскивание (admin-images.js).
     Данные: $product (с images).
 --}}
 @php
@@ -47,44 +48,14 @@
 
         @csrf
 
-        <div class="flex flex-wrap items-center gap-3">
+        @include('partials.image_queue', ['required' => true])
 
-            <input
-                type="file"
-                name="images[]"
-                multiple
-                accept="{{ $accept }}"
-                required
-                class="text-sm"
-                @change="preview($event)"
-            >
-
-            <button
-                type="submit"
-                class="bg-slate-800 hover:bg-slate-700 text-white px-5 py-2 rounded-xl transition"
-            >
-                Загрузить
-            </button>
-
-        </div>
-
-        {{-- Предпросмотр выбранных файлов --}}
-        <template x-if="previews.length">
-
-            <div class="mt-4 grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-3">
-
-                <template x-for="item in previews" :key="item.url">
-
-                    <figure class="text-xs text-slate-500">
-                        <img :src="item.url" :alt="item.name" class="w-full aspect-square object-contain bg-slate-50 rounded-lg border border-slate-200">
-                        <figcaption class="mt-1 truncate" x-text="item.name + ' · ' + item.size"></figcaption>
-                    </figure>
-
-                </template>
-
-            </div>
-
-        </template>
+        <button
+            type="submit"
+            class="mt-4 bg-slate-800 hover:bg-slate-700 text-white px-5 py-2 rounded-xl transition"
+        >
+            Загрузить
+        </button>
 
     </form>
 
