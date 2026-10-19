@@ -2,7 +2,7 @@
     Блок «Изображения» на странице товара в админке (SRS §10.4.8). Применяется сразу.
     Без JS — формы и кнопки «вверх/вниз»; с JS — очередь до загрузки (image-queue.js)
     и перетаскивание (admin-images.js).
-    Данные: $product (с images).
+    Данные: $product (с images), $form — id формы товара (поле очереди и кнопка «Загрузить сейчас»).
 --}}
 @php
     $images = $product->images;
@@ -18,8 +18,8 @@
 >
 
     <h2 class="text-lg font-semibold mb-1">
-        Изображения
-        <span class="text-sm font-normal text-slate-400 ml-2">применяются сразу</span>
+        Фото товара
+        <span class="text-sm font-normal text-slate-400 ml-2">данные сайта · применяются сразу</span>
     </h2>
 
     <p class="text-sm text-slate-500 mb-4">
@@ -38,26 +38,23 @@
 
     @enderror
 
-    {{-- Загрузка нескольких файлов --}}
-    <form
-        method="POST"
-        action="/admin/product/{{ $product->id }}/images"
-        enctype="multipart/form-data"
-        class="mb-6"
-    >
+    {{-- Очередь — часть формы товара: фото из неё загружаются и при сохранении товара,
+         и сразу кнопкой «Загрузить» (та же форма, другой адрес) --}}
+    <div class="mb-6">
 
-        @csrf
-
-        @include('partials.image_queue', ['required' => true])
+        @include('partials.image_queue', ['form' => $form])
 
         <button
             type="submit"
+            form="{{ $form }}"
+            formaction="/admin/product/{{ $product->id }}/images"
+            formnovalidate
             class="mt-4 bg-slate-800 hover:bg-slate-700 text-white px-5 py-2 rounded-xl transition"
         >
-            Загрузить
+            Загрузить сейчас
         </button>
 
-    </form>
+    </div>
 
     @if($images->isEmpty())
 

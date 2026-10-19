@@ -1,7 +1,7 @@
 {{--
     Выбор фото с очередью до загрузки (image-queue.js). Без собственной формы — вставляется
     в форму загрузки фото или в форму товара. Файлы уходят в поле images[].
-    Параметры: $required (bool, по умолчанию false).
+    Параметры: $required (bool, по умолчанию false); $form — id формы, если поле стоит вне её.
 --}}
 @php
     $maxKb = (int) config('shop.images.max_kb');
@@ -19,6 +19,7 @@
         name="images[]"
         multiple
         accept="{{ implode(',', $types) }}"
+        @isset($form) form="{{ $form }}" @endisset
         @if($required ?? false) required @endif
         class="text-sm"
         x-ref="input"

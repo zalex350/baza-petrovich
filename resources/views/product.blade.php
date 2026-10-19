@@ -4,6 +4,42 @@
 
 @section('content')
 
+@isset($preview)
+
+    {{-- Предпросмотр из админки: страница как на сайте, с черновыми текстами --}}
+    <div class="max-w-6xl mx-auto mb-6 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex flex-wrap items-center gap-3 text-sm" data-preview-bar>
+
+        <strong class="text-amber-800">Предпросмотр</strong>
+
+        <span class="text-amber-700">
+            @if(! $product->is_published)
+                Товар ещё не опубликован — покупатели его не видят.
+            @elseif($preview['draft'])
+                Показан неопубликованный черновик текстов.
+            @else
+                Так товар выглядит на сайте.
+            @endif
+        </span>
+
+        <span class="grow"></span>
+
+        <a href="/admin/product/{{ $product->id }}" class="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-slate-700 hover:bg-amber-100">
+            ← К редактированию
+        </a>
+
+        @if(! $product->is_published || $preview['draft'])
+            <form method="POST" action="/admin/product/{{ $product->id }}/publish">
+                @csrf
+                <button type="submit" class="rounded-lg bg-green-700 hover:bg-green-600 text-white px-3 py-1.5">
+                    Опубликовать
+                </button>
+            </form>
+        @endif
+
+    </div>
+
+@endisset
+
 <div class="max-w-6xl mx-auto">
 
     <div class="flex flex-col md:flex-row gap-6 md:gap-10">
