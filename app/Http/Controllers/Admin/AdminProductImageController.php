@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Exceptions\ImageUploadException;
+use App\Http\Controllers\Admin\Concerns\UploadsProductImages;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Services\Images\ProductImageService;
-use Illuminate\Http\UploadedFile;
 
 /**
  * Блок «Изображения» на странице товара в админке (SRS §10.4.8). Изменения применяются
@@ -15,8 +15,7 @@ use Illuminate\Http\UploadedFile;
  */
 class AdminProductImageController extends Controller
 {
-    /** Файлов за одну загрузку */
-    public const MAX_FILES = 20;
+    use UploadsProductImages;
 
     public function __construct(private readonly ProductImageService $images)
     {
@@ -144,51 +143,5 @@ class AdminProductImageController extends Controller
     private function backToImages(Product $product)
     {
         return redirect("/admin/product/{$product->id}#images");
-    }
-
-    /**
-     * Тип проверяется по содержимому (MIME), а не по расширению.
-     */
-    private function fileRules(): array
-    {
-        return [
-            'file',
-            'mimetypes:' . implode(',', config('shop.images.mimetypes')),
-            'max:' . config('shop.images.max_kb'),
-        ];
-    }
-
-    private function fileMessages(string $field): array
-    {
-        $mb = (int) round(config('shop.images.max_kb') / 1024);
-
-        return [
-            "{$field}.uploaded"  => "Файл :attribute не загрузился — возможно, он больше {$mb} МБ",
-            "{$field}.file"      => "Файл :attribute не загрузился",
-            "{$field}.mimetypes" => 'Файл :attribute — недопустимый формат. Можно загружать JPG, PNG и WebP',
-            "{$field}.max"       => "Файл :attribute больше {$mb} МБ",
-        ];
-    }
-
-    /**
-     * В сообщениях — имя файла пользователя, а не images.0.
-     */
-    private function fileNames(string $field): array
-    {
-        $files = request()->file($field);
-
-        if ($files instanceof UploadedFile) {
-            return [$field => "«{$files->getClientOriginalName()}»"];
-        }
-
-        $names = [];
-
-        foreach ((array) $files as $index => $file) {
-            if ($file instanceof UploadedFile) {
-                $names["{$field}.{$index}"] = "«{$file->getClientOriginalName()}»";
-            }
-        }
-
-        return $names;
     }
 }

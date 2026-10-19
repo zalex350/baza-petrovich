@@ -10,12 +10,16 @@
         Админка — Товары
     </h1>
 
-    <a
-        href="/admin/product/create"
-        class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded"
-    >
-        Добавить товар
-    </a>
+    @if(config('shop.catalog.manual_products'))
+        <a
+            href="/admin/product/create"
+            class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded"
+        >
+            Добавить товар
+        </a>
+    @else
+        <span class="text-sm text-slate-500">Товары приходят из 1С</span>
+    @endif
 
 </div>
 

@@ -345,7 +345,7 @@ class ProductImageAdminTest extends TestCase
 
         $this->actingAs($this->admin)->get("/admin/product/{$this->product->id}")
             ->assertOk()
-            ->assertSee('Изображения')
+            ->assertSee('Фото товара')
             ->assertSee('name="images[]"', false)
             ->assertSee('data-main-badge', false)
             ->assertSee('Сделать основным')
