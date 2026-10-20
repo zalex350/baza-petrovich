@@ -5,10 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
 class SearchController extends Controller
 {
+    /** Товаров на странице результатов */
+    public const PER_PAGE = 24;
+
     public function index()
     {
         $query = trim((string) request('q', ''));
@@ -16,7 +20,7 @@ class SearchController extends Controller
         if ($query === '') {
             return view('search', [
                 'query' => $query,
-                'products' => collect(),
+                'products' => new LengthAwarePaginator([], 0, self::PER_PAGE),
             ]);
         }
 
@@ -40,7 +44,10 @@ class SearchController extends Controller
             })
             ->orderByRaw('CASE WHEN LOWER(sku) = ? THEN 0 ELSE 1 END', [mb_strtolower($query)])
             ->orderBy('name')
-            ->get();
+            ->orderBy('id')
+            // Страницы по 24; q и прочие параметры — в ссылках пагинации
+            ->paginate(self::PER_PAGE)
+            ->withQueryString();
 
         return view('search', [
             'query' => $query,
