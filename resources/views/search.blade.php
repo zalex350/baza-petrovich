@@ -11,7 +11,7 @@
     </h1>
 
     <p class="mt-2 text-slate-500">
-        Найдено товаров: {{ $products->count() }}
+        Найдено товаров: {{ $products->total() }}
     </p>
 
 </div>
@@ -165,6 +165,10 @@
 
         </table>
 
+    </div>
+
+    <div class="mt-8" data-pagination>
+        {{ $products->links() }}
     </div>
 
 @endif

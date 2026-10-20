@@ -103,4 +103,32 @@ class SearchTest extends TestCase
         $response->assertDontSee('Grohe Start');
         $response->assertSee('ничего не найдено');
     }
+
+    public function test_results_are_paginated_by_24_and_keep_query(): void
+    {
+        // Латиница: LOWER/LIKE в SQLite тестов не работают с кириллицей (в MySQL — работают)
+        for ($i = 1; $i <= 30; $i++) {
+            $this->createProduct(['name' => sprintf('Mixer %02d', $i), 'sku' => "MIX-{$i}"]);
+        }
+
+        $first = $this->get('/search?q=mixer')->assertOk()->getContent();
+
+        $this->assertStringContainsString('Mixer 01', $first);
+        $this->assertStringContainsString('Mixer 24', $first);
+        $this->assertStringNotContainsString('Mixer 25', $first);
+        $this->assertStringContainsString('Найдено товаров: 30', $first);
+        $this->assertStringContainsString(e('/search?' . http_build_query(['q' => 'mixer', 'page' => 2])), $first);
+
+        $second = $this->get('/search?q=mixer&page=2')->assertOk()->getContent();
+
+        $this->assertStringContainsString('Найдено товаров: 30', $second);
+        $this->assertStringContainsString('Mixer 25', $second);
+        $this->assertStringContainsString('Mixer 30', $second);
+        $this->assertStringNotContainsString('Mixer 24', $second);
+    }
+
+    public function test_empty_query_has_no_pagination_error(): void
+    {
+        $this->get('/search?q=&page=3')->assertOk()->assertSee('Найдено товаров: 0');
+    }
 }
