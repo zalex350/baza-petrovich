@@ -25,7 +25,7 @@ class AdminProductController extends Controller
     }
 
     /** Поля учётной системы: при shop.catalog.manual_products = false приходят только из 1С */
-    private const ERP_FIELDS = ['name', 'sku', 'brand', 'category_id', 'price', 'vat_rate', 'stock'];
+    private const ERP_FIELDS = ['name', 'sku', 'brand', 'category_id', 'price', 'vat_rate', 'stock', 'on_order'];
 
     /** Тексты сайта: через черновик */
     private const DRAFT_FIELDS = ['display_name', 'description', 'specifications', 'package_contents'];
@@ -226,6 +226,7 @@ class AdminProductController extends Controller
             'price'       => 'required|numeric|min:0',
             'vat_rate'    => ['sometimes', 'required', VatCalculator::rateRule()],
             'stock'       => 'required|integer|min:0',
+            'on_order'    => 'boolean',
         ];
     }
 

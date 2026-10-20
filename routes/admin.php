@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminOrganizationController;
 use App\Http\Controllers\Admin\AdminDeliveryAddressController;
 use App\Http\Controllers\Admin\AdminAttributeController;
+use App\Http\Controllers\Admin\AdminCatalogFilterController;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,6 +18,11 @@ use App\Http\Controllers\Admin\AdminAttributeController;
 */
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
+
+    // Фильтры каталога по категориям (SRS §3.9, BR-016)
+    Route::get('/admin/catalog-filters', [AdminCatalogFilterController::class, 'index']);
+    Route::get('/admin/catalog-filters/{id}', [AdminCatalogFilterController::class, 'edit']);
+    Route::post('/admin/catalog-filters/{id}', [AdminCatalogFilterController::class, 'update']);
 
     // Справочник характеристик (SRS §4.9, §4.18)
     Route::get('/admin/attributes', [AdminAttributeController::class, 'index']);

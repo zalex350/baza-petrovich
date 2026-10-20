@@ -18,6 +18,7 @@ class Product extends Model
         'price',
         'vat_rate',
         'stock',
+        'on_order',
         'description',
         'category_id',
         'specifications',
@@ -30,6 +31,11 @@ class Product extends Model
 
     protected $attributes = [
         'vat_rate' => 20.00,
+        'on_order' => false,
+    ];
+
+    protected $casts = [
+        'on_order' => 'boolean',
     ];
 
     /**

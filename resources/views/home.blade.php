@@ -176,6 +176,12 @@
                         В наличии
                     </span>
 
+                @elseif($product->on_order)
+
+                    <span class="text-amber-700 text-sm">
+                        Под заказ
+                    </span>
+
                 @else
 
                     <span class="text-red-600 text-sm">

@@ -107,6 +107,11 @@
         <div>
             <label for="f-stock" class="block mb-2 font-semibold">Остаток</label>
             <input id="f-stock" type="number" min="0" name="stock" form="{{ $form }}" value="{{ old('stock', $product->stock) }}" class="{{ $input }}" @disabled($locked) @unless($locked) required @endunless>
+            <label class="flex items-center gap-2 mt-2 text-sm">
+                <input type="hidden" name="on_order" value="0" form="{{ $form }}" @disabled($locked)>
+                <input type="checkbox" name="on_order" value="1" form="{{ $form }}" @checked(old('on_order', $product->on_order)) @disabled($locked)>
+                Под заказ, когда остатка нет
+            </label>
         </div>
 
         <div>

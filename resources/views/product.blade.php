@@ -59,11 +59,13 @@
         <div class="flex-1 min-w-0">
 
             <p class="mb-4">
+                {{-- BR-084: тот же список с фильтрами, сортировкой и страницей; прокрутка восстановится --}}
                 <a
-                    href="/catalog/{{ $product->category->slug ?? '' }}"
+                    href="{{ \App\Http\Controllers\CatalogController::backUrl($product->category) }}"
                     class="underline"
+                    data-back-to-list
                 >
-                    ← Назад в каталог
+                    ← Вернуться к списку
                 </a>
             </p>
 
@@ -119,7 +121,7 @@
                 @endif
 
                 <p class="mb-4">
-                    В наличии: {{ $product->stock }}
+                    @include('partials.stock_badge', ['product' => $product])
                 </p>
 
                 @if(! auth()->user()->isClient())
@@ -161,7 +163,7 @@
                 @else
 
                     <div class="bg-red-100 border border-red-400 p-4 rounded mt-4">
-                        Нет в наличии
+                        {{ $product->on_order ? 'Под заказ — уточните срок у менеджера' : 'Нет в наличии' }}
                     </div>
 
                 @endif

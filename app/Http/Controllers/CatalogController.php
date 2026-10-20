@@ -3,11 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
-use App\Models\Product;
+use App\Services\Catalog\CatalogFilters;
+use App\Services\Catalog\CatalogListing;
 use App\Services\CatalogMenu;
 
 class CatalogController extends Controller
 {
+    /** Ключ сессии: адрес последнего списка каталога с фильтрами */
+    public const BACK_URL = 'catalog.back_url';
+
     public function index()
     {
         $parents = Category::whereNull('parent_id')
@@ -32,26 +36,48 @@ class CatalogController extends Controller
     }
 
     /**
-     * Товары категории вместе со всеми вложенными подкатегориями —
-     * «весь раздел» из мегаменю и мобильного меню.
+     * Товары категории вместе со всеми вложенными подкатегориями — «весь раздел» из мегаменю
+     * и мобильного меню — с фильтрами и сортировкой (SRS §3.9, §3.10). Всё состояние — в URL
+     * (BR-029, BR-030); адрес списка запоминается для «← Вернуться к списку» в карточке (BR-084).
      */
-    public function show($slug, CatalogMenu $menu)
+    public function show($slug, CatalogMenu $menu, CatalogFilters $filters)
     {
-        $category = Category::where(
-            'slug',
-            $slug
-        )->firstOrFail();
+        $category = Category::where('slug', $slug)->firstOrFail();
 
-        $products = Product::with(['category', 'mainImage'])
-            ->whereIn('category_id', $menu->descendantIds($category))
-            ->where('is_active', 1)
-            ->where('is_published', true)
-            ->latest()
-            ->paginate(24);
+        $listing = new CatalogListing(
+            $category,
+            $menu->descendantIds($category),
+            $filters,
+            request()->query(),
+            auth()->check(),
+        );
 
-        return view('catalog', compact(
-            'category',
-            'products'
-        ));
+        $baseUrl = '/catalog/' . $category->slug;
+
+        session([self::BACK_URL => request()->getRequestUri()]);
+
+        return view('catalog', [
+            'category' => $category,
+            'listing'  => $listing,
+            'products' => $listing->products(),
+            'facets'   => $listing->facets(),
+            'chips'    => $listing->chips($baseUrl),
+            'baseUrl'  => $baseUrl,
+        ]);
+    }
+
+    /**
+     * Куда ведёт «← Вернуться к списку» из карточки: последний открытый список каталога,
+     * иначе — категория товара.
+     */
+    public static function backUrl(?Category $category): string
+    {
+        $url = session(self::BACK_URL);
+
+        if (is_string($url) && str_starts_with($url, '/catalog/')) {
+            return $url;
+        }
+
+        return $category ? '/catalog/' . $category->slug : route('catalog.index');
     }
 }

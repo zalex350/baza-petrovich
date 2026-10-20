@@ -8,6 +8,7 @@ import mobileMenu from './mobile-menu';
 import adminImages from './admin-images';
 import imageQueue from './image-queue';
 import attributeRows from './attribute-rows';
+import catalogFilters from './catalog-filters';
 import productGallery from './product-gallery';
 
 window.Alpine = Alpine;
@@ -17,6 +18,7 @@ Alpine.data('mobileMenu', mobileMenu);
 Alpine.data('adminImages', adminImages);
 Alpine.data('imageQueue', imageQueue);
 Alpine.data('attributeRows', attributeRows);
+Alpine.data('catalogFilters', catalogFilters);
 Alpine.data('productGallery', productGallery);
 
 Alpine.start();
