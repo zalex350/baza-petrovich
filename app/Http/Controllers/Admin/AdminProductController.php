@@ -25,7 +25,7 @@ class AdminProductController extends Controller
     }
 
     /** Поля учётной системы: при shop.catalog.manual_products = false приходят только из 1С */
-    private const ERP_FIELDS = ['name', 'sku', 'brand', 'category_id', 'price', 'vat_rate', 'stock', 'on_order'];
+    private const ERP_FIELDS = ['name', 'sku', 'brand', 'price', 'vat_rate', 'stock', 'on_order'];
 
     /** Тексты сайта: через черновик */
     private const DRAFT_FIELDS = ['display_name', 'description', 'specifications', 'package_contents'];
@@ -134,8 +134,11 @@ class AdminProductController extends Controller
 
         $direct = $manual ? $this->normalizeVat(array_intersect_key($data, array_flip(self::ERP_FIELDS))) : [];
 
-        if (request()->has('slug')) {
-            $direct['slug'] = $data['slug'] ?? null;
+        // Данные сайта, которые применяются сразу (SRS §11.3: категория — сайта, не 1С)
+        foreach (['slug', 'category_id'] as $field) {
+            if (request()->has($field)) {
+                $direct[$field] = $data[$field] ?? null;
+            }
         }
 
         $product->update($direct);
@@ -222,7 +225,6 @@ class AdminProductController extends Controller
             'name'        => 'required|string|max:255',
             'sku'         => ['required', 'string', 'max:100', Rule::unique('products', 'sku')->ignore($product?->id)],
             'brand'       => 'nullable|string|max:255',
-            'category_id' => 'nullable|exists:categories,id',
             'price'       => 'required|numeric|min:0',
             'vat_rate'    => ['sometimes', 'required', VatCalculator::rateRule()],
             'stock'       => 'required|integer|min:0',
@@ -233,6 +235,7 @@ class AdminProductController extends Controller
     private function siteRules(?Product $product = null): array
     {
         return [
+            'category_id'      => 'nullable|exists:categories,id',
             'display_name'     => 'nullable|string|max:255',
             'slug'             => ['nullable', 'string', 'max:255', Rule::unique('products', 'slug')->ignore($product?->id)],
             'description'      => 'nullable|string',

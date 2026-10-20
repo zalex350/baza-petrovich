@@ -114,18 +114,6 @@
             </label>
         </div>
 
-        <div>
-            <label for="f-category" class="block mb-2 font-semibold">Категория</label>
-            <select id="f-category" name="category_id" form="{{ $form }}" class="{{ $input }}" @disabled($locked)>
-                <option value="">— не выбрана —</option>
-                @foreach($categories as $category)
-                    <option value="{{ $category->id }}" @selected(old('category_id', $product->category_id) == $category->id)>
-                        {{ $category->name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-
     </div>
 
 </div>
@@ -141,7 +129,7 @@
         @if($isNew)
             Новый товар сохраняется как черновик и не отображается на сайте до публикации.
         @else
-            Тексты сохраняются в черновик и попадают на сайт после публикации. Адрес страницы — сразу.
+            Тексты сохраняются в черновик и попадают на сайт после публикации. Категория и адрес страницы — сразу.
         @endif
     </p>
 
@@ -152,6 +140,19 @@
     @endif
 
     <div class="space-y-6">
+
+        <div>
+            <label for="f-category" class="block mb-2 font-semibold">Категория</label>
+            <select id="f-category" name="category_id" form="{{ $form }}" class="{{ $input }}">
+                <option value="">— не выбрана —</option>
+                @foreach($categories as $category)
+                    <option value="{{ $category->id }}" @selected(old('category_id', $product->category_id) == $category->id)>
+                        {{ $category->name }}
+                    </option>
+                @endforeach
+            </select>
+            <p class="text-sm text-slate-500 mt-1">Раздел каталога на сайте — задаётся здесь, из 1С не приходит.</p>
+        </div>
 
         <div>
             <label for="f-display-name" class="block mb-2 font-semibold">

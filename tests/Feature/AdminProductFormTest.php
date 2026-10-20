@@ -319,7 +319,6 @@ class AdminProductFormTest extends TestCase
             $this->assertMatchesRegularExpression('#<input[^>]*name="' . $field . '"[^>]*\sdisabled[\s>]#s', $html, $field);
         }
 
-        $this->assertMatchesRegularExpression('#<select[^>]*name="category_id"[^>]*\sdisabled[\s>]#s', $html);
         $this->assertMatchesRegularExpression('#<select[^>]*name="vat_rate"[^>]*\sdisabled[\s>]#s', $html);
         $this->assertDoesNotMatchRegularExpression('#<textarea[^>]*name="description"[^>]*\sdisabled[\s>]#s', $html);
     }
@@ -336,7 +335,6 @@ class AdminProductFormTest extends TestCase
             'price'       => -5,
             'vat_rate'    => 'abc',
             'stock'       => 999,
-            'category_id' => null,
             'description' => 'Новое описание',
         ])->assertSessionHasNoErrors();
 
@@ -347,10 +345,44 @@ class AdminProductFormTest extends TestCase
         $this->assertSame('Grohe', $this->product->brand);
         $this->assertEquals(100, $this->product->price);
         $this->assertSame(5, (int) $this->product->stock);
-        $this->assertSame($this->category->id, $this->product->category_id);
 
         // Данные сайта при этом сохраняются
         $this->assertSame('Новое описание', $this->product->description);
+    }
+
+    /**
+     * SRS §11.3: категория принадлежит сайту, производитель — 1С.
+     */
+    public function test_category_is_site_data_and_editable_without_manual_products(): void
+    {
+        config(['shop.catalog.manual_products' => false]);
+
+        $html = $this->actingAs($this->admin)->get("/admin/product/{$this->product->id}")->getContent();
+
+        // Поле категории — в блоке «Данные сайта», не заблокировано; бренд — в блоке 1С
+        $site = substr($html, strpos($html, 'data-site-block'));
+        $erp = substr($html, strpos($html, 'data-erp-block'), strpos($html, 'data-site-block') - strpos($html, 'data-erp-block'));
+
+        $this->assertStringContainsString('name="category_id"', $site);
+        $this->assertStringNotContainsString('name="category_id"', $erp);
+        $this->assertStringContainsString('name="brand"', $erp);
+        $this->assertDoesNotMatchRegularExpression('#<select[^>]*name="category_id"[^>]*\sdisabled[\s>]#s', $html);
+
+        $other = Category::create(['name' => 'Ванны', 'slug' => 'vanny']);
+
+        $this->actingAs($this->admin)->post("/admin/product/{$this->product->id}", [
+            'action'      => 'draft',
+            'category_id' => $other->id,
+            'brand'       => 'Other',
+        ])->assertSessionHasNoErrors();
+
+        $this->product->refresh();
+        $this->assertSame($other->id, $this->product->category_id);
+        $this->assertSame('Grohe', $this->product->brand);
+
+        // Несуществующая категория — ошибка
+        $this->actingAs($this->admin)->post("/admin/product/{$this->product->id}", ['category_id' => 999999])
+            ->assertSessionHasErrors('category_id');
     }
 
     public function test_without_manual_products_photos_still_upload(): void
