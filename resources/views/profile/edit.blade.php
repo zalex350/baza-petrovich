@@ -34,16 +34,6 @@
 
     </div>
 
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-
-        <div class="max-w-xl">
-
-            @include('profile.partials.delete-user-form')
-
-        </div>
-
-    </div>
-
 </div>
 
 @endsection

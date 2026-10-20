@@ -61,39 +61,32 @@ class ProfileTest extends TestCase
         $this->assertNotNull($user->refresh()->email_verified_at);
     }
 
-    public function test_user_can_delete_their_account(): void
+    /**
+     * B2B: учётную запись блокирует администратор, сам пользователь её не удаляет.
+     */
+    public function test_nobody_can_delete_own_account(): void
     {
-        $user = User::factory()->create();
+        foreach ([User::factory()->create(), User::factory()->admin()->create()] as $user) {
+            $this->actingAs($user)->get('/profile')
+                ->assertOk()
+                ->assertDontSee('Delete Account')
+                ->assertDontSee('userDeletion', false);
 
-        $response = $this
-            ->actingAs($user)
-            ->delete('/profile', [
-                'password' => 'password',
-            ]);
+            $this->actingAs($user)->delete('/profile', ['password' => 'password'])
+                ->assertStatus(405);
 
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect('/');
-
-        $this->assertGuest();
-        $this->assertNull($user->fresh());
+            $this->assertNotNull($user->fresh());
+        }
     }
 
-    public function test_correct_password_must_be_provided_to_delete_account(): void
+    public function test_profile_page_is_in_russian(): void
     {
-        $user = User::factory()->create();
-
-        $response = $this
-            ->actingAs($user)
-            ->from('/profile')
-            ->delete('/profile', [
-                'password' => 'wrong-password',
-            ]);
-
-        $response
-            ->assertSessionHasErrorsIn('userDeletion', 'password')
-            ->assertRedirect('/profile');
-
-        $this->assertNotNull($user->fresh());
+        $this->actingAs(User::factory()->create())->get('/profile')
+            ->assertOk()
+            ->assertSee('Данные профиля')
+            ->assertSee('Смена пароля')
+            ->assertSee('Текущий пароль')
+            ->assertDontSee('Profile Information')
+            ->assertDontSee('Update Password');
     }
 }

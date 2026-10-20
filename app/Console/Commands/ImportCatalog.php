@@ -12,25 +12,25 @@ class ImportCatalog extends Command
 {
     protected $signature = 'catalog:import';
 
-    protected $description = 'Import product catalog from storage/app/imports/catalog_import.json';
+    protected $description = 'Импорт каталога из storage/app/imports/catalog_import.json';
 
     public function handle(): int
     {
         $path = storage_path('app/imports/catalog_import.json');
 
         if (!file_exists($path)) {
-            $this->error('File not found: ' . $path);
+            $this->error('Файл не найден: ' . $path);
             return self::FAILURE;
         }
 
         $data = json_decode(file_get_contents($path), true);
 
         if (!$data || !isset($data['categories'], $data['products'])) {
-            $this->error('Invalid JSON structure');
+            $this->error('Неверная структура JSON: нужны ключи categories и products');
             return self::FAILURE;
         }
 
-        $this->info('Importing ' . count($data['categories']) . ' categories...');
+        $this->info('Импорт категорий: ' . count($data['categories']) . '…');
 
         $categoryMap = [];
         $usedSlugs = [];
@@ -63,7 +63,7 @@ class ImportCatalog extends Command
             $categoryMap[$categoryName] = $category->id;
         }
 
-        $this->info('Categories done. Importing ' . count($data['products']) . ' products...');
+        $this->info('Категории готовы. Импорт товаров: ' . count($data['products']) . '…');
 
         $bar = $this->output->createProgressBar(count($data['products']));
         $bar->start();
@@ -116,7 +116,7 @@ class ImportCatalog extends Command
         $bar->finish();
         $this->newLine(2);
 
-        $this->info("Done. Created: {$created}, skipped (duplicates/no sku): {$skipped}");
+        $this->info("Готово. Создано: {$created}, пропущено (дубли или без артикула): {$skipped}");
 
         // Массовые изменения идут мимо observer — сбрасываем кэш меню вручную
         CatalogMenu::flush();
