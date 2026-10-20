@@ -99,6 +99,16 @@ return [
             'expire' => 60,
             'throttle' => 60,
         ],
+
+        // Приглашение нового пользователя (админка): ссылка на установку пароля
+        // живёт 72 часа. Отдельная таблица — токен приглашения не принимается
+        // как обычный сброс пароля, а обычный сброс — как приглашение.
+        'invitations' => [
+            'provider' => 'users',
+            'table' => env('AUTH_INVITATION_TOKEN_TABLE', 'user_invitation_tokens'),
+            'expire' => (int) env('AUTH_INVITATION_EXPIRE', 72 * 60),
+            'throttle' => 60,
+        ],
     ],
 
     /*

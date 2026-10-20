@@ -5,6 +5,11 @@
         <!-- Password Reset Token -->
         <input type="hidden" name="token" value="{{ $request->route('token') }}">
 
+        {{-- Ссылка из приглашения: токен проверяется брокером приглашений (72 ч) --}}
+        @if($request->boolean('invite') || old('invite'))
+            <input type="hidden" name="invite" value="1">
+        @endif
+
         <!-- Email Address -->
         <div>
             <x-input-label for="email" :value="__('Email')" />
