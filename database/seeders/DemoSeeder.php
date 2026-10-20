@@ -36,6 +36,15 @@ class DemoSeeder extends Seeder
 
     public const ALLOWED_ENVIRONMENTS = ['staging', 'local', 'testing'];
 
+    /** По ним demo:clear находит, что удалять */
+    public const EMAIL_DOMAIN = '@demo.test';
+
+    public const ORGANIZATION_UNPS = ['190000001', '290000002'];
+
+    public const PRODUCT_SKUS = ['DEMO-1', 'DEMO-2', 'DEMO-3'];
+
+    public const CATEGORY_SLUG = 'demo-tovary';
+
     /** @var list<array{0: string, 1: string, 2: string, 3: string}> роль, email, имя, пароль */
     private array $accounts = [];
 
@@ -77,7 +86,7 @@ class DemoSeeder extends Seeder
      */
     private function products()
     {
-        $category = Category::firstOrCreate(['slug' => 'demo-tovary'], ['name' => 'Демо-товары']);
+        $category = Category::firstOrCreate(['slug' => self::CATEGORY_SLUG], ['name' => 'Демо-товары']);
 
         $items = [
             ['DEMO-1', 'Смеситель для кухни (демо)', 'Grohe', 189.90],
