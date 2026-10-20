@@ -33,6 +33,38 @@ docker-compose exec node npm run build
 Имя compose-проекта зафиксировано (`name: smesitel_by`): контейнеры `smesitel_by-*` и том
 `smesitel_by_dbdata` не зависят от имени папки.
 
+### Зависимости PHP
+
+**`vendor/` — в томе Docker `smesitel_by_vendor`**, а не в папке проекта на диске: через
+bind-mount Windows тысячи файлов зависимостей в разы замедляли тесты и страницы. Код
+приложения по-прежнему подключён из папки проекта — правки видны сразу.
+
+- **composer — только внутри контейнера:**
+  ```bash
+  docker-compose exec php composer install
+  docker-compose exec php composer require vendor/package       # --dev для dev-зависимостей
+  docker-compose exec php composer update vendor/package
+  ```
+  `composer.json` и `composer.lock` лежат в папке проекта — изменения попадают в git как обычно.
+- Папку `vendor/` на хосте контейнер **не видит и не обновляет**. Она нужна только для
+  подсказок в IDE; при желании обновить — `composer install` на хосте. Для работы сайта
+  и тестов она не используется.
+- Том пуст после первого запуска или после `docker-compose down -v` — выполнить
+  `docker-compose exec php composer install`.
+
+**После `git pull`** — по тому, что изменилось (`git diff --name-only ORIG_HEAD HEAD`):
+
+| Изменилось | Выполнить |
+|---|---|
+| `composer.lock` | `docker-compose exec php composer install` |
+| `docker/php/` (Dockerfile, php.ini) | `docker-compose up -d --build php`, затем `docker-compose exec php composer install` |
+| `database/migrations/` | `docker-compose exec php php artisan migrate` |
+| `package-lock.json` | `docker-compose exec node npm ci` |
+| `resources/` (шаблоны, CSS, JS) или `package-lock.json` | `docker-compose exec node npm run build` |
+| `config/`, `.env` | `docker-compose exec php php artisan config:clear` |
+
+Проверка после обновления: `docker-compose exec php php artisan test --parallel`.
+
 ### Фото товаров
 
 Хранятся на диске из `SHOP_IMAGES_DISK` (по умолчанию `public` — `storage/app/public`,
