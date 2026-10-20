@@ -116,6 +116,22 @@ class HeaderTest extends TestCase
             ->assertSee('Корзина');
     }
 
+    public function test_mobile_burger_is_left_of_logo(): void
+    {
+        $html = $this->get('/')->assertOk()->getContent();
+
+        // Мобильная шапка: ☰ — первым, до логотипа, поиска и корзины
+        $mobile = substr($html, strpos($html, 'x-data="mobileMenu('));
+
+        $burger = strpos($mobile, 'x-ref="burger"');
+        $logo = strpos($mobile, 'aria-label="' . config('shop.name') . ' — на главную"');
+        $search = strpos($mobile, 'aria-controls="mobile-search"');
+
+        $this->assertNotFalse($burger);
+        $this->assertLessThan($logo, $burger);
+        $this->assertLessThan($search, $logo);
+    }
+
     public function test_cart_shows_positions_count_and_sum(): void
     {
         $client = $this->client();

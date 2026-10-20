@@ -1,5 +1,5 @@
 {{--
-    Мобильная шапка (<1024px): логотип, поиск, корзина, пользователь, ☰;
+    Мобильная шапка (<1024px): ☰ слева (панель тоже выезжает слева), логотип, поиск, корзина, пользователь;
     off-canvas панель с drill-down каталогом. Поведение — resources/js/mobile-menu.js.
 --}}
 <div
@@ -10,6 +10,18 @@
 
     {{-- Строка шапки --}}
     <div class="h-14 px-4 flex items-center gap-1">
+
+        <button
+            type="button"
+            x-ref="burger"
+            @click="openPanel()"
+            :aria-expanded="panel.toString()"
+            aria-controls="mobile-panel"
+            aria-label="Меню"
+            class="w-10 h-10 -ml-2 flex items-center justify-center text-slate-700"
+        >
+            @svg('heroicon-o-bars-3', $iconClass)
+        </button>
 
         <a href="/" class="text-lg font-extrabold tracking-tight text-slate-900 mr-auto truncate" aria-label="{{ config('shop.name') }} — на главную">
             {{ config('shop.name') }}
@@ -46,19 +58,6 @@
         >
             @svg($user ? 'heroicon-o-user-circle' : 'heroicon-o-user', $iconClass)
         </a>
-
-        <button
-            type="button"
-            x-ref="burger"
-            @click="openPanel()"
-            :aria-expanded="panel.toString()"
-            aria-controls="mobile-panel"
-            aria-label="Меню"
-            class="w-10 h-10 flex items-center justify-center text-slate-700"
-        >
-            @svg('heroicon-o-bars-3', $iconClass)
-        </button>
-
     </div>
 
     {{-- Строка поиска --}}
