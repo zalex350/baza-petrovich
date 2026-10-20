@@ -1,0 +1,65 @@
+# Тестовый стенд (test.smesitel.by). Самостоятельный файл, не дополнение к docker-compose.yml.
+# В .env стенда: COMPOSE_FILE=docker-compose.staging.yml — тогда docker compose в папке
+# проекта работает с этим файлом. Обновление — ./deploy.sh (docs/STAGING.md).
+#
+# Отличия от локального docker-compose.yml:
+#   - код, vendor и собранный фронт — внутри образов (docker/staging/Dockerfile), без bind-mount;
+#   - снаружи только .env (только чтение) и тома: БД и storage (фото, логи, сессии);
+#   - MySQL наружу не открыт; nginx — только на 127.0.0.1, HTTPS и пароль — nginx сервера;
+#   - node-контейнера нет: фронт собирается при сборке образа.
+#
+# Имя проекта smesitel_by — те же имена контейнеров и тот же том БД smesitel_by_dbdata,
+# что при прежнем запуске: данные сохраняются.
+name: smesitel_by
+
+services:
+
+  php:
+    build:
+      context: .
+      dockerfile: docker/staging/Dockerfile
+      target: app
+    image: smesitel_by-app:latest
+    restart: unless-stopped
+    volumes:
+      - ./.env:/var/www/.env:ro
+      - storage:/var/www/storage
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/staging/Dockerfile
+      target: web
+    image: smesitel_by-web:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${APP_PORT:-8090}:80"
+    volumes:
+      # Загруженные фото (public/storage → storage/app/public)
+      - storage:/var/www/storage:ro
+    depends_on:
+      - php
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:?DB_DATABASE не задан в .env}
+      MYSQL_USER: ${DB_USERNAME:?DB_USERNAME не задан в .env}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD не задан в .env}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD не задан в .env}
+    volumes:
+      - dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+volumes:
+  dbdata:
+  storage:
