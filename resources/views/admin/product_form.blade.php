@@ -167,7 +167,10 @@
         </div>
 
         <div>
-            <label for="f-specifications" class="block mb-2 font-semibold">Характеристики</label>
+            <label for="f-specifications" class="block mb-2 font-semibold">
+                Дополнительная информация
+                <span class="text-slate-400 font-normal text-sm">(свободный текст под таблицей характеристик)</span>
+            </label>
             <textarea id="f-specifications" name="specifications" form="{{ $form }}" rows="5" class="{{ $input }}">{{ $site('specifications') }}</textarea>
         </div>
 
@@ -200,6 +203,8 @@
     </div>
 
 </div>
+
+@include('partials.admin_product_attributes', ['attributeRows' => $attributeRows, 'form' => $form])
 
 @unless($isNew)
     @include('partials.admin_product_images', ['product' => $product, 'form' => $form])

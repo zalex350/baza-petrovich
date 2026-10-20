@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductDraft;
+use App\Services\ProductAttributes;
 use App\Services\Vat\VatCalculator;
 use Illuminate\Validation\Rule;
 
@@ -18,6 +19,10 @@ use Illuminate\Validation\Rule;
 class AdminProductController extends Controller
 {
     use UploadsProductImages;
+
+    public function __construct(private readonly ProductAttributes $attributes)
+    {
+    }
 
     /** Поля учётной системы: при shop.catalog.manual_products = false приходят только из 1С */
     private const ERP_FIELDS = ['name', 'sku', 'brand', 'category_id', 'price', 'vat_rate', 'stock'];
@@ -41,8 +46,9 @@ class AdminProductController extends Controller
 
         return view('admin.product_form', [
             'product'    => new Product(['vat_rate' => 20.00, 'price' => 0, 'stock' => 0]),
-            'categories' => Category::all(),
-            'draft'      => null,
+            'categories'    => Category::all(),
+            'draft'         => null,
+            'attributeRows' => $this->attributeRows(collect()),
         ]);
     }
 
@@ -59,8 +65,13 @@ class AdminProductController extends Controller
         $data['is_active']    = request()->boolean('is_active');
         $data['is_published'] = $this->action() === 'publish';
 
+        // Характеристики проверяются до создания товара: ошибка — товар не создаётся
+        $set = request()->has('attributes_sent') ? $this->attributes->fromRows((array) request('attributes', [])) : [];
+
         // Новый товар на сайте не виден до публикации — тексты пишутся сразу в товар
         $product = Product::create($data);
+
+        $this->attributes->sync($product, $set);
 
         return $this->afterSave($product, 'Товар создан');
     }
@@ -86,12 +97,19 @@ class AdminProductController extends Controller
 
     public function show($id)
     {
-        $product = Product::with('images')->findOrFail($id);
+        $product = Product::with(['images', 'attributeValues.attribute'])->findOrFail($id);
+        $draft = $product->draft;
+
+        // Характеристики: черновые, если есть, иначе опубликованные
+        $values = isset($draft?->data['attributes'])
+            ? $this->attributes->toModels($draft->data['attributes'])
+            : $product->attributeValues;
 
         return view('admin.product_form', [
-            'product'    => $product,
-            'categories' => Category::all(),
-            'draft'      => $product->draft,
+            'product'       => $product,
+            'categories'    => Category::all(),
+            'draft'         => $draft,
+            'attributeRows' => $this->attributeRows($values),
         ]);
     }
 
@@ -108,6 +126,11 @@ class AdminProductController extends Controller
         $data = request()->validate(
             ($manual ? $this->erpRules($product) : []) + $this->siteRules($product)
         );
+
+        // Характеристики — до записи: ошибка в них не сохраняет ничего
+        if (request()->has('attributes_sent')) {
+            $data['attributes'] = $this->attributes->fromRows((array) request('attributes', []));
+        }
 
         $direct = $manual ? $this->normalizeVat(array_intersect_key($data, array_flip(self::ERP_FIELDS))) : [];
 
@@ -129,14 +152,15 @@ class AdminProductController extends Controller
     {
         $product = Product::findOrFail($id);
 
+        // Черновые характеристики, если есть, сохраняются
         ProductDraft::updateOrCreate(
             ['product_id' => $product->id],
-            ['data' => [
+            ['data' => array_merge($product->draft?->data ?? [], [
                 'display_name'    => request('display_name'),
                 'description'     => request('description'),
                 'specifications'  => request('specifications'),
                 'package_contents' => request('package_contents'),
-            ]]
+            ])]
         );
 
         return back()->with('success', 'Черновик сохранён');
@@ -169,6 +193,10 @@ class AdminProductController extends Controller
             $product->description     = $data['description'] ?? $product->description;
             $product->specifications  = $data['specifications'] ?? $product->specifications;
             $product->package_contents = $data['package_contents'] ?? $product->package_contents;
+
+            if (isset($data['attributes'])) {
+                $product->setRelation('attributeValues', $this->attributes->toModels($data['attributes']));
+            }
         }
 
         $preview = ['draft' => (bool) $draft];
@@ -222,14 +250,15 @@ class AdminProductController extends Controller
     }
 
     /**
-     * Тексты пришли и отличаются от опубликованных (или черновик уже есть) — в черновик.
-     * Сохранение без правок текста черновик не создаёт.
+     * Тексты и характеристики пришли и отличаются от опубликованных (или черновик уже
+     * есть) — в черновик. Сохранение без правок черновик не создаёт.
      */
     private function saveDraftFields(Product $product, array $data): void
     {
         $sent = array_intersect(self::DRAFT_FIELDS, array_keys(request()->all()));
+        $attributesSent = array_key_exists('attributes', $data);
 
-        if (! $sent) {
+        if (! $sent && ! $attributesSent) {
             return;
         }
 
@@ -240,13 +269,42 @@ class AdminProductController extends Controller
             $values[$field] = $data[$field] ?? null;
         }
 
+        if ($attributesSent) {
+            $values['attributes'] = $data['attributes'];
+        }
+
         $changed = collect(self::DRAFT_FIELDS)->contains(
             fn ($field) => (string) ($values[$field] ?? '') !== (string) ($product->{$field} ?? '')
-        );
+        ) || (isset($values['attributes']) && $values['attributes'] !== $this->attributes->current($product));
 
         if ($draft || $changed) {
             ProductDraft::updateOrCreate(['product_id' => $product->id], ['data' => $values]);
         }
+    }
+
+    /**
+     * Строки блока «Характеристики»: после ошибки — введённое, иначе — из значений.
+     */
+    private function attributeRows($values): array
+    {
+        if (is_array(old('attributes'))) {
+            $units = \App\Models\ProductAttribute::pluck('unit', 'name_key');
+
+            return collect(old('attributes'))
+                ->map(fn ($row) => [
+                    'name'  => (string) ($row['name'] ?? ''),
+                    'value' => (string) ($row['value'] ?? ''),
+                    'unit'  => $units[\App\Models\ProductAttribute::key($row['name'] ?? '')] ?? null,
+                ])
+                ->filter(fn ($row) => $row['name'] !== '' || $row['value'] !== '')
+                ->values()->all();
+        }
+
+        return collect($values)->map(fn ($v) => [
+            'name'  => $v->attribute->name,
+            'value' => $v->value,
+            'unit'  => $v->attribute->unit,
+        ])->values()->all();
     }
 
     private function publishProduct(Product $product): void
@@ -264,6 +322,10 @@ class AdminProductController extends Controller
                 'package_contents' => $data['package_contents'] ?? $product->package_contents,
                 'is_published'    => true,
             ]);
+
+            if (isset($data['attributes'])) {
+                $this->attributes->sync($product, $data['attributes']);
+            }
 
             $draft->delete();
         } else {
