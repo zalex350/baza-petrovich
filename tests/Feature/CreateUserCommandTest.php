@@ -264,7 +264,7 @@ class CreateUserCommandTest extends TestCase
             '--role'     => 'client',
             '--password' => 'Manual-pass-123',
         ])
-            ->expectsOutputToContain('The email field must be a valid email address.')
+            ->expectsOutputToContain('Поле «Email» должно содержать корректный email.')
             ->expectsOutputToContain('Получено: "w@ht'.chr(92).'u200b"')
             ->assertFailed();
 
@@ -280,7 +280,7 @@ class CreateUserCommandTest extends TestCase
             '--role'     => 'client',
             '--password' => 'ab',
         ])
-            ->expectsOutputToContain('at least 8 characters')
+            ->expectsOutputToContain('не меньше 8 символов')
             ->expectsOutputToContain('Получено: "ab"')
             ->assertFailed();
     }
@@ -350,7 +350,7 @@ class CreateUserCommandTest extends TestCase
             ->expectsChoice('Роль', 'client', ['client', 'admin'])
             ->expectsQuestion('ID организации', (string) $this->org->id)
             ->expectsQuestion('Пароль (пусто — сгенерировать)', '1234567')
-            ->expectsOutputToContain('at least 8 characters')
+            ->expectsOutputToContain('не меньше 8 символов')
             ->doesntExpectOutputToContain('Сгенерированный пароль')
             ->assertFailed();
 
