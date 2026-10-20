@@ -1,0 +1,18 @@
+# Контекст сборки образов стенда (docker/staging/Dockerfile): только исходники.
+# Зависимости ставятся и фронт собирается внутри сборки; данные — в томах.
+.git
+.env
+.env.*
+!.env.example
+vendor
+node_modules
+public/build
+public/storage
+public/media
+storage
+bootstrap/cache/*.php
+tests
+docker-compose*.yml
+*.sql
+*.sql.gz
+.phpunit.result.cache
