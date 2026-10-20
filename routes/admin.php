@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminOrganizationController;
 use App\Http\Controllers\Admin\AdminDeliveryAddressController;
+use App\Http\Controllers\Admin\AdminAttributeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,6 +17,15 @@ use App\Http\Controllers\Admin\AdminDeliveryAddressController;
 */
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
+
+    // Справочник характеристик (SRS §4.9, §4.18)
+    Route::get('/admin/attributes', [AdminAttributeController::class, 'index']);
+    Route::get('/admin/attribute/create', [AdminAttributeController::class, 'create']);
+    Route::post('/admin/attribute', [AdminAttributeController::class, 'store']);
+    Route::post('/admin/attributes/merge', [AdminAttributeController::class, 'merge']);
+    Route::get('/admin/attribute/{id}/edit', [AdminAttributeController::class, 'edit']);
+    Route::post('/admin/attribute/{id}', [AdminAttributeController::class, 'update']);
+    Route::post('/admin/attribute/{id}/delete', [AdminAttributeController::class, 'destroy']);
 
     // Фото товара (SRS §10.4.8): загрузка, порядок, основное, замена, удаление
     Route::post(

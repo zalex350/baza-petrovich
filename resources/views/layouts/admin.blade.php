@@ -27,6 +27,7 @@
     $adminMenu = [
         // 'active' — точные шаблоны: 'admin/order*' совпал бы и с admin/organizations
         ['url' => '/admin/products',      'label' => 'Товары',       'icon' => 'heroicon-o-cube',                    'active' => ['admin/products', 'admin/product/*']],
+        ['url' => '/admin/attributes',    'label' => 'Характеристики', 'icon' => 'heroicon-o-adjustments-horizontal',  'active' => ['admin/attributes', 'admin/attribute/*']],
         ['url' => '/admin/orders',        'label' => 'Заказы',       'icon' => 'heroicon-o-clipboard-document-list', 'active' => ['admin/orders', 'admin/order/*']],
         ['url' => '/admin/organizations', 'label' => 'Клиенты',      'icon' => 'heroicon-o-building-office-2',       'active' => ['admin/organizations', 'admin/organization/*']],
         ['url' => '/admin/users',         'label' => 'Пользователи', 'icon' => 'heroicon-o-users',                   'active' => ['admin/users', 'admin/user/*']],

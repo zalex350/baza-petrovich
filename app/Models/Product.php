@@ -91,4 +91,25 @@ class Product extends Model
     {
         return $this->hasOne(\App\Models\ProductDraft::class);
     }
+
+    /**
+     * Характеристики в порядке из админки (BR-061).
+     */
+    public function attributeValues()
+    {
+        return $this->hasMany(ProductAttributeValue::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /**
+     * Строки таблицы характеристик карточки: в заданном порядке, пустые не выводятся (BR-062).
+     *
+     * @return \Illuminate\Support\Collection<int, array{name: string, value: string}>
+     */
+    public function specRows()
+    {
+        return $this->attributeValues
+            ->filter(fn (ProductAttributeValue $v) => $v->attribute && trim((string) $v->value) !== '')
+            ->map(fn (ProductAttributeValue $v) => ['name' => $v->attribute->name, 'value' => $v->displayValue()])
+            ->values();
+    }
 }

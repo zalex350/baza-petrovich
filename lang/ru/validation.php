@@ -185,7 +185,7 @@ return [
         'category_id' => 'Категория',
         'display_name' => 'Отображаемое название',
         'description' => 'Описание',
-        'specifications' => 'Характеристики',
+        'specifications' => 'Дополнительная информация',
         'package_contents' => 'Комплектация',
         'quantity' => 'Количество',
         'qty' => 'Количество',

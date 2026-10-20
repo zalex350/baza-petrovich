@@ -76,6 +76,13 @@
                 {{ $product->sku }}
             </p>
 
+            @if($product->brand)
+                <p class="mb-2">
+                    <strong>Производитель:</strong>
+                    {{ $product->brand }}
+                </p>
+            @endif
+
             @auth
 
                 @if($product->price === null)
@@ -178,6 +185,13 @@
 
     </div>
 
+    @php
+        // BR-082: ошибка в характеристиках не роняет карточку — блок просто не показывается
+        $specRows = rescue(fn () => $product->specRows(), collect());
+        $specText = trim((string) $product->specifications);
+        $hasSpecs = $specRows->isNotEmpty() || $specText !== '';
+    @endphp
+
     <!-- Tabs -->
     <div class="mt-10">
 
@@ -190,12 +204,15 @@
                 Описание
             </button>
 
-            <button
-                onclick="showTab('chars')"
-                class="border px-4 py-2 rounded"
-            >
-                Характеристики
-            </button>
+            {{-- §4.9.4: нет характеристик — нет и вкладки --}}
+            @if($hasSpecs)
+                <button
+                    onclick="showTab('chars')"
+                    class="border px-4 py-2 rounded"
+                >
+                    Характеристики
+                </button>
+            @endif
 
             <button
                 onclick="showTab('kit')"
@@ -215,41 +232,39 @@
 
         </div>
 
-        <!-- Specifications -->
-        <div
-            id="chars"
-            class="tab-content hidden"
-        >
+        <!-- Specifications: «Характеристика — Значение» в заданном порядке, пустые не выводятся (BR-062) -->
+        @if($hasSpecs)
 
-            <table class="table-auto border-collapse border w-full">
+            <div
+                id="chars"
+                class="tab-content hidden"
+                data-specs
+            >
 
-                <tr>
-                    <td class="border p-2">Артикул</td>
-                    <td class="border p-2">{{ $product->sku }}</td>
-                </tr>
+                @if($specRows->isNotEmpty())
 
-                <tr>
-                    <td class="border p-2">Бренд</td>
-                    <td class="border p-2">{{ $product->brand }}</td>
-                </tr>
+                    <table class="w-full border-collapse text-sm sm:text-base">
+                        <tbody class="divide-y divide-slate-200 border-y border-slate-200">
+                            @foreach($specRows as $row)
+                                <tr data-spec-row>
+                                    <th scope="row" class="py-2 pr-4 text-left font-normal text-slate-500 align-top w-1/2">{{ $row['name'] }}</th>
+                                    <td class="py-2 text-slate-900">{{ $row['value'] }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
 
-                <tr>
-                    <td class="border p-2">Категория</td>
-                    <td class="border p-2">
-                        {{ $product->category->name ?? '-' }}
-                    </td>
-                </tr>
+                @endif
 
-                <tr>
-                    <td class="border p-2">Характеристики</td>
-                    <td class="border p-2">
-                        {!! nl2br(e($product->specifications)) !!}
-                    </td>
-                </tr>
+                @if($specText !== '')
+                    <p @class(['text-slate-700', 'mt-4' => $specRows->isNotEmpty()])>
+                        {!! nl2br(e($specText)) !!}
+                    </p>
+                @endif
 
-            </table>
+            </div>
 
-        </div>
+        @endif
 
         <!-- Package -->
         <div
