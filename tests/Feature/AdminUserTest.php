@@ -224,7 +224,7 @@ class AdminUserTest extends TestCase
         $this->assertNotNull($user);
 
         Notification::assertSentTo($user, UserInvitation::class, function (UserInvitation $notification) use ($user) {
-            $this->assertTrue(Password::broker()->tokenExists($user, $notification->token));
+            $this->assertTrue(Password::broker(UserInvitation::BROKER)->tokenExists($user, $notification->token));
 
             $mail = $notification->toMail($user);
             $this->assertSame('Приглашение на smesitel.by', $mail->subject);
@@ -253,6 +253,7 @@ class AdminUserTest extends TestCase
         });
 
         $this->post('/reset-password', [
+            'invite'                => 1,
             'token'                 => $token,
             'email'                 => 'ivanov@santeh.by',
             'password'              => 'My-new-pass-123',

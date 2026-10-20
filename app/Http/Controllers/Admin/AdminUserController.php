@@ -93,7 +93,7 @@ class AdminUserController extends Controller
             return redirect("/admin/user/{$user->id}")->with('success', 'Пользователь создан');
         }
 
-        $status = Password::sendResetLink(
+        $status = Password::broker(UserInvitation::BROKER)->sendResetLink(
             ['email' => $user->email],
             fn (User $user, string $token) => $user->notify(new UserInvitation($token))
         );
