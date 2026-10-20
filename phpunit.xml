@@ -33,5 +33,9 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- Скорость: скомпилированные шаблоны — в /tmp контейнера, не на bind-mount Windows;
+             лог тестов не пишется (storage/logs на bind-mount) -->
+        <env name="VIEW_COMPILED_PATH" value="/tmp/smesitel-test-views"/>
+        <env name="LOG_CHANNEL" value="null"/>
     </php>
 </phpunit>

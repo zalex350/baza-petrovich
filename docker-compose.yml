@@ -22,6 +22,9 @@ services:
       context: ./docker/php
     volumes:
       - .:/var/www
+      # vendor — в томе Docker, а не на диске Windows: тысячи файлов через bind-mount
+      # в ~12 раз замедляли тесты и страницы. Наполняется composer install в контейнере.
+      - vendor:/var/www/vendor
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini
     depends_on:
       - mysql
@@ -48,3 +51,4 @@ services:
 
 volumes:
   dbdata:
+  vendor:
