@@ -12,11 +12,32 @@
 | Фото, логи, сессии | том `smesitel_by_storage` (`/var/www/storage` в контейнерах) |
 | HTTPS, пароль на сайт | nginx сервера: `/etc/nginx/sites-enabled/smesitel`, certbot, `/etc/nginx/.htpasswd` |
 | Сайт внутри сервера | `http://127.0.0.1:8090` (nginx сервера проксирует сюда) |
-| Бэкапы БД | `/home/deploy/backups`, последние 10 |
+| Бэкапы БД | `/home/deploy/backups`, последние 10: перед каждым деплоем и ежедневно в 03:30 (cron) |
 
 Код, PHP-зависимости и собранный фронт — **внутри образов** (`docker/staging/Dockerfile`).
 Папка проекта на сервере нужна только для `git pull`, сборки и `.env`; правки файлов
 на сервере на сайт не попадают — только через git и `./deploy.sh`.
+
+### Где собирается фронт
+
+На сервере, при каждом деплое, в **одноразовом node-контейнере** — это стадия `assets`
+в `docker/staging/Dockerfile` (`node:22`: `npm ci && npm run build`). Контейнер живёт только
+во время `docker compose build`; в работающем стенде node нет. Готовый `public/build`
+копируется в образы `php` и `nginx`. Так же, без dev-пакетов, ставится `composer install
+--no-dev` (стадия `vendor`). На сервере не нужны ни node, ни composer, ни PHP — только Docker.
+
+### Права на файлы
+
+Всё в папке проекта — пользователя **deploy**: `git pull`, `./deploy.sh`, cron — от него.
+От root git откажется (`detected dubious ownership`) — запускать `sudo -u deploy …`
+(или, если очень нужно, `git config --global --add safe.directory /home/deploy/smesitel_by`
+у того пользователя, от которого запускаете).
+
+`vendor/` и `node_modules/` в папке проекта при прежней схеме ставились в контейнерах
+от root. Теперь они не используются (зависимости — в образе), `deploy.sh` о них
+предупреждает. Удалить: `sudo rm -rf vendor node_modules public/build`.
+`.env` — `deploy:www-data`, `640`; `storage/` в папке проекта после перехода тоже
+не используется (данные — в томе `smesitel_by_storage`).
 
 ## Обновление
 
@@ -100,7 +121,8 @@ cd /home/deploy/smesitel_by
    docker compose build
    docker compose run --rm --no-deps php php artisan key:generate --show
    ```
-5. **Запуск:** `./deploy.sh` (бэкап на первом запуске пропускается — БД ещё нет).
+5. **Запуск:** `./deploy.sh` (бэкап на первом запуске пропускается — БД ещё нет),
+   затем ежедневный бэкап: `./deploy.sh install-cron`.
 6. **nginx сервера** — `/etc/nginx/sites-available/smesitel` (ссылка в `sites-enabled`):
    ```nginx
    server {
@@ -138,9 +160,29 @@ docker compose exec php php artisan db:seed --class=DemoSeeder --force
 заказы во всех статусах и заказ с запросом на отмену. **Пароли выводятся в консоль и при
 каждом запуске новые** — передайте их тестировщикам. Работает только при `APP_ENV=staging`.
 
+Удалить демо-данные (организации, пользователей `@demo.test`, их заказы и корзины,
+демо-товары и категорию «Демо-товары»; каталог и остальные данные не трогаются):
+
+```bash
+docker compose exec php php artisan demo:clear          # покажет, что удалит, и спросит
+docker compose exec php php artisan demo:clear --force  # без вопроса
+```
+
 ## Бэкап и восстановление БД
 
-Бэкап делается автоматически перед каждым обновлением; вручную — `./deploy.sh backup`.
+Бэкап делается перед каждым обновлением и **ежедневно по cron**; вручную —
+`./deploy.sh backup`.
+
+Ежедневный бэкап включается один раз:
+
+```bash
+./deploy.sh install-cron     # 03:30 каждый день, в crontab пользователя deploy
+crontab -l                   # проверить
+tail -n 50 ~/backups/backup.log
+```
+
+Время меняется переменной `BACKUP_CRON` (`BACKUP_CRON="0 2 * * *" ./deploy.sh install-cron`),
+повторный запуск строку не дублирует.
 Файлы: `/home/deploy/backups/smesitel-<дата>-<коммит>.sql.gz`, хранятся последние 10
 (`BACKUP_KEEP`, папка — `BACKUP_DIR`). Бэкапы лежат на том же сервере — важные копии
 скачивайте себе: `scp deploy@<сервер>:backups/<файл> .`

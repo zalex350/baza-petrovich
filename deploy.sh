@@ -2,8 +2,9 @@
 #
 # Обновление тестового стенда test.smesitel.by (docs/STAGING.md).
 #
-#   ./deploy.sh          — полное обновление
-#   ./deploy.sh backup   — только бэкап БД
+#   ./deploy.sh               — полное обновление
+#   ./deploy.sh backup        — только бэкап БД (так же — ежедневно по cron)
+#   ./deploy.sh install-cron  — добавить ежедневный бэкап в crontab пользователя
 #
 # Запускать из папки проекта от пользователя deploy (не root: git откажется работать
 # с репозиторием чужого владельца).
@@ -20,6 +21,7 @@
 #   BACKUP_KEEP=10                сколько последних бэкапов хранить
 #   SKIP_PULL=1                   не обновлять код (повторная сборка того же коммита)
 #   COMPOSE_PROJECT_NAME=…        имя проекта docker compose (по умолчанию smesitel_by)
+#   BACKUP_CRON="30 3 * * *"      расписание ежедневного бэкапа для install-cron
 
 set -Eeuo pipefail
 
@@ -35,13 +37,20 @@ STEP="подготовка"
 RESTARTED=0
 BACKUP_FILE=""
 
+# Цвета — только в терминале; в логе cron — без управляющих символов
+if [ -t 1 ]; then
+    BOLD=$'\033[1m' RED=$'\033[31m' GREEN=$'\033[32m' RESET=$'\033[0m'
+else
+    BOLD='' RED='' GREEN='' RESET=''
+fi
+
 step() {
     STEP="$1"
-    printf '\n\033[1m==> %s\033[0m\n' "$1"
+    printf '\n%s==> %s%s\n' "$BOLD" "$1" "$RESET"
 }
 
 fail() {
-    printf '\n\033[31mОШИБКА: %s\033[0m\n' "$1" >&2
+    printf '\n%sОШИБКА: %s%s\n' "$RED" "$1" "$RESET" >&2
 
     if [ "$RESTARTED" = 0 ]; then
         echo "Стенд не перезапускался — работает прежняя версия." >&2
@@ -83,6 +92,17 @@ preflight() {
         echo "Внимание: в .env COMPOSE_FILE указывает на docker-compose.yml (локальный, с bind-mount)."
         echo "          Для стенда: COMPOSE_FILE=docker-compose.staging.yml (deploy.sh использует его в любом случае)."
     fi
+
+    # Остатки прежней схемы (bind-mount): vendor/ и node_modules/ ставились в контейнерах
+    # от root. Теперь не используются — зависимости и фронт собираются внутри образа
+    local leftover
+    for leftover in vendor node_modules public/build; do
+        if [ -e "$leftover" ] && [ "$(stat -c %U "$leftover" 2>/dev/null)" = root ]; then
+            echo "Внимание: $leftover/ принадлежит root и больше не используется (зависимости — в образе)."
+            echo "          Удалить: sudo rm -rf vendor node_modules public/build"
+            break
+        fi
+    done
 
     mkdir -p "$BACKUP_DIR"
     echo "Проект: $PROJECT, ветка: $BRANCH, бэкапы: $BACKUP_DIR"
@@ -196,7 +216,7 @@ finish() {
         if curl -fsS -o /dev/null "$url"; then
             echo "Стенд отвечает: $url"
             docker image prune -f >/dev/null || true
-            printf '\n\033[32mГотово: %s\033[0m\n' "$(git log --oneline -1)"
+            printf '\n%sГотово: %s%s\n' "$GREEN" "$(git log --oneline -1)" "$RESET"
             [ -n "$BACKUP_FILE" ] && echo "Бэкап перед обновлением: $BACKUP_FILE"
             return
         fi
@@ -206,10 +226,34 @@ finish() {
     fail "стенд не отвечает на $url. Логи: docker compose logs --tail=100 php nginx"
 }
 
+# Ежедневный бэкап: строка в crontab пользователя (повторный запуск не дублирует)
+install_cron() {
+    step "Ежедневный бэкап по cron"
+
+    local schedule line current
+    schedule="${BACKUP_CRON:-30 3 * * *}"
+    line="$schedule cd $(pwd) && BACKUP_DIR=$BACKUP_DIR BACKUP_KEEP=$BACKUP_KEEP ./deploy.sh backup >> $BACKUP_DIR/backup.log 2>&1"
+    current="$(crontab -l 2>/dev/null || true)"
+
+    if grep -qF './deploy.sh backup' <<< "$current"; then
+        echo "Уже есть в crontab:"
+        grep -F './deploy.sh backup' <<< "$current"
+        return
+    fi
+
+    printf '%s\n%s\n' "$current" "$line" | sed '/^$/d' | crontab -
+    echo "Добавлено в crontab пользователя $(id -un):"
+    echo "  $line"
+}
+
 case "${1:-deploy}" in
     backup)
         preflight
         backup
+        ;;
+    install-cron)
+        preflight
+        install_cron
         ;;
     deploy)
         preflight
@@ -222,7 +266,7 @@ case "${1:-deploy}" in
         finish
         ;;
     *)
-        echo "Использование: ./deploy.sh [deploy|backup]" >&2
+        echo "Использование: ./deploy.sh [deploy|backup|install-cron]" >&2
         exit 2
         ;;
 esac
