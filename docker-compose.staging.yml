@@ -28,6 +28,24 @@ services:
       mysql:
         condition: service_healthy
 
+  # Воркер очереди (QUEUE_CONNECTION=database в .env): письма администраторам.
+  # Тот же образ, что php; deploy.sh пересоздаёт контейнер новым образом и шлёт queue:restart.
+  # --max-time: воркер раз в час перезапускается сам (restart: unless-stopped) — без утечек памяти.
+  queue:
+    image: smesitel_by-app:latest
+    pull_policy: never
+    command: ["php", "artisan", "queue:work", "--tries=3", "--sleep=3", "--max-time=3600"]
+    restart: unless-stopped
+    stop_grace_period: 30s
+    volumes:
+      - ./.env:/var/www/.env:ro
+      - storage:/var/www/storage
+    depends_on:
+      mysql:
+        condition: service_healthy
+      php:
+        condition: service_started
+
   nginx:
     build:
       context: .

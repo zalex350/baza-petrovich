@@ -29,6 +29,22 @@ services:
     depends_on:
       - mysql
 
+  # Воркер очереди (QUEUE_CONNECTION=database): письма администраторам и др. задачи.
+  # Код держит в памяти — после правок PHP: docker-compose restart queue
+  # (или php artisan queue:restart). Логи: docker-compose logs -f queue
+  queue:
+    build:
+      context: ./docker/php
+    command: php artisan queue:work --tries=3 --sleep=3 --max-time=3600
+    restart: unless-stopped
+    volumes:
+      - .:/var/www
+      - vendor:/var/www/vendor
+      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini
+    depends_on:
+      - mysql
+      - mailpit
+
   mysql:
     image: mysql:8.0
     restart: always

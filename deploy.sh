@@ -12,7 +12,7 @@
 # Шаги: бэкап БД → git pull → сборка образов (composer install --no-dev, npm ci &&
 # npm run build — внутри docker/staging/Dockerfile) → migrate --force (новым образом,
 # пока работает старая версия) → перезапуск контейнеров → storage:link → кэши
-# config/route/view → проверка /up.
+# config/route/view → queue:restart (воркер очереди) → проверка /up.
 # Ошибка до перезапуска — стенд остаётся на прежней версии.
 #
 # Настройки (переменные окружения):
@@ -206,6 +206,15 @@ finish() {
     php_exec config:cache
     php_exec route:cache
     php_exec view:cache
+
+    step "Воркер очереди"
+    # up -d уже пересоздал queue новым образом. queue:restart — и для случаев, когда контейнер
+    # не пересоздавался (тот же образ, правка .env): воркер завершится после текущей задачи,
+    # Docker поднимет его снова (restart: unless-stopped) — с новым кодом и .env
+    if ! compose ps --status running --services | grep -qx queue; then
+        fail "воркер очереди не запущен. Логи: docker compose logs --tail=100 queue"
+    fi
+    php_exec queue:restart
 
     step "Проверка"
     local port url
