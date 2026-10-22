@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\Order;
 use App\Models\User;
+use App\Support\Money;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
@@ -68,11 +69,11 @@ abstract class AdminOrderNotification extends Notification implements ShouldQueu
     }
 
     /**
-     * 1 234,50 BYN — как x-price на экранах (пробелы неразрывные: сумма не переносится).
+     * 1 234,50 BYN — тот же формат, что x-price на экранах (App\Support\Money).
      */
     protected static function money(float|string|null $amount): string
     {
-        return number_format((float) $amount, 2, ',', "\u{00A0}")."\u{00A0}BYN";
+        return Money::format($amount ?? 0);
     }
 
     /**

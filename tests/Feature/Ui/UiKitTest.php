@@ -95,6 +95,29 @@ class UiKitTest extends TestCase
             ->assertSee('Укажите причину');
     }
 
+    public function test_checkbox_sends_unchecked_value_and_shows_error(): void
+    {
+        $this->blade('<x-checkbox name="notify" label="Новый заказ" hint="Письмо при заказе" :checked="true" class="mt-2" />')
+            ->assertSee('<input type="hidden" name="notify" value="0">', false)
+            ->assertSee('type="checkbox"', false)
+            ->assertSee('checked', false)
+            ->assertSee('aria-describedby="f-notify-hint"', false)
+            ->assertSeeInOrder(['Новый заказ', 'Письмо при заказе'])
+            ->assertSee('<div class="min-w-0 mt-2">', false);
+
+        $this->blade('<x-checkbox name="notify" label="Новый заказ" />')->assertDontSee(' checked', false);
+
+        // Группа галочек — без скрытого поля
+        $this->blade('<x-checkbox name="ids[]" label="Товар" value="5" :unchecked="false" />')
+            ->assertDontSee('type="hidden"', false)
+            ->assertSee('value="5"', false);
+
+        $this->withViewErrors(['notify' => 'Неверное значение']);
+        $this->blade('<x-checkbox name="notify" label="Новый заказ" />')
+            ->assertSee('aria-invalid="true"', false)
+            ->assertSee('Неверное значение');
+    }
+
     // --- x-badge ---
 
     public function test_badge_status_uses_single_color_map(): void

@@ -272,11 +272,10 @@ class AdminNotificationsTest extends TestCase
         $self = User::factory()->admin()->create();
         $admin = User::factory()->admin()->create();
 
-        $this->actingAs($self)->get("/admin/user/{$admin->id}/edit")
-            ->assertOk()
-            ->assertSee('Уведомления на почту')
-            ->assertSee('name="notify_new_order" value="1" checked', false)
-            ->assertSee('name="notify_cancel_request" value="1" checked', false);
+        $form = $this->actingAs($self)->get("/admin/user/{$admin->id}/edit")->assertOk()->getContent();
+        $this->assertStringContainsString('Уведомления на почту', $form);
+        $this->assertCheckbox($form, 'notify_new_order', true);
+        $this->assertCheckbox($form, 'notify_cancel_request', true);
 
         $this->actingAs($self)->post("/admin/user/{$admin->id}", [
             'name' => $admin->name, 'email' => $admin->email, 'role' => 'admin',
@@ -287,9 +286,48 @@ class AdminNotificationsTest extends TestCase
         $this->assertFalse($admin->notify_new_order);
         $this->assertTrue($admin->notify_cancel_request);
 
-        $this->actingAs($self)->get("/admin/user/{$admin->id}")
-            ->assertOk()
-            ->assertSeeInOrder(['Уведомления на почту', 'Новый заказ', 'Выключено', 'Запрос на отмену', 'Включено']);
+        // Карточка: те же галочки (x-checkbox) в своей форме
+        $card = $this->actingAs($self)->get("/admin/user/{$admin->id}")->assertOk()->getContent();
+        $this->assertStringContainsString('action="/admin/user/'.$admin->id.'/notifications"', $card);
+        $this->assertCheckbox($card, 'notify_new_order', false);
+        $this->assertCheckbox($card, 'notify_cancel_request', true);
+    }
+
+    public function test_admin_card_saves_notification_settings(): void
+    {
+        $self = User::factory()->admin()->create();
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($self)->from("/admin/user/{$admin->id}")
+            ->post("/admin/user/{$admin->id}/notifications", ['notify_new_order' => '0', 'notify_cancel_request' => '0'])
+            ->assertRedirect("/admin/user/{$admin->id}")
+            ->assertSessionHas('success', 'Настройки уведомлений сохранены');
+
+        $admin->refresh();
+        $this->assertFalse($admin->notify_new_order);
+        $this->assertFalse($admin->notify_cancel_request);
+
+        // Своё тоже можно менять; имя, email и роль не трогаются
+        $this->actingAs($self)->post("/admin/user/{$self->id}/notifications", ['notify_new_order' => '0', 'notify_cancel_request' => '1']);
+        $this->assertFalse($self->fresh()->notify_new_order);
+        $this->assertTrue($self->fresh()->isAdmin());
+
+        $this->actingAs($self)->post("/admin/user/{$admin->id}/notifications", ['notify_new_order' => 'да'])
+            ->assertSessionHasErrors(['notify_new_order', 'notify_cancel_request']);
+    }
+
+    public function test_card_settings_are_not_for_clients_or_non_admins(): void
+    {
+        $self = User::factory()->admin()->create();
+
+        $this->actingAs($self)->post("/admin/user/{$this->client->id}/notifications", ['notify_new_order' => '0', 'notify_cancel_request' => '0'])
+            ->assertSessionHas('error');
+        $this->assertTrue($this->client->fresh()->notify_new_order);
+
+        // Клиент не может сам менять настройки администратора
+        $this->actingAs($this->client)->post("/admin/user/{$self->id}/notifications", ['notify_new_order' => '0', 'notify_cancel_request' => '0'])
+            ->assertForbidden();
+        $this->assertTrue($self->fresh()->notify_new_order);
     }
 
     public function test_new_admin_can_turn_notifications_off_on_create(): void
@@ -321,6 +359,19 @@ class AdminNotificationsTest extends TestCase
 
         // У клиента блока нет на карточке
         $this->actingAs($self)->get("/admin/user/{$this->client->id}")->assertDontSee('Уведомления на почту');
+    }
+
+    /**
+     * x-checkbox: скрытое «0» + галочка «1», отмечена или нет.
+     */
+    private function assertCheckbox(string $html, string $name, bool $checked): void
+    {
+        $this->assertStringContainsString('<input type="hidden" name="'.$name.'" value="0">', $html);
+        $this->assertMatchesRegularExpression(
+            '#<input\s+type="checkbox"\s+id="f-'.$name.'"\s+name="'.$name.'"\s+value="1"\s+'.($checked ? 'checked' : '(?!checked)').'#',
+            $html,
+            "$name: ".($checked ? 'включено' : 'выключено'),
+        );
     }
 
     /**
