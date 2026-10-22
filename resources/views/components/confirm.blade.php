@@ -15,6 +15,8 @@
     open — показать окно сразу (после ошибки валидации полей из слота fields: :open="$errors->has('reason')").
     Закрытие: «Отмена», Esc, клик по фону. Фокус — на поле с ошибкой, иначе на первом поле
     из fields, иначе на кнопке подтверждения; после закрытия — на триггере.
+    Фокус удерживается в окне (x-trap, @alpinejs/focus): Tab / Shift+Tab — по кругу внутри,
+    остальная страница на время окна недоступна скринридерам (.inert) и не прокручивается (.noscroll).
 --}}
 @props([
     'action',
@@ -68,6 +70,7 @@
                 open && focusFirst();
             "
             x-on:keydown.escape.window="open && hide()"
+            x-trap.inert.noscroll.noautofocus="open"
             class="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center"
             role="dialog"
             aria-modal="true"

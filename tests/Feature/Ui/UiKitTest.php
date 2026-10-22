@@ -160,7 +160,24 @@ class UiKitTest extends TestCase
             ->assertSee('Часть товаров недоступна')
             ->assertSee('Неверное количество');
 
+        $this->blade('<x-alert.flash validation="none" />')->assertDontSee('Неверное количество');
         $this->blade('<x-alert.flash :validation="false" />')->assertDontSee('Неверное количество');
+    }
+
+    public function test_flash_summary_replaces_error_list(): void
+    {
+        $this->withViewErrors(['qty' => 'Неверное количество', 'name' => 'Укажите название']);
+
+        $this->blade('<x-alert.flash validation="summary" />')
+            ->assertSee('Проверьте выделенные поля')
+            ->assertSee('data-validation-summary', false)
+            ->assertDontSee('Неверное количество')
+            ->assertDontSee('Укажите название')
+            ->assertDontSee('<ul', false);
+
+        // Без ошибок сводки нет
+        $this->withViewErrors([]);
+        $this->blade('<x-alert.flash validation="summary" />')->assertDontSee('Проверьте выделенные поля');
     }
 
     // --- x-empty-state ---
@@ -222,6 +239,8 @@ class UiKitTest extends TestCase
 
         $view->assertSee('x-data', false)
             ->assertSee('x-teleport="body"', false)
+            // Фокус удерживается в окне (@alpinejs/focus), начальный фокус — свой
+            ->assertSee('x-trap.inert.noscroll.noautofocus="open"', false)
             ->assertSee('role="dialog"', false)
             ->assertSee('aria-modal="true"', false)
             ->assertSee('action="/admin/product/5/delete"', false)

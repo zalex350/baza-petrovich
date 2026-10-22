@@ -3,6 +3,7 @@ import './search-suggest';
 import './cart-add';
 
 import Alpine from 'alpinejs';
+import focus from '@alpinejs/focus';
 import megaMenu from './mega-menu';
 import mobileMenu from './mobile-menu';
 import adminImages from './admin-images';
@@ -12,6 +13,9 @@ import catalogFilters from './catalog-filters';
 import productGallery from './product-gallery';
 
 window.Alpine = Alpine;
+
+// x-trap — удержание фокуса в модальных окнах (x-confirm)
+Alpine.plugin(focus);
 
 Alpine.data('megaMenu', megaMenu);
 Alpine.data('mobileMenu', mobileMenu);
