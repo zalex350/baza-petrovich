@@ -1,22 +1,30 @@
 {{--
     Флеш-сообщения сессии (success / error / warning) и список ошибок валидации.
-    Замена partials/flash — экраны переводятся постепенно; [data-flash] нужен cart-add.js.
-    :validation="false" — не выводить общий список ошибок, если они показаны у полей (x-input и др.).
+    Стоит в layouts/app, layouts/admin, layouts/guest — по одному разу; на экранах не подключать.
+    [data-flash] всегда в DOM и содержит только алерты: cart-add.js переносит его поверх страницы.
+    :validation="false" — не выводить общий список ошибок (auth-страницы показывают их у полей).
 --}}
 @props(['validation' => true])
 
-<div data-flash {{ $attributes->class('space-y-3') }}>
-    @foreach(['success' => 'success', 'error' => 'error', 'warning' => 'warning'] as $key => $type)
-        @if(session($key))
-            <x-alert :type="$type">{{ session($key) }}</x-alert>
-        @endif
+@php
+    $messages = array_filter([
+        'success' => session('success'),
+        'error'   => session('error'),
+        'warning' => session('warning'),
+    ]);
+    $invalid = $validation && isset($errors) && $errors->any();
+@endphp
+
+<div data-flash {{ $attributes->class(['space-y-3', 'mb-4' => $messages || $invalid]) }}>
+    @foreach($messages as $type => $message)
+        <x-alert :type="$type">{{ $message }}</x-alert>
     @endforeach
 
-    @if($validation && isset($errors) && $errors->any())
+    @if($invalid)
         <x-alert type="error">
             <ul class="list-disc pl-5">
-                @foreach($errors->all() as $message)
-                    <li>{{ $message }}</li>
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
                 @endforeach
             </ul>
         </x-alert>
