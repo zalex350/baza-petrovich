@@ -4,15 +4,39 @@ namespace App\Notifications;
 
 use App\Models\Order;
 use App\Models\User;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 
 /**
  * Общее для писем администраторам о заказе: канал mail, ссылка в админку,
  * формат сумм и экранирование текста, введённого пользователем.
+ *
+ * Отправка — через очередь (QUEUE_CONNECTION=database, воркер — сервис queue):
+ * по задаче на каждого получателя, только после коммита транзакции; при сбое SMTP —
+ * повтор через 1 и 5 минут, затем задача в failed_jobs (php artisan queue:failed).
  */
-abstract class AdminOrderNotification extends Notification
+abstract class AdminOrderNotification extends Notification implements ShouldQueue
 {
-    public function __construct(public readonly Order $order) {}
+    use Queueable;
+
+    public int $tries = 3;
+
+    /** Заказ удалён до отправки — задача снимается без ошибки */
+    public bool $deleteWhenMissingModels = true;
+
+    public function __construct(public Order $order)
+    {
+        $this->afterCommit();
+    }
+
+    /**
+     * @return list<int>
+     */
+    public function backoff(): array
+    {
+        return [60, 300];
+    }
 
     /**
      * @return list<string>
@@ -59,12 +83,15 @@ abstract class AdminOrderNotification extends Notification
      */
     protected static function text(?string $value): string
     {
-        $value = trim((string) $value);
+        // Одна строка: переносы клиента не дают блочной разметки («# …», «- …», «> …»)
+        $value = trim(preg_replace('/\s+/u', ' ', (string) $value));
 
         if ($value === '') {
             return '—';
         }
 
-        return preg_replace('/([\\\\`*_{}\[\]()#+\-.!|~])/u', '\\\\$1', $value);
+        // Экранируется только то, что даёт разметку внутри строки: ссылки и выделение.
+        // Точки, скобки, дефисы не трогаем — иначе «\.» и «\(» видны в текстовой версии письма
+        return preg_replace('/([\\\\`*_\[\]~])/u', '\\\\$1', $value);
     }
 }

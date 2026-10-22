@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\OrderHistoryEvent;
 use App\Enums\OrderStatus;
+use App\Events\CancelRequested;
 use App\Exceptions\CancelRequestException;
 use App\Exceptions\InvalidStatusTransition;
 use App\Models\Order;
@@ -19,10 +20,6 @@ use Illuminate\Support\Facades\DB;
  */
 class OrderStatusService
 {
-    public function __construct(private readonly AdminNotifier $notifier)
-    {
-    }
-
     /**
      * @throws InvalidStatusTransition
      */
@@ -78,8 +75,8 @@ class OrderStatusService
 
             $this->recordEvent($order, OrderHistoryEvent::CancelRequested, $by, $order->cancel_reason);
 
-            // Письмо администраторам — после коммита
-            $this->notifier->cancelRequested($order);
+            // Письмо администраторам — слушатель после коммита (ShouldDispatchAfterCommit)
+            CancelRequested::dispatch($order);
 
             return $order;
         });

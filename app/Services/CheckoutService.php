@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\OrderStatus;
+use App\Events\OrderPlaced;
 use App\Exceptions\CheckoutException;
 use App\Models\Cart;
 use App\Models\DeliveryAddress;
@@ -22,7 +23,6 @@ class CheckoutService
         private readonly CartValidator $validator,
         private readonly OrderStatusService $statuses,
         private readonly VatCalculator $vat,
-        private readonly AdminNotifier $notifier,
     ) {
     }
 
@@ -150,8 +150,9 @@ class CheckoutService
 
             $this->statuses->recordPlaced($order, $user);
 
-            // Только для нового заказа (повтор формы с тем же токеном выше писем не шлёт); после коммита
-            $this->notifier->newOrder($order);
+            // Только для нового заказа (повтор формы с тем же токеном выше события не даёт).
+            // Слушатели — после коммита (ShouldDispatchAfterCommit), при откате события нет
+            OrderPlaced::dispatch($order);
 
             return $order;
         });

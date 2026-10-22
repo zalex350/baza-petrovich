@@ -2,14 +2,22 @@
 
 namespace Tests\Feature;
 
+use App\Events\CancelRequested;
+use App\Events\OrderPlaced;
 use App\Models\Order;
 use App\Models\Organization;
 use App\Models\Product;
 use App\Models\User;
 use App\Notifications\CancelRequestNotification;
 use App\Notifications\NewOrderNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Mail\Markdown;
+use Illuminate\Notifications\SendQueuedNotifications;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Queue;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -103,6 +111,78 @@ class AdminNotificationsTest extends TestCase
         Notification::assertNotSentTo([$off, $blocked, $otherSetting, $this->client], CancelRequestNotification::class);
     }
 
+    public function test_notifications_wait_for_commit(): void
+    {
+        $order = $this->placeOrder();
+        Notification::fake();
+        $admin = User::factory()->admin()->create();
+
+        DB::transaction(function () use ($order) {
+            OrderPlaced::dispatch($order);
+            CancelRequested::dispatch($order);
+
+            // Внутри транзакции — ещё ничего
+            Notification::assertNothingSent();
+        });
+
+        Notification::assertSentTo($admin, NewOrderNotification::class);
+        Notification::assertSentTo($admin, CancelRequestNotification::class);
+    }
+
+    public function test_rolled_back_transaction_sends_nothing(): void
+    {
+        $order = $this->placeOrder();
+        Notification::fake();
+        User::factory()->admin()->create();
+
+        try {
+            DB::transaction(function () use ($order) {
+                OrderPlaced::dispatch($order);
+                CancelRequested::dispatch($order);
+
+                throw new RuntimeException('откат');
+            });
+        } catch (RuntimeException) {
+        }
+
+        Notification::assertNothingSent();
+    }
+
+    public function test_mails_are_queued_per_recipient_after_commit(): void
+    {
+        Queue::fake();
+        [$on, , , $otherSetting] = $this->admins();
+
+        $order = $this->placeOrder();
+
+        $notification = new NewOrderNotification($order);
+        $this->assertInstanceOf(ShouldQueue::class, $notification);
+        $this->assertTrue($notification->afterCommit);
+        $this->assertSame(3, $notification->tries);
+
+        // По задаче на получателя: включено у двоих
+        Queue::assertPushed(SendQueuedNotifications::class, 2);
+        Queue::assertPushed(
+            SendQueuedNotifications::class,
+            fn (SendQueuedNotifications $job) => $job->notification instanceof NewOrderNotification
+                && $job->notifiables->contains($on),
+        );
+        Queue::assertPushed(SendQueuedNotifications::class, fn ($job) => $job->notifiables->contains($otherSetting));
+    }
+
+    public function test_queue_failure_does_not_break_checkout_or_cancel_request(): void
+    {
+        User::factory()->admin()->create();
+        // Очередь недоступна: постановка письма падает
+        Notification::shouldReceive('send')->andThrow(new RuntimeException('queue is down'));
+
+        $order = $this->placeOrder();
+
+        $this->actingAs($this->client)->post("/order/{$order->id}/cancel-request", ['cancel_reason' => 'Передумали'])
+            ->assertSessionHas('success');
+        $this->assertTrue($order->fresh()->hasOpenCancelRequest());
+    }
+
     public function test_new_order_mail_content(): void
     {
         $admin = User::factory()->admin()->create();
@@ -129,6 +209,26 @@ class AdminNotificationsTest extends TestCase
         $this->assertStringNotContainsString('href="http://evil.test"', $html);
         $this->assertStringNotContainsString('<strong>срочно</strong>', $html);
         $this->assertStringContainsString('[подарок](http://evil.test)', html_entity_decode(strip_tags($html)));
+
+        // Текстовая версия письма — без лишних «\.», «\(»: экранируется только разметка
+        $text = (string) app(Markdown::class)->renderText($mail->markdown, $mail->data());
+        $this->assertStringContainsString('Организация:** ООО «Аква Строй» (УНП 190000001)', $text);
+        $this->assertStringContainsString('Иван Клиентов (ivan@client.test)', $text);
+        $this->assertStringNotContainsString('\\.', $text);
+        $this->assertStringNotContainsString('\\(', $text);
+    }
+
+    public function test_line_breaks_in_client_text_do_not_make_blocks(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $order = $this->placeOrder("Срочно\n# Заголовок\n- пункт\n> цитата");
+
+        $html = (string) (new NewOrderNotification($order))->toMail($admin)->render();
+
+        $this->assertStringNotContainsString('<h1>Заголовок', $html);
+        $this->assertStringNotContainsString('<li>пункт', $html);
+        $this->assertStringNotContainsString('<blockquote', $html);
+        $this->assertStringContainsString('Срочно # Заголовок - пункт &gt; цитата', $html);
     }
 
     public function test_cancel_request_mail_content(): void
