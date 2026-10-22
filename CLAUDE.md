@@ -59,6 +59,12 @@ docker-compose exec php ./vendor/bin/pint
 docker-compose exec php php artisan migrate
 ```
 
+> **Правило бэкапа:** перед любой миграцией, меняющей или переносящей данные, — дамп БД в `D:\smesitel_by\backup_before_<задача>.sql`; проверить, что дамп полный; путь и размер указать в отчёте.
+> ```bash
+> docker-compose exec -T mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --no-tablespaces "$MYSQL_DATABASE"' > ../backup_before_<задача>.sql
+> ```
+> Дамп полный, если команда завершилась без ошибки, последняя строка файла — `-- Dump completed on …`, а число `CREATE TABLE` совпадает с числом таблиц в БД.
+
 > **Правило:** после мержа любой ветки, содержащей новую миграцию, обязательно выполнить `docker-compose exec php php artisan migrate` на контейнере — до того, как считать задачу завершённой. Тесты используют SQLite in-memory и не проверяют состояние боевой MySQL; без этого шага новые колонки отсутствуют в БД и INSERT падает с `Column not found`.
 
 ## Architecture
@@ -86,7 +92,7 @@ User → belongs_to Organization (nullable), has_many Order
 ### Views (Blade)
 Templates in `resources/views/`. Страницы — `@extends('layouts.app')` (или `layouts.admin`) + `@section('content')`.
 
-**UI-кит — `resources/views/components/`** (анонимные Blade-компоненты): `x-button`, `x-input`, `x-select`, `x-textarea`, `x-field`, `x-table` (+ `x-table.th`, `x-table.td`), `x-badge`, `x-alert`, `x-alert.flash`, `x-empty-state`, `x-confirm`, `x-price`. Описание параметров — в комментарии в начале каждого файла. Пример экрана — `admin/orders.blade.php`.
+**UI-кит — `resources/views/components/`** (анонимные Blade-компоненты): `x-button`, `x-input`, `x-select`, `x-textarea`, `x-checkbox`, `x-field`, `x-table` (+ `x-table.th`, `x-table.td`), `x-badge`, `x-alert`, `x-alert.flash`, `x-empty-state`, `x-confirm`, `x-price`. Описание параметров — в комментарии в начале каждого файла. Пример экрана — `admin/orders.blade.php`.
 
 ### File Storage
 User uploads go to `storage/app/public/` (accessible via `/storage/...` URLs via symlink):
@@ -117,7 +123,9 @@ DB_HOST=mysql  # Docker service name
 DB_PORT=3306
 DB_DATABASE=smesitel
 SESSION_DRIVER=database
-QUEUE_CONNECTION=database
+QUEUE_CONNECTION=database   # воркер — контейнер queue; после правок PHP: docker-compose restart queue
 CACHE_STORE=database
-MAIL_MAILER=log
+MAIL_MAILER=smtp             # локально — Mailpit: MAIL_HOST=mailpit, MAIL_PORT=1025, письма — http://localhost:8025
+APP_NAME=smesitel.by         # отправитель и подпись писем (MAIL_FROM_NAME="${APP_NAME}")
 ```
+На стенде почта — `MAIL_MAILER=log`, переменные — `docs/STAGING.md`.
