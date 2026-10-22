@@ -22,6 +22,7 @@ class CheckoutService
         private readonly CartValidator $validator,
         private readonly OrderStatusService $statuses,
         private readonly VatCalculator $vat,
+        private readonly AdminNotifier $notifier,
     ) {
     }
 
@@ -148,6 +149,9 @@ class CheckoutService
             $cart->items()->delete();
 
             $this->statuses->recordPlaced($order, $user);
+
+            // Только для нового заказа (повтор формы с тем же токеном выше писем не шлёт); после коммита
+            $this->notifier->newOrder($order);
 
             return $order;
         });

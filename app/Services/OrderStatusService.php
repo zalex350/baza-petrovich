@@ -19,6 +19,10 @@ use Illuminate\Support\Facades\DB;
  */
 class OrderStatusService
 {
+    public function __construct(private readonly AdminNotifier $notifier)
+    {
+    }
+
     /**
      * @throws InvalidStatusTransition
      */
@@ -73,6 +77,9 @@ class OrderStatusService
             $order->save();
 
             $this->recordEvent($order, OrderHistoryEvent::CancelRequested, $by, $order->cancel_reason);
+
+            // Письмо администраторам — после коммита
+            $this->notifier->cancelRequested($order);
 
             return $order;
         });
