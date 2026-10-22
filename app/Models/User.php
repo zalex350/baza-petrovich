@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -49,7 +50,20 @@ class User extends Authenticatable
             'password' => 'hashed',
             'role' => UserRole::class,
             'blocked_at' => 'datetime',
+            'notify_new_order' => 'boolean',
+            'notify_cancel_request' => 'boolean',
         ];
+    }
+
+    /**
+     * Получатели email-уведомления: активные администраторы с включённой галочкой.
+     * $setting — notify_new_order | notify_cancel_request (у клиентов значения игнорируются).
+     */
+    public function scopeNotifiedAdmins(Builder $query, string $setting): void
+    {
+        $query->where('role', UserRole::Admin)
+            ->whereNull('blocked_at')
+            ->where($setting, true);
     }
 
     /**
