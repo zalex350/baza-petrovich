@@ -84,6 +84,37 @@
 
 </div>
 
+{{-- Уведомления на почту: только у администратора --}}
+@if($user->isAdmin())
+
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 mb-6" data-notifications>
+
+        <div class="flex items-center justify-between gap-4 mb-4">
+            <h2 class="text-lg font-semibold">Уведомления на почту</h2>
+            <a href="/admin/user/{{ $user->id }}/edit" class="text-sm underline">Изменить</a>
+        </div>
+
+        <dl class="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-3">
+            @foreach(['notify_new_order' => 'Новый заказ', 'notify_cancel_request' => 'Запрос на отмену'] as $field => $title)
+                <dt class="text-slate-500">{{ $title }}</dt>
+                <dd>
+                    @if($user->{$field})
+                        <span class="inline-flex rounded-full bg-green-100 text-green-700 px-2 py-0.5 text-xs">Включено</span>
+                    @else
+                        <span class="inline-flex rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-xs">Выключено</span>
+                    @endif
+                </dd>
+            @endforeach
+        </dl>
+
+        @if($user->isBlocked())
+            <p class="text-sm text-slate-400 mt-3">Заблокированным пользователям письма не отправляются.</p>
+        @endif
+
+    </div>
+
+@endif
+
 {{-- Действия --}}
 <div class="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
 

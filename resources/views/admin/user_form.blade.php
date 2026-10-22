@@ -8,6 +8,8 @@
     $isSelf = $user->exists && $user->is(auth()->user());
     $currentRole = old('role', $user->role?->value ?? \App\Enums\UserRole::Client->value);
     $passwordMode = old('password_mode', \App\Http\Controllers\Admin\AdminUserController::PASSWORD_INVITE);
+    // Уведомления: у нового пользователя и у тех, кому их ещё не меняли, — включены
+    $notify = fn (string $field) => (bool) old($field, $user->exists ? $user->{$field} : true);
 @endphp
 
 <a
@@ -39,6 +41,7 @@
         method="POST"
         action="{{ $user->exists ? '/admin/user/'.$user->id : '/admin/user' }}"
         class="space-y-6"
+        x-data="{ role: @js($isSelf ? \App\Enums\UserRole::Admin->value : $currentRole) }"
     >
 
         @csrf
@@ -100,7 +103,7 @@
 
             @else
 
-                <select name="role" class="w-full border rounded px-3 py-2">
+                <select name="role" class="w-full border rounded px-3 py-2" x-model="role">
                     @foreach(\App\Enums\UserRole::cases() as $case)
                         <option value="{{ $case->value }}" @selected($currentRole === $case->value)>
                             {{ $case->label() }}
@@ -129,6 +132,37 @@
                 @endforeach
             </select>
         </div>
+
+        <!-- Notifications: только для администратора -->
+        <fieldset
+            class="space-y-3"
+            data-notifications
+            x-show="role === @js(\App\Enums\UserRole::Admin->value)"
+            @unless($currentRole === \App\Enums\UserRole::Admin->value || $isSelf) x-cloak @endunless
+        >
+
+            <legend class="mb-2 font-semibold">Уведомления на почту</legend>
+
+            @foreach([
+                'notify_new_order'      => ['Новый заказ', 'Письмо при оформлении каждого заказа клиентом.'],
+                'notify_cancel_request' => ['Запрос на отмену', 'Письмо, когда клиент запрашивает отмену заказа.'],
+            ] as $field => [$title, $hint])
+
+                <label class="flex items-start gap-2">
+                    {{-- Снятая галочка не отправляется — скрытое поле передаёт «выключено» --}}
+                    <input type="hidden" name="{{ $field }}" value="0">
+                    <input type="checkbox" name="{{ $field }}" value="1" @checked($notify($field)) class="mt-1">
+                    <span>
+                        {{ $title }}
+                        <span class="block text-sm text-slate-400">{{ $hint }}</span>
+                    </span>
+                </label>
+
+            @endforeach
+
+            <p class="text-xs text-slate-400">Письма уходят на email пользователя: {{ $user->email ?: 'указанный выше' }}.</p>
+
+        </fieldset>
 
         @unless($user->exists)
 
