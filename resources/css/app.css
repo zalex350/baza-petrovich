@@ -7,6 +7,19 @@
 }
 
 /*
+ * x-alert.flash поверх страницы (cart-add.js ставит data-floating после «В корзину» из списка):
+ * по центру сверху, на телефоне — по ширине экрана с отступами 16px.
+ * Вне @layer — Tailwind не выбрасывает правило, хотя атрибут ставится из JS.
+ */
+[data-flash][data-floating] {
+    @apply fixed inset-x-4 top-4 z-50 mx-auto mb-0 max-w-md;
+}
+
+[data-flash][data-floating] > * {
+    @apply shadow-lg;
+}
+
+/*
  * x-table stack: ниже брейкпоинта строки таблицы — карточки «подпись колонки — значение».
  * Подпись — из data-label ячейки (x-table.td label="…"), шапка скрыта визуально.
  * Классы .ui-table-stack-{sm|md|lg|xl} ставит компонент; блоки одинаковые, отличается только ширина.

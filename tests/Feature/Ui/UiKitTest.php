@@ -164,6 +164,18 @@ class UiKitTest extends TestCase
         $this->blade('<x-alert.flash :validation="false" />')->assertDontSee('Неверное количество');
     }
 
+    public function test_floating_flash_is_styled_by_kit_css(): void
+    {
+        // cart-add.js только ставит атрибут; положение — в CSS кита (вне @layer: класс из JS не выбрасывается)
+        $js = file_get_contents(resource_path('js/cart-add.js'));
+        $css = file_get_contents(resource_path('css/app.css'));
+
+        $this->assertStringContainsString("flash.dataset.floating = ''", $js);
+        $this->assertStringNotContainsString('classList.add(', $js);
+        // По центру сверху, на телефоне — по ширине экрана с отступами 16px (inset-x-4, top-4)
+        $this->assertStringContainsString("[data-flash][data-floating] {\n    @apply fixed inset-x-4 top-4 z-50 mx-auto mb-0 max-w-md;", $css);
+    }
+
     public function test_flash_summary_replaces_error_list(): void
     {
         $this->withViewErrors(['qty' => 'Неверное количество', 'name' => 'Укажите название']);
