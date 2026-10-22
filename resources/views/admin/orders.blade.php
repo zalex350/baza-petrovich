@@ -2,7 +2,12 @@
 
 @section('title', 'Админка — Заказы')
 
+{{-- Поля формы на x-input/x-select показывают ошибки сами — во flash только сводка --}}
+@section('flash-validation', 'summary')
+
 @section('content')
+
+{{-- Пример экрана на UI-ките (resources/views/components): x-input, x-select, x-button, x-table, x-badge, x-price, x-empty-state --}}
 
 @php
     $filtered = collect($filters)->filter(fn ($value) => $value !== null && $value !== '')->isNotEmpty();
@@ -16,246 +21,134 @@
 <form
     method="GET"
     action="/admin/orders"
-    class="bg-white rounded-2xl border border-slate-200 p-4 mb-6 flex flex-wrap items-end gap-4"
+    class="bg-white rounded-card border border-slate-200 p-4 mb-6 grid gap-4 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end"
 >
 
-    <div class="grow min-w-64">
+    <x-input
+        name="q"
+        id="q"
+        type="search"
+        label="Поиск"
+        :value="$filters['q'] ?? ''"
+        placeholder="Номер заказа, клиент, УНП, пользователь, email"
+        class="sm:col-span-2 lg:grow lg:min-w-64"
+    />
 
-        <label for="q" class="block text-sm font-medium text-slate-600 mb-1">
-            Поиск
-        </label>
+    <x-select
+        name="status"
+        id="status"
+        label="Статус"
+        placeholder="Все"
+        :options="collect($statuses)->mapWithKeys(fn ($status) => [$status->value => $status->label()])"
+        :value="$filters['status'] ?? ''"
+    />
 
-        <input
-            id="q"
-            type="search"
-            name="q"
-            value="{{ $filters['q'] ?? '' }}"
-            placeholder="Номер заказа, клиент, УНП, пользователь, email"
-            class="border border-slate-300 rounded px-3 py-2 w-full"
-        >
-
+    <div class="grid grid-cols-2 gap-4 lg:contents">
+        <x-input name="date_from" id="date_from" type="date" label="Оформлен с" :value="$filters['date_from'] ?? ''" />
+        <x-input name="date_to" id="date_to" type="date" label="по" :value="$filters['date_to'] ?? ''" />
     </div>
 
-    <div>
-
-        <label for="status" class="block text-sm font-medium text-slate-600 mb-1">
-            Статус
-        </label>
-
-        <select
-            id="status"
-            name="status"
-            class="border border-slate-300 rounded px-3 py-2"
-        >
-
-            <option value="">Все</option>
-
-            @foreach($statuses as $status)
-
-                <option value="{{ $status->value }}" @selected(($filters['status'] ?? '') === $status->value)>
-                    {{ $status->label() }}
-                </option>
-
-            @endforeach
-
-        </select>
-
-    </div>
-
-    <div>
-
-        <label for="date_from" class="block text-sm font-medium text-slate-600 mb-1">
-            Оформлен с
-        </label>
-
-        <input
-            id="date_from"
-            type="date"
-            name="date_from"
-            value="{{ $filters['date_from'] ?? '' }}"
-            class="border border-slate-300 rounded px-3 py-2"
-        >
-
-    </div>
-
-    <div>
-
-        <label for="date_to" class="block text-sm font-medium text-slate-600 mb-1">
-            по
-        </label>
-
-        <input
-            id="date_to"
-            type="date"
-            name="date_to"
-            value="{{ $filters['date_to'] ?? '' }}"
-            class="border border-slate-300 rounded px-3 py-2"
-        >
-
-    </div>
-
-    <label class="flex items-center gap-2 py-2">
+    <label class="flex items-center gap-2 lg:py-2">
         <input
             type="checkbox"
             name="cancel_request"
             value="1"
+            class="rounded border-slate-300 text-primary focus:ring-primary"
             @checked($filters['cancel_request'] ?? false)
         >
         Запрос на отмену
     </label>
 
-    <button
-        type="submit"
-        class="bg-slate-800 hover:bg-slate-700 text-white px-5 py-2 rounded-xl transition"
-    >
-        Найти
-    </button>
+    <div class="flex items-center gap-4">
+        <x-button>Найти</x-button>
 
-    @if($filtered)
-
-        <a
-            href="/admin/orders"
-            class="text-slate-600 hover:text-slate-800 underline py-2"
-        >
-            Сбросить
-        </a>
-
-    @endif
+        @if($filtered)
+            <x-button variant="link" href="/admin/orders">Сбросить</x-button>
+        @endif
+    </div>
 
 </form>
 
 @if(!$orders->count())
 
-    <div class="bg-white rounded-2xl border border-slate-200 p-6">
-
-        <p>
-            {{ $filtered ? 'Заказы не найдены' : 'Заказов нет' }}
-        </p>
-
-    </div>
+    <x-empty-state :title="$filtered ? 'Заказы не найдены' : 'Заказов нет'" :icon="$filtered ? 'magnifying-glass' : 'inbox'">
+        @if($filtered)
+            Измените условия поиска или сбросьте фильтры.
+            <x-slot:action>
+                <x-button variant="secondary" href="/admin/orders">Сбросить фильтры</x-button>
+            </x-slot:action>
+        @else
+            Заказы появятся здесь, когда клиенты их оформят.
+        @endif
+    </x-empty-state>
 
 @else
 
-    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+    {{-- 7 колонок помещаются в контент рядом с сайдбаром от 1280 px; уже — карточки --}}
+    <x-table stack="xl" caption="Заказы">
 
-        <table class="w-full text-left">
+        <x-slot:head>
+            <x-table.th>№ заказа</x-table.th>
+            <x-table.th>Дата оформления</x-table.th>
+            <x-table.th>Клиент</x-table.th>
+            <x-table.th>Статус</x-table.th>
+            <x-table.th align="right">Без НДС</x-table.th>
+            <x-table.th align="right">НДС</x-table.th>
+            <x-table.th align="right">С НДС</x-table.th>
+        </x-slot:head>
 
-            <thead class="bg-slate-50 border-b border-slate-200">
+        @foreach($orders as $order)
 
-                <tr>
+            <tr class="hover:bg-slate-50">
 
-                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
-                        № заказа
-                    </th>
+                <x-table.td label="№ заказа" nowrap>
+                    <a href="/admin/order/{{ $order->id }}" class="font-medium text-slate-800 underline underline-offset-2 hover:text-slate-600">
+                        {{ $order->number }}
+                    </a>
+                </x-table.td>
 
-                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
-                        Дата оформления
-                    </th>
+                <x-table.td label="Дата">
+                    {{ $order->placed_at?->format('d.m.Y H:i') }}
+                </x-table.td>
 
-                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
-                        Клиент
-                    </th>
+                <x-table.td label="Клиент">
+                    <div>{{ $order->organization->name ?? '—' }}</div>
+                    @if($order->user)
+                        <div class="text-sm text-slate-500">{{ $order->user->name }}</div>
+                    @endif
+                </x-table.td>
 
-                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
-                        Пользователь
-                    </th>
+                <x-table.td label="Статус">
+                    <div class="flex flex-wrap items-center justify-end gap-1.5 xl:justify-start">
+                        <x-badge :status="$order->status" />
 
-                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
-                        Статус
-                    </th>
+                        @if($order->hasOpenCancelRequest())
+                            <x-badge tone="attention" data-cancel-badge>Запрос на отмену</x-badge>
+                        @endif
 
-                    <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
-                        Без НДС
-                    </th>
+                        @if($order->is_paid)
+                            <x-badge tone="success">Оплачен</x-badge>
+                        @endif
+                    </div>
+                </x-table.td>
 
-                    <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
-                        НДС
-                    </th>
+                <x-table.td label="Без НДС" align="right">
+                    <x-price :amount="$order->total_without_vat" />
+                </x-table.td>
 
-                    <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
-                        С НДС
-                    </th>
+                <x-table.td label="НДС" align="right">
+                    <x-price :amount="$order->total_vat" />
+                </x-table.td>
 
-                    <th class="px-4 py-3 text-sm font-semibold text-slate-600">
-                    </th>
+                <x-table.td label="С НДС" align="right" class="font-semibold text-slate-800">
+                    <x-price :amount="$order->total_with_vat" />
+                </x-table.td>
 
-                </tr>
+            </tr>
 
-            </thead>
+        @endforeach
 
-            <tbody class="divide-y divide-slate-200">
-
-                @foreach($orders as $order)
-
-                    <tr class="hover:bg-slate-50">
-
-                        <td class="px-4 py-3 font-medium text-slate-800">
-                            {{ $order->number }}
-                        </td>
-
-                        <td class="px-4 py-3 text-slate-700">
-                            {{ $order->placed_at?->format('d.m.Y H:i') }}
-                        </td>
-
-                        <td class="px-4 py-3 text-slate-700">
-                            {{ $order->organization->name ?? '—' }}
-                        </td>
-
-                        <td class="px-4 py-3 text-slate-700">
-                            {{ $order->user->name ?? '—' }}
-                        </td>
-
-                        <td class="px-4 py-3">
-
-                            <div class="flex items-center gap-2">
-
-                                @include('partials.order_status', ['status' => $order->status])
-                                @include('partials.cancel_request_badge', ['order' => $order, 'admin' => true])
-
-                                @if($order->is_paid)
-
-                                    <span class="inline-flex rounded-full bg-green-100 text-green-700 px-2 py-0.5 text-xs">
-                                        Оплачен
-                                    </span>
-
-                                @endif
-
-                            </div>
-
-                        </td>
-
-                        <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
-                            {{ number_format($order->total_without_vat, 2, '.', '') }} BYN
-                        </td>
-
-                        <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
-                            {{ number_format($order->total_vat, 2, '.', '') }} BYN
-                        </td>
-
-                        <td class="px-4 py-3 text-right font-semibold text-slate-800 whitespace-nowrap">
-                            {{ number_format($order->total_with_vat, 2, '.', '') }} BYN
-                        </td>
-
-                        <td class="px-4 py-3">
-
-                            <a
-                                href="/admin/order/{{ $order->id }}"
-                                class="underline"
-                            >
-                                Открыть
-                            </a>
-
-                        </td>
-
-                    </tr>
-
-                @endforeach
-
-            </tbody>
-
-        </table>
-
-    </div>
+    </x-table>
 
 @endif
 

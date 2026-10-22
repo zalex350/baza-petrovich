@@ -129,7 +129,7 @@
 
         <main class="max-w-7xl mx-auto py-6 px-4 lg:px-8">
 
-            @include('partials.flash')
+            <x-alert.flash :validation="trim($__env->yieldContent('flash-validation', 'list'))" />
 
             @yield('content')
 

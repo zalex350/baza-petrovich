@@ -31,18 +31,19 @@ enum OrderStatus: string
     }
 
     /**
-     * Tailwind-классы бейджа статуса.
+     * Tailwind-классы бейджа статуса — единая карта цветов для всех экранов
+     * (x-badge :status, partials/order_status). Сами цвета — токены status.* в tailwind.config.js.
      */
     public function color(): string
     {
         return match ($this) {
-            self::New        => 'bg-blue-100 text-blue-700',
-            self::Confirmed  => 'bg-cyan-100 text-cyan-700',
-            self::SentTo1c   => 'bg-indigo-100 text-indigo-700',
-            self::InProgress => 'bg-yellow-100 text-yellow-700',
-            self::Shipped    => 'bg-purple-100 text-purple-700',
-            self::Completed  => 'bg-green-100 text-green-700',
-            self::Cancelled  => 'bg-slate-200 text-slate-600',
+            self::New        => 'bg-status-new-bg text-status-new-text',
+            self::Confirmed  => 'bg-status-confirmed-bg text-status-confirmed-text',
+            self::SentTo1c   => 'bg-status-sent-bg text-status-sent-text',
+            self::InProgress => 'bg-status-progress-bg text-status-progress-text',
+            self::Shipped    => 'bg-status-shipped-bg text-status-shipped-text',
+            self::Completed  => 'bg-status-completed-bg text-status-completed-text',
+            self::Cancelled  => 'bg-status-cancelled-bg text-status-cancelled-text',
         };
     }
 

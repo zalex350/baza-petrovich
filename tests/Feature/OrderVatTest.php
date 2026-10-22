@@ -208,11 +208,17 @@ class OrderVatTest extends TestCase
     {
         $order = $this->placeMixedOrder();
 
+        // Админ-список — на x-price (1 234,50 BYN, неразрывные пробелы), кабинет — пока прежний формат
+        $sums = [
+            '/orders' => ['270.34 BYN', '27.04 BYN', '297.38 BYN'],
+            '/admin/orders' => ["270,34\u{00A0}BYN", "27,04\u{00A0}BYN", "297,38\u{00A0}BYN"],
+        ];
+
         foreach ([[$this->client, '/orders'], [$this->admin, '/admin/orders']] as [$user, $url]) {
             $this->actingAs($user)->get($url)
                 ->assertOk()
                 ->assertSeeInOrder(['Без НДС', 'НДС', 'С НДС'])
-                ->assertSeeInOrder([$order->number, '270.34 BYN', '27.04 BYN', '297.38 BYN']);
+                ->assertSeeInOrder([$order->number, ...$sums[$url]]);
         }
     }
 

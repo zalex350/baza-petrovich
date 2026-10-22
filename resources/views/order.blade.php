@@ -182,21 +182,16 @@
 
                             <td class="px-4 py-3">
 
-                                <form
-                                    method="POST"
+                                <x-confirm
                                     action="/order/delete/{{ $item->id }}"
+                                    label="Удалить"
+                                    title="Удалить товар из корзины?"
+                                    confirm-label="Удалить"
+                                    trigger-variant="link"
+                                    trigger-size="sm"
                                 >
-
-                                    @csrf
-
-                                    <button
-                                        type="submit"
-                                        class="text-red-600 hover:text-red-700 underline text-sm"
-                                    >
-                                        Удалить
-                                    </button>
-
-                                </form>
+                                    «{{ $item->title() }}» будет удалён из корзины.
+                                </x-confirm>
 
                             </td>
 
@@ -318,21 +313,16 @@
 
                         <td class="px-4 py-3">
 
-                            <form
-                                method="POST"
+                            <x-confirm
                                 action="/order/delete/{{ $item->id }}"
+                                label="Удалить"
+                                title="Удалить товар из корзины?"
+                                confirm-label="Удалить"
+                                trigger-variant="link"
+                                trigger-size="sm"
                             >
-
-                                @csrf
-
-                                <button
-                                    type="submit"
-                                    class="text-red-600 hover:text-red-700 underline text-sm"
-                                >
-                                    Удалить
-                                </button>
-
-                            </form>
+                                «{{ $item->title() }}» будет удалён из корзины.
+                            </x-confirm>
 
                         </td>
 
