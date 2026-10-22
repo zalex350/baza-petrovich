@@ -102,39 +102,36 @@
 
             @endif
 
-            <form
-                method="POST"
-                action="/admin/order/{{ $order->id }}/cancel-request/reject"
-                class="space-y-3"
-            >
+            <div class="space-y-3">
 
-                @csrf
+                <p class="text-slate-600">
+                    Заказ останется в работе, клиент увидит причину отклонения.
+                </p>
 
-                <label for="reject_comment" class="block text-sm font-medium text-slate-600">
-                    Причина отклонения <span class="text-red-600">*</span>
-                </label>
-
-                <textarea
-                    id="reject_comment"
-                    name="reject_comment"
-                    rows="2"
-                    maxlength="1000"
-                    required
-                    class="border border-slate-300 rounded px-3 py-2 w-full bg-white"
-                >{{ old('reject_comment') }}</textarea>
-
-                @error('reject_comment')
-                    <p class="text-red-600 text-sm">{{ $message }}</p>
-                @enderror
-
-                <button
-                    type="submit"
-                    class="bg-slate-800 hover:bg-slate-700 text-white px-5 py-2 rounded-xl transition"
+                {{-- После ошибки (пустая причина) окно открывается снова, с ошибкой у поля --}}
+                <x-confirm
+                    action="/admin/order/{{ $order->id }}/cancel-request/reject"
+                    label="Отклонить запрос"
+                    title="Отклонить запрос на отмену?"
+                    confirm-label="Отклонить"
+                    variant="primary"
+                    :open="$errors->has('reject_comment')"
                 >
-                    Отклонить
-                </button>
+                    Заказ {{ $order->number }} не будет отменён.
 
-            </form>
+                    <x-slot:fields>
+                        <x-textarea
+                            name="reject_comment"
+                            id="reject_comment"
+                            label="Причина отклонения"
+                            rows="3"
+                            maxlength="1000"
+                            required
+                        />
+                    </x-slot:fields>
+                </x-confirm>
+
+            </div>
 
         </div>
 

@@ -93,15 +93,17 @@
 
     <div class="flex flex-wrap items-center gap-4">
 
-        <form method="POST" action="/admin/user/{{ $user->id }}/reset-password" class="inline">
-            @csrf
-            <button
-                type="submit"
-                class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded"
-            >
-                Сбросить пароль
-            </button>
-        </form>
+        <x-confirm
+            action="/admin/user/{{ $user->id }}/reset-password"
+            label="Сбросить пароль"
+            title="Сбросить пароль?"
+            confirm-label="Отправить ссылку"
+            variant="primary"
+            trigger-variant="secondary"
+        >
+            На {{ $user->email }} уйдёт письмо со ссылкой для установки нового пароля.
+            Текущий пароль действует, пока пользователь его не сменит.
+        </x-confirm>
 
         @if($user->isBlocked())
 

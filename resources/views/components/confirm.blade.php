@@ -11,8 +11,10 @@
 
     label — текст кнопки-триггера; variant — danger | primary (кнопка подтверждения и триггер);
     trigger-variant / trigger-size — вид триггера, если нужен другой (например link, sm);
-    method — POST | PUT | PATCH | DELETE (не-POST — через @method).
-    Закрытие: «Отмена», Esc, клик по фону; фокус — на кнопке подтверждения, после закрытия — на триггере.
+    method — POST | PUT | PATCH | DELETE (не-POST — через @method);
+    open — показать окно сразу (после ошибки валидации полей из слота fields: :open="$errors->has('reason')").
+    Закрытие: «Отмена», Esc, клик по фону. Фокус — на поле с ошибкой, иначе на первом поле
+    из fields, иначе на кнопке подтверждения; после закрытия — на триггере.
 --}}
 @props([
     'action',
@@ -24,6 +26,7 @@
     'triggerVariant' => null,
     'triggerSize' => 'md',
     'method' => 'POST',
+    'open' => false,
 ])
 
 @php
@@ -33,7 +36,7 @@
 
 <div
     x-data="{
-        open: false,
+        open: @js((bool) $open),
         show() { this.open = true },
         hide() { this.open = false; this.$nextTick(() => this.$refs.trigger.focus()) },
     }"
@@ -55,7 +58,15 @@
             id="{{ $id }}"
             x-show="open"
             x-cloak
-            x-init="$watch('open', value => value && $nextTick(() => $el.querySelector('[data-confirm-submit]').focus()))"
+            x-init="
+                const focusFirst = () => $nextTick(() => (
+                    $el.querySelector('[aria-invalid=true]')
+                    ?? $el.querySelector('[data-confirm-fields] :is(input, select, textarea)')
+                    ?? $el.querySelector('[data-confirm-submit]')
+                ).focus());
+                $watch('open', value => value && focusFirst());
+                open && focusFirst();
+            "
             x-on:keydown.escape.window="open && hide()"
             class="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center"
             role="dialog"
@@ -88,7 +99,7 @@
                 <div id="{{ $id }}-text" class="mt-2 text-slate-600">{{ $slot }}</div>
 
                 @isset($fields)
-                    <div class="mt-4 space-y-3">{{ $fields }}</div>
+                    <div class="mt-4 space-y-3" data-confirm-fields>{{ $fields }}</div>
                 @endisset
 
                 <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
