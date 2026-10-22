@@ -42,6 +42,16 @@ services:
     volumes:
       - dbdata:/var/lib/mysql
 
+  # Перехват почты: приложение шлёт на mailpit:1025 (MAIL_MAILER=smtp в .env),
+  # письма — в веб-интерфейсе http://localhost:8025. Наружу ничего не уходит.
+  mailpit:
+    image: axllent/mailpit:v1.31.3
+    ports:
+      - "${FORWARD_MAILPIT_PORT:-8025}:8025"
+      - "${FORWARD_MAILPIT_SMTP_PORT:-1025}:1025"
+    environment:
+      MP_MAX_MESSAGES: 500
+
   node:
     image: node:22
     working_dir: /var/www
