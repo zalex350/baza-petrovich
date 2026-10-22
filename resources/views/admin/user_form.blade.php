@@ -8,8 +8,8 @@
     $isSelf = $user->exists && $user->is(auth()->user());
     $currentRole = old('role', $user->role?->value ?? \App\Enums\UserRole::Client->value);
     $passwordMode = old('password_mode', \App\Http\Controllers\Admin\AdminUserController::PASSWORD_INVITE);
-    // Уведомления: у нового пользователя и у тех, кому их ещё не меняли, — включены
-    $notify = fn (string $field) => (bool) old($field, $user->exists ? $user->{$field} : true);
+    // Уведомления: у нового пользователя — включены (old() после ошибки учитывает x-checkbox)
+    $notify = fn (string $field) => $user->exists ? (bool) $user->{$field} : true;
 @endphp
 
 <a
@@ -143,24 +143,21 @@
 
             <legend class="mb-2 font-semibold">Уведомления на почту</legend>
 
-            @foreach([
-                'notify_new_order'      => ['Новый заказ', 'Письмо при оформлении каждого заказа клиентом.'],
-                'notify_cancel_request' => ['Запрос на отмену', 'Письмо, когда клиент запрашивает отмену заказа.'],
-            ] as $field => [$title, $hint])
+            <x-checkbox
+                name="notify_new_order"
+                label="Новый заказ"
+                hint="Письмо при оформлении каждого заказа клиентом."
+                :checked="$notify('notify_new_order')"
+            />
 
-                <label class="flex items-start gap-2">
-                    {{-- Снятая галочка не отправляется — скрытое поле передаёт «выключено» --}}
-                    <input type="hidden" name="{{ $field }}" value="0">
-                    <input type="checkbox" name="{{ $field }}" value="1" @checked($notify($field)) class="mt-1">
-                    <span>
-                        {{ $title }}
-                        <span class="block text-sm text-slate-400">{{ $hint }}</span>
-                    </span>
-                </label>
+            <x-checkbox
+                name="notify_cancel_request"
+                label="Запрос на отмену"
+                hint="Письмо, когда клиент запрашивает отмену заказа."
+                :checked="$notify('notify_cancel_request')"
+            />
 
-            @endforeach
-
-            <p class="text-xs text-slate-400">Письма уходят на email пользователя: {{ $user->email ?: 'указанный выше' }}.</p>
+            <p class="text-sm text-slate-500">Письма уходят на email пользователя: {{ $user->email ?: 'указанный выше' }}.</p>
 
         </fieldset>
 

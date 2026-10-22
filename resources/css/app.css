@@ -5,3 +5,139 @@
 [x-cloak] {
     display: none !important;
 }
+
+/*
+ * x-alert.flash поверх страницы (cart-add.js ставит data-floating после «В корзину» из списка):
+ * по центру сверху, на телефоне — по ширине экрана с отступами 16px.
+ * Вне @layer — Tailwind не выбрасывает правило, хотя атрибут ставится из JS.
+ */
+[data-flash][data-floating] {
+    @apply fixed inset-x-4 top-4 z-50 mx-auto mb-0 max-w-md;
+}
+
+[data-flash][data-floating] > * {
+    @apply shadow-lg;
+}
+
+/*
+ * x-table stack: ниже брейкпоинта строки таблицы — карточки «подпись колонки — значение».
+ * Подпись — из data-label ячейки (x-table.td label="…"), шапка скрыта визуально.
+ * Классы .ui-table-stack-{sm|md|lg|xl} ставит компонент; блоки одинаковые, отличается только ширина.
+ */
+@layer components {
+    @media (max-width: 639px) {
+        .ui-table-stack-sm thead {
+            @apply sr-only;
+        }
+
+        .ui-table-stack-sm,
+        .ui-table-stack-sm tbody,
+        .ui-table-stack-sm tr {
+            @apply block;
+        }
+
+        .ui-table-stack-sm tr {
+            @apply px-cell-x py-cell-y;
+        }
+
+        .ui-table-stack-sm td {
+            @apply flex items-baseline justify-between gap-4 px-0 py-1 text-right;
+        }
+
+        .ui-table-stack-sm td[data-label]::before {
+            content: attr(data-label);
+            @apply shrink-0 text-left text-sm font-medium text-slate-500;
+        }
+
+        .ui-table-stack-sm td:not([data-label]) {
+            @apply justify-end;
+        }
+    }
+
+    @media (max-width: 767px) {
+        .ui-table-stack-md thead {
+            @apply sr-only;
+        }
+
+        .ui-table-stack-md,
+        .ui-table-stack-md tbody,
+        .ui-table-stack-md tr {
+            @apply block;
+        }
+
+        .ui-table-stack-md tr {
+            @apply px-cell-x py-cell-y;
+        }
+
+        .ui-table-stack-md td {
+            @apply flex items-baseline justify-between gap-4 px-0 py-1 text-right;
+        }
+
+        .ui-table-stack-md td[data-label]::before {
+            content: attr(data-label);
+            @apply shrink-0 text-left text-sm font-medium text-slate-500;
+        }
+
+        .ui-table-stack-md td:not([data-label]) {
+            @apply justify-end;
+        }
+    }
+
+    @media (max-width: 1023px) {
+        .ui-table-stack-lg thead {
+            @apply sr-only;
+        }
+
+        .ui-table-stack-lg,
+        .ui-table-stack-lg tbody,
+        .ui-table-stack-lg tr {
+            @apply block;
+        }
+
+        .ui-table-stack-lg tr {
+            @apply px-cell-x py-cell-y;
+        }
+
+        .ui-table-stack-lg td {
+            @apply flex items-baseline justify-between gap-4 px-0 py-1 text-right;
+        }
+
+        .ui-table-stack-lg td[data-label]::before {
+            content: attr(data-label);
+            @apply shrink-0 text-left text-sm font-medium text-slate-500;
+        }
+
+        .ui-table-stack-lg td:not([data-label]) {
+            @apply justify-end;
+        }
+    }
+
+    @media (max-width: 1279px) {
+        .ui-table-stack-xl thead {
+            @apply sr-only;
+        }
+
+        .ui-table-stack-xl,
+        .ui-table-stack-xl tbody,
+        .ui-table-stack-xl tr {
+            @apply block;
+        }
+
+        .ui-table-stack-xl tr {
+            @apply px-cell-x py-cell-y;
+        }
+
+        .ui-table-stack-xl td {
+            @apply flex items-baseline justify-between gap-4 px-0 py-1 text-right;
+        }
+
+        .ui-table-stack-xl td[data-label]::before {
+            content: attr(data-label);
+            @apply shrink-0 text-left text-sm font-medium text-slate-500;
+        }
+
+        .ui-table-stack-xl td:not([data-label]) {
+            @apply justify-end;
+        }
+    }
+}

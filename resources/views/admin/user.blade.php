@@ -87,31 +87,39 @@
 {{-- Уведомления на почту: только у администратора --}}
 @if($user->isAdmin())
 
-    <div class="bg-white rounded-2xl border border-slate-200 p-6 mb-6" data-notifications>
+    <form
+        method="POST"
+        action="/admin/user/{{ $user->id }}/notifications"
+        class="bg-white rounded-card border border-slate-200 p-card mb-6 space-y-4"
+        data-notifications
+    >
+        @csrf
 
-        <div class="flex items-center justify-between gap-4 mb-4">
+        <div>
             <h2 class="text-lg font-semibold">Уведомления на почту</h2>
-            <a href="/admin/user/{{ $user->id }}/edit" class="text-sm underline">Изменить</a>
+            <p class="text-sm text-slate-500">Письма уходят на {{ $user->email }}.</p>
         </div>
 
-        <dl class="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-3">
-            @foreach(['notify_new_order' => 'Новый заказ', 'notify_cancel_request' => 'Запрос на отмену'] as $field => $title)
-                <dt class="text-slate-500">{{ $title }}</dt>
-                <dd>
-                    @if($user->{$field})
-                        <span class="inline-flex rounded-full bg-green-100 text-green-700 px-2 py-0.5 text-xs">Включено</span>
-                    @else
-                        <span class="inline-flex rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-xs">Выключено</span>
-                    @endif
-                </dd>
-            @endforeach
-        </dl>
-
         @if($user->isBlocked())
-            <p class="text-sm text-slate-400 mt-3">Заблокированным пользователям письма не отправляются.</p>
+            <x-alert type="warning">Пользователь заблокирован — письма ему не отправляются.</x-alert>
         @endif
 
-    </div>
+        <x-checkbox
+            name="notify_new_order"
+            label="Новый заказ"
+            hint="Письмо при оформлении каждого заказа клиентом."
+            :checked="$user->notify_new_order"
+        />
+
+        <x-checkbox
+            name="notify_cancel_request"
+            label="Запрос на отмену"
+            hint="Письмо, когда клиент запрашивает отмену заказа."
+            :checked="$user->notify_cancel_request"
+        />
+
+        <x-button size="sm">Сохранить</x-button>
+    </form>
 
 @endif
 
@@ -124,15 +132,17 @@
 
     <div class="flex flex-wrap items-center gap-4">
 
-        <form method="POST" action="/admin/user/{{ $user->id }}/reset-password" class="inline">
-            @csrf
-            <button
-                type="submit"
-                class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded"
-            >
-                Сбросить пароль
-            </button>
-        </form>
+        <x-confirm
+            action="/admin/user/{{ $user->id }}/reset-password"
+            label="Сбросить пароль"
+            title="Сбросить пароль?"
+            confirm-label="Отправить ссылку"
+            variant="primary"
+            trigger-variant="secondary"
+        >
+            На {{ $user->email }} уйдёт письмо со ссылкой для установки нового пароля.
+            Текущий пароль действует, пока пользователь его не сменит.
+        </x-confirm>
 
         @if($user->isBlocked())
 

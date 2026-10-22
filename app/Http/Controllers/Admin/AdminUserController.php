@@ -180,6 +180,28 @@ class AdminUserController extends Controller
             : back()->with('error', 'Не удалось отправить ссылку: '.__($status));
     }
 
+    /**
+     * Блок «Уведомления на почту» в карточке администратора (у клиентов настроек нет).
+     */
+    public function updateNotifications($id): RedirectResponse
+    {
+        $user = User::findOrFail($id);
+
+        if (! $user->isAdmin()) {
+            return back()->with('error', 'Уведомления на почту настраиваются только администраторам');
+        }
+
+        $data = request()->validate([
+            'notify_new_order'      => ['required', 'boolean'],
+            'notify_cancel_request' => ['required', 'boolean'],
+        ]);
+
+        $this->fillNotifications($user, $data);
+        $user->save();
+
+        return back()->with('success', 'Настройки уведомлений сохранены');
+    }
+
     private function rules(?User $user = null): array
     {
         return [

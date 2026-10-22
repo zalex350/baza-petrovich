@@ -48,7 +48,8 @@ function restore() {
         return;
     }
 
-    flash.classList.add('fixed', 'top-4', 'right-4', 'left-4', 'sm:left-auto', 'sm:max-w-md', 'z-50', 'shadow-lg');
+    // Положение и вид — в resources/css/app.css ([data-flash][data-floating])
+    flash.dataset.floating = '';
     setTimeout(() => flash.remove(), 4000);
 }
 

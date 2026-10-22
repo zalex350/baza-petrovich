@@ -259,4 +259,9 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         '/admin/user/{id}/reset-password',
         [AdminUserController::class, 'resetPassword']
     );
+
+    Route::post(
+        '/admin/user/{id}/notifications',
+        [AdminUserController::class, 'updateNotifications']
+    );
 });
