@@ -18,11 +18,14 @@ enum OrderHistoryEvent: string
         };
     }
 
+    /**
+     * Tailwind-классы бейджа (токены tone.* в tailwind.config.js).
+     */
     public function color(): string
     {
         return match ($this) {
-            self::CancelRequested => 'bg-orange-100 text-orange-700',
-            self::CancelRejected  => 'bg-slate-100 text-slate-700',
+            self::CancelRequested => 'bg-tone-attention-bg text-tone-attention-text',
+            self::CancelRejected  => 'bg-tone-neutral-bg text-tone-neutral-text',
         };
     }
 }
