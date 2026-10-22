@@ -2,6 +2,9 @@
 
 @section('title', 'Админка — Заказы')
 
+{{-- Поля формы на x-input/x-select показывают ошибки сами — во flash только сводка --}}
+@section('flash-validation', 'summary')
+
 @section('content')
 
 {{-- Пример экрана на UI-ките (resources/views/components): x-input, x-select, x-button, x-table, x-badge, x-price, x-empty-state --}}

@@ -99,6 +99,7 @@ User uploads go to `storage/app/public/` (accessible via `/storage/...` URLs via
 - **`@include` — только для крупных блоков страницы** (`partials/order_items`, `partials/header` и т.п.).
 - **Новые элементы — добавлять в кит**, не делать локально на экране.
 - Подтверждение действий — `x-confirm`, не `onclick="return confirm(...)"`. Суммы — `x-price` (`App\Support\Money`: `1 234,50 BYN`). Flash-сообщения выводят layouts (`x-alert.flash`) — на экранах не подключать.
+- **При переводе формы на `x-input`/`x-select`** (и `x-textarea`) общий список ошибок заменяется одним alert «Проверьте выделенные поля»: в шаблоне экрана `@section('flash-validation', 'summary')`, тексты ошибок остаются только у полей. Пока на экране есть формы не на ките — оставлять список (по умолчанию). Пример — `admin/orders.blade.php`.
 - Breeze-компоненты (`x-primary-button`, `x-text-input`, `x-input-label`, `x-input-error`, `x-guest-layout` и др.) — наследие auth/профиля; в новом коде не использовать.
 
 **Tailwind:** цвета, отступы и радиусы — токены в `tailwind.config.js` (`bg-primary`, `bg-danger`, `bg-tone-success-bg`, `bg-status-new-bg`, `px-btn-x`, `px-cell-x`, `rounded-control`, `rounded-card`, `p-card`); новые значения — туда же, а не произвольными классами. Цвета статусов заказа — одна карта: `OrderStatus::color()` → токены `status.*`.

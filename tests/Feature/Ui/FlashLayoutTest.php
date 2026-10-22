@@ -52,18 +52,30 @@ class FlashLayoutTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/data-flash class="[^"]*mb-4/', $html);
     }
 
-    public function test_validation_errors_listed_once_in_app_and_admin(): void
+    public function test_validation_errors_listed_once_on_screens_without_kit_forms(): void
     {
-        // Ключ без поля на странице: проверяется сам список во flash (ошибку поля x-select/x-input
-        // дополнительно показывает под полем — это не дубль flash)
         $errors = (new ViewErrorBag)->put('default', new MessageBag(['checkout' => ['Неверный статус заказа']]));
 
-        foreach ([['client', '/orders'], ['admin', '/admin/orders']] as [$role, $url]) {
+        // Формы этих экранов ещё не на x-input/x-select — во flash полный список
+        foreach ([['client', '/orders'], ['admin', '/admin/users']] as [$role, $url]) {
             $this->flushSession();
             $html = $this->as($role)->withSession(['errors' => $errors])->get($url)->assertOk()->getContent();
 
             $this->assertSame(1, substr_count($html, 'Неверный статус заказа'), $url);
+            $this->assertStringNotContainsString('Проверьте выделенные поля', $html, $url);
         }
+    }
+
+    public function test_kit_form_shows_summary_and_error_at_field(): void
+    {
+        $errors = (new ViewErrorBag)->put('default', new MessageBag(['status' => ['Неверный статус заказа']]));
+
+        $html = $this->as('admin')->withSession(['errors' => $errors])->get('/admin/orders')->assertOk()->getContent();
+
+        // Сводка — одна, сам текст ошибки — только у поля «Статус»
+        $this->assertSame(1, substr_count($html, 'Проверьте выделенные поля'));
+        $this->assertSame(1, substr_count($html, 'Неверный статус заказа'));
+        $this->assertMatchesRegularExpression('#id="status-error"[^>]*data-field-error>\s*Неверный статус заказа#', $html);
     }
 
     public function test_guest_layout_leaves_validation_errors_to_fields(): void
