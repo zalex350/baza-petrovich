@@ -243,9 +243,10 @@ class UiKitTest extends TestCase
 
     public function test_price_formats_amount_and_vat_label(): void
     {
-        $this->blade('<x-price :amount="1234.5" />')->assertSee('1 234.50 BYN')->assertDontSee('НДС');
-        $this->blade('<x-price :amount="270.34" vat="net" />')->assertSeeInOrder(['270.34 BYN', 'без НДС']);
-        $this->blade('<x-price amount="10" vat="gross" />')->assertSeeInOrder(['10.00 BYN', 'с НДС']);
+        // Пробелы в сумме — неразрывные (U+00A0)
+        $this->blade('<x-price :amount="1234.5" />')->assertSee("1\u{00A0}234,50\u{00A0}BYN")->assertDontSee('НДС');
+        $this->blade('<x-price :amount="270.34" vat="net" />')->assertSeeInOrder(["270,34\u{00A0}BYN", 'без НДС']);
+        $this->blade('<x-price amount="10" vat="gross" />')->assertSeeInOrder(["10,00\u{00A0}BYN", 'с НДС']);
         $this->blade('<x-price :amount="null" />')->assertSee('Цена уточняется')->assertSee('data-price-tbd', false);
     }
 
@@ -256,10 +257,10 @@ class UiKitTest extends TestCase
         $noPrice = new Product(['price' => null]);
 
         $this->blade('<x-price :product="$p" />', ['p' => $withVat])
-            ->assertSeeInOrder(['100.00 BYN', 'без НДС', 'с НДС: 120.00 BYN']);
+            ->assertSeeInOrder(["100,00\u{00A0}BYN", 'без НДС', "с НДС: 120,00\u{00A0}BYN"]);
 
         $this->blade('<x-price :product="$p" />', ['p' => $exempt])
-            ->assertSeeInOrder(['80.00 BYN', 'без НДС', 'НДС не облагается']);
+            ->assertSeeInOrder(["80,00\u{00A0}BYN", 'без НДС', 'НДС не облагается']);
 
         $this->blade('<x-price :product="$p" />', ['p' => $noPrice])->assertSee('Цена уточняется');
     }
