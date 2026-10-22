@@ -7,7 +7,7 @@
 |---|---|
 | Код (git, ветка `master`) | `/home/deploy/smesitel_by` |
 | Настройки | `/home/deploy/smesitel_by/.env` (владелец `deploy:www-data`, права `640`) |
-| Контейнеры | `docker-compose.staging.yml`, проект `smesitel_by`: `php`, `nginx`, `mysql` |
+| Контейнеры | `docker-compose.staging.yml`, проект `smesitel_by`: `php`, `nginx`, `mysql`, `queue` (воркер очереди: письма) |
 | БД MySQL 8 | том `smesitel_by_dbdata`, наружу не открыта |
 | Фото, логи, сессии | том `smesitel_by_storage` (`/var/www/storage` в контейнерах) |
 | HTTPS, пароль на сайт | nginx сервера: `/etc/nginx/sites-enabled/smesitel`, certbot, `/etc/nginx/.htpasswd` |
@@ -48,7 +48,8 @@ cd /home/deploy/smesitel_by
 
 Скрипт по шагам: бэкап БД → `git pull` → сборка образов (`composer install --no-dev`,
 `npm ci && npm run build`) → миграции новым образом → перезапуск контейнеров →
-`storage:link` → кэши config/route/view → проверка `http://127.0.0.1:8090/up`.
+`storage:link` → кэши config/route/view → `queue:restart` (воркер очереди перезапускается
+с новым кодом) → проверка `http://127.0.0.1:8090/up`.
 
 - Ошибка на любом шаге — скрипт останавливается и пишет, на каком. Если до перезапуска —
   стенд продолжает работать на прежней версии.
@@ -109,7 +110,7 @@ cd /home/deploy/smesitel_by
 
    SESSION_DRIVER=database
    CACHE_STORE=database
-   QUEUE_CONNECTION=sync
+   QUEUE_CONNECTION=database
    MAIL_MAILER=log
 
    COMPOSE_FILE=docker-compose.staging.yml
@@ -217,19 +218,28 @@ SKIP_PULL=1 ./deploy.sh               # собрать и запустить п�
 ## Логи и письма
 
 Почта на стенде не отправляется: `MAIL_MAILER=log` — письма (приглашения, восстановление
-пароля) записываются в лог приложения целиком, со ссылками.
+пароля, уведомления администраторам о заказах) записываются в лог приложения целиком, со ссылками.
+
+Уведомления администраторам (новый заказ, запрос на отмену) отправляются **через очередь**:
+`QUEUE_CONNECTION=database`, задачи — в таблице `jobs`, отправляет контейнер `queue`
+(`php artisan queue:work`). Без запущенного воркера письма копятся в `jobs` и не уходят.
+Неудачная отправка повторяется 3 раза (через 1 и 5 минут), затем — в `failed_jobs`.
 
 ```bash
 docker compose exec php tail -n 200 -f storage/logs/laravel.log   # лог приложения и письма
 docker compose exec php grep -n "reset-password" storage/logs/laravel.log | tail   # ссылки из писем
 docker compose logs --tail=100 php nginx     # php-fpm и nginx контейнера
+docker compose logs --tail=100 -f queue      # воркер очереди: какие задачи выполнены / упали
+docker compose exec php php artisan queue:failed      # неудачные задачи
+docker compose exec php php artisan queue:retry all   # повторить их
 docker compose logs --tail=100 mysql
 sudo tail -f /var/log/nginx/access.log /var/log/nginx/error.log   # nginx сервера
 ```
 
-Чтобы письма уходили по-настоящему — задать в `.env` `MAIL_MAILER=smtp` и `MAIL_HOST`,
-`MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS`, затем `SKIP_PULL=1 ./deploy.sh`
-(или `docker compose up -d --force-recreate php` — кэш конфигурации пересобирается при старте).
+Чтобы письма уходили по-настоящему — задать в `.env` `MAIL_MAILER=smtp` и `MAIL_SCHEME`,
+`MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME`,
+затем `SKIP_PULL=1 ./deploy.sh` (или `docker compose up -d --force-recreate php queue` — кэш
+конфигурации пересобирается при старте, воркер перечитывает `.env`).
 
 ## Полезные команды
 

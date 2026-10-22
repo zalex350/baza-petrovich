@@ -87,6 +87,7 @@ class AdminUserController extends Controller
         ]);
         $user->role              = UserRole::from($data['role']);
         $user->email_verified_at = now();
+        $this->fillNotifications($user, $data);
         $user->save();
 
         if (! $invite) {
@@ -140,6 +141,7 @@ class AdminUserController extends Controller
             'organization_id' => $data['organization_id'] ?? null,
         ]);
         $user->role = UserRole::from($data['role']);
+        $this->fillNotifications($user, $data);
         $user->save();
 
         return redirect("/admin/user/{$user->id}")->with('success', 'Пользователь сохранён');
@@ -186,7 +188,26 @@ class AdminUserController extends Controller
             'phone'           => ['nullable', 'string', 'max:50'],
             'role'            => ['required', Rule::enum(UserRole::class)],
             'organization_id' => User::organizationRules((string) request('role')),
+            'notify_new_order'      => ['sometimes', 'boolean'],
+            'notify_cancel_request' => ['sometimes', 'boolean'],
         ];
+    }
+
+    /**
+     * Email-уведомления значимы только для администратора: у клиента значения не меняются.
+     * Поле не пришло (форма без блока) — настройка остаётся прежней.
+     */
+    private function fillNotifications(User $user, array $data): void
+    {
+        if (! $user->isAdmin()) {
+            return;
+        }
+
+        foreach (['notify_new_order', 'notify_cancel_request'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $user->{$field} = (bool) $data[$field];
+            }
+        }
     }
 
     private function messages(): array

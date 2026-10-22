@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\OrderHistoryEvent;
 use App\Enums\OrderStatus;
+use App\Events\CancelRequested;
 use App\Exceptions\CancelRequestException;
 use App\Exceptions\InvalidStatusTransition;
 use App\Models\Order;
@@ -73,6 +74,9 @@ class OrderStatusService
             $order->save();
 
             $this->recordEvent($order, OrderHistoryEvent::CancelRequested, $by, $order->cancel_reason);
+
+            // Письмо администраторам — слушатель после коммита (ShouldDispatchAfterCommit)
+            CancelRequested::dispatch($order);
 
             return $order;
         });

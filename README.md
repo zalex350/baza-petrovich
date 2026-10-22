@@ -33,6 +33,15 @@ docker-compose exec node npm run build
 Имя compose-проекта зафиксировано (`name: smesitel_by`): контейнеры `smesitel_by-*` и том
 `smesitel_by_dbdata` не зависят от имени папки.
 
+### Почта и очередь
+
+- **Письма** локально уходят в Mailpit (`MAIL_HOST=mailpit`, `MAIL_PORT=1025` в `.env`) и видны
+  на http://localhost:8025 — наружу ничего не отправляется.
+- **Очередь** — `QUEUE_CONNECTION=database`, воркер — контейнер `queue` (`php artisan queue:work`).
+  Уведомления администраторам о заказах отправляются через неё. Воркер держит код в памяти:
+  после правок PHP — `docker-compose restart queue`. Логи — `docker-compose logs -f queue`,
+  упавшие задачи — `docker-compose exec php php artisan queue:failed`.
+
 ### Фото товаров
 
 Хранятся на диске из `SHOP_IMAGES_DISK` (по умолчанию `public` — `storage/app/public`,

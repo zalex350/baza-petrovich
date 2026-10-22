@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\OrderStatus;
+use App\Events\OrderPlaced;
 use App\Exceptions\CheckoutException;
 use App\Models\Cart;
 use App\Models\DeliveryAddress;
@@ -148,6 +149,10 @@ class CheckoutService
             $cart->items()->delete();
 
             $this->statuses->recordPlaced($order, $user);
+
+            // Только для нового заказа (повтор формы с тем же токеном выше события не даёт).
+            // Слушатели — после коммита (ShouldDispatchAfterCommit), при откате события нет
+            OrderPlaced::dispatch($order);
 
             return $order;
         });
