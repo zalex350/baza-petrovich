@@ -112,7 +112,10 @@
                     >
 
                         <div class="flex items-baseline justify-between gap-4 mb-5">
-                            <h3 class="text-lg font-semibold text-ink">{{ $root['name'] }}</h3>
+                            <h3 class="text-lg font-semibold text-ink">
+                                {{-- Заголовок группы — ссылка на весь раздел --}}
+                                <a href="{{ $root['url'] }}" class="hover:text-link" data-mega-heading>{{ $root['name'] }}</a>
+                            </h3>
                             <a href="{{ $root['url'] }}" class="text-sm text-link hover:underline shrink-0">
                                 Открыть весь раздел →
                             </a>

@@ -68,7 +68,9 @@ class CatalogController extends Controller
             'listing' => $listing,
             'products' => $products,
             'cartItems' => $cart->items(auth()->user()),
-            'breadcrumbs' => $this->breadcrumbs($category),
+            'breadcrumbs' => $this->breadcrumbs($category, $menu),
+            // Чипы подкатегорий над списком: прямые потомки из дерева меню (кэш, без запросов)
+            'subcategories' => $menu->node($category->id)['children'] ?? [],
             'facets' => $listing->facets(),
             'chips' => $listing->chips($baseUrl),
             'baseUrl' => $baseUrl,
@@ -76,16 +78,23 @@ class CatalogController extends Controller
     }
 
     /**
-     * Главная / Каталог / родители / раздел.
+     * Главная / Каталог / родители (ссылки на их страницы — товары всего раздела) / раздел.
+     * Родители — из дерева меню (кэш); если категории в нём нет (пустая) — по parent_id.
      *
      * @return list<array{label: string, url?: string}>
      */
-    private function breadcrumbs(Category $category): array
+    private function breadcrumbs(Category $category, CatalogMenu $menu): array
     {
-        $chain = [];
+        $path = $menu->path($category->id);
 
-        for ($current = $category->parent, $guard = 0; $current && $guard < 20; $current = $current->parent, $guard++) {
-            array_unshift($chain, ['label' => $current->name, 'url' => '/catalog/'.$current->slug]);
+        if ($path) {
+            $chain = array_map(fn ($node) => ['label' => $node['name'], 'url' => $node['url']], array_slice($path, 0, -1));
+        } else {
+            $chain = [];
+
+            for ($current = $category->parent, $guard = 0; $current && $guard < 20; $current = $current->parent, $guard++) {
+                array_unshift($chain, ['label' => $current->name, 'url' => '/catalog/'.$current->slug]);
+            }
         }
 
         return [

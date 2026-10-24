@@ -47,10 +47,20 @@ class AdminLayoutTest extends TestCase
                 ->assertSee('data-layout="admin"', false)
                 ->assertSee('Админ-панель')
                 ->assertSeeInOrder(['Товары', 'Заказы', 'Клиенты', 'Пользователи'])
-                ->assertSee('На сайт')
+                // «Открыть сайт» — в верхней панели, в новой вкладке; внизу сайдбара ссылки больше нет
+                ->assertSee('<a href="/" target="_blank" rel="noopener"', false)
+                ->assertSee('Открыть сайт')
+                ->assertDontSee('На сайт')
                 // шапка витрины в админке не выводится
                 ->assertDontSee('aria-controls="mega-menu"', false);
         }
+    }
+
+    public function test_sidebar_is_sticky_with_own_scroll(): void
+    {
+        $html = $this->actingAs(User::factory()->admin()->create())->get('/admin/products')->getContent();
+
+        $this->assertMatchesRegularExpression('#<aside[^>]*class="[^"]*overflow-y-auto[^"]*lg:sticky lg:top-0 lg:h-screen[^"]*"[^>]*data-admin-sidebar#', $html);
     }
 
     public function test_admin_views_extend_admin_layout(): void
