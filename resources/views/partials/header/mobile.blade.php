@@ -1,68 +1,54 @@
 {{--
-    Мобильная шапка (<1024px): ☰ слева (панель тоже выезжает слева), логотип, поиск, корзина, пользователь;
-    off-canvas панель с drill-down каталогом. Поведение — resources/js/mobile-menu.js.
+    Мобильная шапка (<1024px), макет docs/design/CartMobile: ☰ слева (панель тоже выезжает слева),
+    логотип по центру, корзина справа; поиск — отдельной строкой ниже. Кабинет, вход и контакты — в панели.
+    Off-canvas панель с drill-down каталогом. Поведение — resources/js/mobile-menu.js.
 --}}
 <div
     class="lg:hidden"
     x-data="mobileMenu({ menuUrl: @js(route('catalog.menu', [], false)) })"
-    @keydown.escape.window="closePanel(); search = false"
+    @keydown.escape.window="closePanel()"
 >
 
-    {{-- Строка шапки --}}
-    <div class="h-14 px-4 flex items-center gap-1">
+    <div class="px-4 py-2.5 flex flex-col gap-2.5">
 
-        <button
-            type="button"
-            x-ref="burger"
-            @click="openPanel()"
-            :aria-expanded="panel.toString()"
-            aria-controls="mobile-panel"
-            aria-label="Меню"
-            class="w-10 h-10 -ml-2 flex items-center justify-center text-slate-700"
-        >
-            @svg('heroicon-o-bars-3', $iconClass)
-        </button>
+        {{-- ☰ — логотип — корзина --}}
+        <div class="flex items-center justify-between">
 
-        <a href="/" class="text-lg font-extrabold tracking-tight text-slate-900 mr-auto truncate" aria-label="{{ config('shop.name') }} — на главную">
-            {{ config('shop.name') }}
-        </a>
+            <button
+                type="button"
+                x-ref="burger"
+                @click="openPanel()"
+                :aria-expanded="panel.toString()"
+                aria-controls="mobile-panel"
+                aria-label="Меню"
+                class="w-touch h-touch -ml-2.5 flex items-center justify-center text-primary"
+            >
+                @svg('heroicon-o-bars-3', 'w-6 h-6')
+            </button>
 
-        <button
-            type="button"
-            @click="toggleSearch()"
-            :aria-expanded="search.toString()"
-            aria-controls="mobile-search"
-            aria-label="Поиск"
-            class="w-10 h-10 flex items-center justify-center text-slate-700"
-        >
-            @svg('heroicon-o-magnifying-glass', $iconClass)
-        </button>
+            <x-logo size="sm" class="min-w-0 truncate" />
 
-        <a
-            href="/order"
-            aria-label="Корзина: {{ $cartSummary['count'] }} поз."
-            @class(['relative w-10 h-10 flex items-center justify-center', 'text-blue-600' => $isCart, 'text-slate-700' => ! $isCart])
-        >
-            @svg('heroicon-o-shopping-cart', $iconClass)
-            @if($cartSummary['count'] > 0)
-                <span class="absolute top-0.5 right-0 min-w-5 h-5 px-1 rounded-full bg-blue-600 text-white text-xs leading-5 text-center" data-cart-count-mobile>
-                    {{ $cartSummary['count'] }}
-                </span>
-            @endif
-        </a>
+            <a
+                href="/order"
+                aria-label="Корзина: {{ $cartSummary['count'] }} поз."
+                @if($isCart) aria-current="page" @endif
+                @class(['relative w-touch h-touch -mr-2.5 flex items-center justify-center', 'text-link' => $isCart, 'text-primary' => ! $isCart])
+            >
+                @svg('heroicon-o-shopping-cart', 'w-6 h-6')
+                @if($cartSummary['count'] > 0)
+                    <span class="absolute top-1 right-0.5 min-w-4 px-1.5 rounded-full bg-link text-white text-counter font-bold text-center tabular-nums" data-cart-count-mobile>
+                        {{ $cartSummary['count'] }}
+                    </span>
+                @endif
+            </a>
 
-        <a
-            href="{{ $user ? '/orders' : route('login') }}"
-            aria-label="{{ $user ? 'Личный кабинет' : 'Войти' }}"
-            @class(['w-10 h-10 flex items-center justify-center', 'text-blue-600' => $isCabinet, 'text-slate-700' => ! $isCabinet])
-        >
-            @svg($user ? 'heroicon-o-user-circle' : 'heroicon-o-user', $iconClass)
-        </a>
-    </div>
+        </div>
 
-    {{-- Строка поиска --}}
-    <div id="mobile-search" x-ref="searchRow" x-show="search" x-cloak x-transition class="px-4 pb-3">
-        @include('partials.header.search', ['id' => 'mobile'])
+        {{-- Поиск — всегда виден --}}
+        <div id="mobile-search">
+            @include('partials.header.search', ['id' => 'mobile'])
+        </div>
+
     </div>
 
     {{-- Off-canvas --}}
@@ -85,15 +71,15 @@
         x-transition:leave="transition ease-in duration-150"
         x-transition:leave-start="translate-x-0"
         x-transition:leave-end="-translate-x-full"
-        class="fixed inset-y-0 left-0 z-[70] w-[min(22rem,88vw)] bg-white shadow-xl flex flex-col"
+        class="fixed inset-y-0 left-0 z-[70] w-[min(22rem,88vw)] bg-surface shadow-xl flex flex-col"
         role="dialog"
         aria-modal="true"
         aria-label="Меню"
     >
 
-        <div class="h-14 px-4 flex items-center justify-between border-b border-slate-200 shrink-0">
-            <span class="font-extrabold tracking-tight">{{ config('shop.name') }}</span>
-            <button type="button" x-ref="close" @click="closePanel()" aria-label="Закрыть меню" class="w-10 h-10 flex items-center justify-center text-slate-600">
+        <div class="h-14 px-4 flex items-center justify-between border-b border-line shrink-0">
+            <x-logo size="sm" :href="null" />
+            <button type="button" x-ref="close" @click="closePanel()" aria-label="Закрыть меню" class="w-10 h-10 flex items-center justify-center text-ink-muted">
                 @svg('heroicon-o-x-mark', $iconClass)
             </button>
         </div>
@@ -103,63 +89,63 @@
 
             <nav class="py-2 text-base" aria-label="Мобильное меню">
 
-                <button type="button" @click="openCatalog()" class="w-full flex items-center gap-3 px-4 py-3 text-left font-medium hover:bg-slate-50">
-                    @svg('heroicon-o-squares-2x2', 'w-5 h-5 text-slate-500')
+                <button type="button" @click="openCatalog()" class="w-full flex items-center gap-3 px-4 py-3 text-left font-medium hover:bg-canvas">
+                    @svg('heroicon-o-squares-2x2', 'w-5 h-5 text-ink-muted')
                     <span class="flex-1">Каталог</span>
-                    @svg('heroicon-o-chevron-right', 'w-4 h-4 text-slate-400')
+                    @svg('heroicon-o-chevron-right', 'w-4 h-4 text-ink-muted')
                 </button>
 
-                <a href="#brands" @click="closePanel()" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50">
-                    @svg('heroicon-o-tag', 'w-5 h-5 text-slate-500')
+                <a href="#brands" @click="closePanel()" class="flex items-center gap-3 px-4 py-3 hover:bg-canvas">
+                    @svg('heroicon-o-tag', 'w-5 h-5 text-ink-muted')
                     Производители
                 </a>
 
-                <a href="#delivery" @click="closePanel()" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50">
-                    @svg('heroicon-o-shopping-bag', 'w-5 h-5 text-slate-500')
+                <a href="#delivery" @click="closePanel()" class="flex items-center gap-3 px-4 py-3 hover:bg-canvas">
+                    @svg('heroicon-o-shopping-bag', 'w-5 h-5 text-ink-muted')
                     Доставка
                 </a>
 
-                <a href="#contacts" @click="closePanel()" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50">
-                    @svg('heroicon-o-phone', 'w-5 h-5 text-slate-500')
+                <a href="#contacts" @click="closePanel()" class="flex items-center gap-3 px-4 py-3 hover:bg-canvas">
+                    @svg('heroicon-o-phone', 'w-5 h-5 text-ink-muted')
                     Контакты
                 </a>
 
-                <div class="my-2 border-t border-slate-100"></div>
+                <div class="my-2 border-t border-line"></div>
 
                 @guest
 
-                    <a href="{{ route('login') }}" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50">
-                        @svg('heroicon-o-user', 'w-5 h-5 text-slate-500')
+                    <a href="{{ route('login') }}" class="flex items-center gap-3 px-4 py-3 hover:bg-canvas">
+                        @svg('heroicon-o-user', 'w-5 h-5 text-ink-muted')
                         Войти
                     </a>
 
                 @else
 
                     <div class="px-4 py-2">
-                        <div class="text-xs text-slate-400">Личный кабинет</div>
+                        <div class="text-xs text-ink-muted">Личный кабинет</div>
                         <div class="font-medium truncate">{{ $user->name }}</div>
                         @if($user->organization)
-                            <div class="text-sm text-slate-500 truncate">{{ $user->organization->name }}</div>
+                            <div class="text-sm text-ink-muted truncate">{{ $user->organization->name }}</div>
                         @endif
                     </div>
 
-                    <a href="/orders" class="block px-4 py-3 pl-12 hover:bg-slate-50">Кабинет</a>
-                    <a href="/orders" class="block px-4 py-3 pl-12 hover:bg-slate-50">Мои заказы</a>
+                    <a href="/orders" class="block px-4 py-3 pl-12 hover:bg-canvas">Кабинет</a>
+                    <a href="/orders" class="block px-4 py-3 pl-12 hover:bg-canvas">Мои заказы</a>
                     @if($user->isClient())
-                        <a href="/addresses" class="block px-4 py-3 pl-12 hover:bg-slate-50">Адреса доставки</a>
+                        <a href="/addresses" class="block px-4 py-3 pl-12 hover:bg-canvas">Адреса доставки</a>
                     @endif
-                    <a href="{{ route('profile.edit') }}" class="block px-4 py-3 pl-12 hover:bg-slate-50">Профиль</a>
+                    <a href="{{ route('profile.edit') }}" class="block px-4 py-3 pl-12 hover:bg-canvas">Профиль</a>
 
                     @if($user->isAdmin())
-                        <a href="/admin/products" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50" data-admin-link>
-                            @svg('heroicon-o-cog-6-tooth', 'w-5 h-5 text-slate-500')
+                        <a href="/admin/products" class="flex items-center gap-3 px-4 py-3 hover:bg-canvas" data-admin-link>
+                            @svg('heroicon-o-cog-6-tooth', 'w-5 h-5 text-ink-muted')
                             Админ-панель
                         </a>
                     @endif
 
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button type="submit" class="w-full text-left px-4 py-3 pl-12 text-red-600 hover:bg-slate-50">Выход</button>
+                        <button type="submit" class="w-full text-left px-4 py-3 pl-12 text-danger hover:bg-canvas">Выход</button>
                     </form>
 
                 @endguest
@@ -171,9 +157,9 @@
         {{-- Каталог: drill-down --}}
         <div x-show="view === 'catalog'" x-cloak class="flex-1 min-h-0 flex flex-col">
 
-            <div class="px-2 py-2 border-b border-slate-100 shrink-0">
+            <div class="px-2 py-2 border-b border-line shrink-0">
 
-                <button type="button" @click="back()" class="flex items-center gap-2 px-2 py-2 text-sm text-slate-600">
+                <button type="button" @click="back()" class="flex items-center gap-2 px-2 py-2 text-sm text-ink-muted">
                     @svg('heroicon-o-chevron-left', 'w-4 h-4')
                     Назад
                 </button>
@@ -181,7 +167,7 @@
                 <div class="px-2 pb-1 font-semibold" x-text="current ? current.name : 'Каталог'"></div>
 
                 <template x-if="current">
-                    <a :href="current.url" class="block px-2 pb-1 text-sm text-blue-600">
+                    <a :href="current.url" class="block px-2 pb-1 text-sm text-link">
                         Все товары раздела (<span x-text="current.count"></span>)
                     </a>
                 </template>
@@ -190,29 +176,29 @@
 
             <div class="flex-1 overflow-y-auto" x-ref="catalogList">
 
-                <p x-show="loading" class="px-4 py-3 text-sm text-slate-500">Загрузка…</p>
+                <p x-show="loading" class="px-4 py-3 text-sm text-ink-muted">Загрузка…</p>
 
-                <p x-show="failed" x-cloak class="px-4 py-3 text-sm text-red-600">
+                <p x-show="failed" x-cloak class="px-4 py-3 text-sm text-danger">
                     Не удалось загрузить каталог.
                     <a href="{{ route('catalog.index') }}" class="underline">Открыть страницу каталога</a>
                 </p>
 
                 <ul>
                     <template x-for="node in items" :key="node.id">
-                        <li class="border-b border-slate-50">
+                        <li class="border-b border-line">
 
                             <template x-if="node.children.length">
-                                <button type="button" @click="enter(node)" class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50">
+                                <button type="button" @click="enter(node)" class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-canvas">
                                     <span class="flex-1 min-w-0" x-text="node.name"></span>
-                                    <span class="text-xs text-slate-400" x-text="node.count"></span>
-                                    @svg('heroicon-o-chevron-right', 'w-4 h-4 text-slate-400 shrink-0')
+                                    <span class="text-xs text-ink-muted" x-text="node.count"></span>
+                                    @svg('heroicon-o-chevron-right', 'w-4 h-4 text-ink-muted shrink-0')
                                 </button>
                             </template>
 
                             <template x-if="! node.children.length">
-                                <a :href="node.url" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50">
+                                <a :href="node.url" class="flex items-center gap-3 px-4 py-3 hover:bg-canvas">
                                     <span class="flex-1 min-w-0" x-text="node.name"></span>
-                                    <span class="text-xs text-slate-400" x-text="node.count"></span>
+                                    <span class="text-xs text-ink-muted" x-text="node.count"></span>
                                 </a>
                             </template>
 
@@ -225,7 +211,7 @@
         </div>
 
         {{-- Контакты внизу --}}
-        <div class="border-t border-slate-200 px-4 py-4 text-sm text-slate-600 space-y-2 shrink-0">
+        <div class="border-t border-line px-4 py-4 text-sm text-ink-muted space-y-2 shrink-0">
             <a href="tel:{{ preg_replace('/[^+\d]/', '', config('shop.phone')) }}" class="flex items-center gap-2">
                 @svg('heroicon-o-phone', 'w-4 h-4')
                 {{ config('shop.phone') }}

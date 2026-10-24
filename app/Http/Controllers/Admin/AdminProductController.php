@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\Concerns\UploadsProductImages;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductAttribute;
 use App\Models\ProductDraft;
 use App\Services\ProductAttributes;
 use App\Services\Vat\VatCalculator;
@@ -20,12 +21,13 @@ class AdminProductController extends Controller
 {
     use UploadsProductImages;
 
-    public function __construct(private readonly ProductAttributes $attributes)
-    {
-    }
+    public function __construct(private readonly ProductAttributes $attributes) {}
 
     /** Поля учётной системы: при shop.catalog.manual_products = false приходят только из 1С */
-    private const ERP_FIELDS = ['name', 'sku', 'brand', 'price', 'vat_rate', 'stock', 'on_order'];
+    private const ERP_FIELDS = ['name', 'sku', 'brand', 'price', 'vat_rate', 'stock', 'on_order', 'min_qty', 'qty_step', 'default_qty'];
+
+    /** Данные сайта, которые применяются сразу, без черновика (SRS §11.3: категория — сайта, не 1С) */
+    private const DIRECT_SITE_FIELDS = ['slug', 'category_id', 'is_hit', 'is_new'];
 
     /** Тексты сайта: через черновик */
     private const DRAFT_FIELDS = ['display_name', 'description', 'specifications', 'package_contents'];
@@ -45,9 +47,9 @@ class AdminProductController extends Controller
         $this->ensureManualProducts();
 
         return view('admin.product_form', [
-            'product'    => new Product(['vat_rate' => 20.00, 'price' => 0, 'stock' => 0]),
-            'categories'    => Category::all(),
-            'draft'         => null,
+            'product' => new Product(['vat_rate' => 20.00, 'price' => 0, 'stock' => 0]),
+            'categories' => Category::all(),
+            'draft' => null,
             'attributeRows' => $this->attributeRows(collect()),
         ]);
     }
@@ -62,7 +64,7 @@ class AdminProductController extends Controller
 
         $data = $this->normalizeVat($data);
 
-        $data['is_active']    = request()->boolean('is_active');
+        $data['is_active'] = request()->boolean('is_active');
         $data['is_published'] = $this->action() === 'publish';
 
         // Характеристики проверяются до создания товара: ошибка — товар не создаётся
@@ -106,9 +108,9 @@ class AdminProductController extends Controller
             : $product->attributeValues;
 
         return view('admin.product_form', [
-            'product'       => $product,
-            'categories'    => Category::all(),
-            'draft'         => $draft,
+            'product' => $product,
+            'categories' => Category::all(),
+            'draft' => $draft,
             'attributeRows' => $this->attributeRows($values),
         ]);
     }
@@ -134,8 +136,7 @@ class AdminProductController extends Controller
 
         $direct = $manual ? $this->normalizeVat(array_intersect_key($data, array_flip(self::ERP_FIELDS))) : [];
 
-        // Данные сайта, которые применяются сразу (SRS §11.3: категория — сайта, не 1С)
-        foreach (['slug', 'category_id'] as $field) {
+        foreach (self::DIRECT_SITE_FIELDS as $field) {
             if (request()->has($field)) {
                 $direct[$field] = $data[$field] ?? null;
             }
@@ -159,9 +160,9 @@ class AdminProductController extends Controller
         ProductDraft::updateOrCreate(
             ['product_id' => $product->id],
             ['data' => array_merge($product->draft?->data ?? [], [
-                'display_name'    => request('display_name'),
-                'description'     => request('description'),
-                'specifications'  => request('specifications'),
+                'display_name' => request('display_name'),
+                'description' => request('description'),
+                'specifications' => request('specifications'),
                 'package_contents' => request('package_contents'),
             ])]
         );
@@ -187,14 +188,14 @@ class AdminProductController extends Controller
     public function preview($id)
     {
         $product = Product::findOrFail($id);
-        $draft   = $product->draft;
+        $draft = $product->draft;
 
         if ($draft) {
             $data = $draft->data;
 
-            $product->display_name    = $data['display_name'] ?? $product->display_name;
-            $product->description     = $data['description'] ?? $product->description;
-            $product->specifications  = $data['specifications'] ?? $product->specifications;
+            $product->display_name = $data['display_name'] ?? $product->display_name;
+            $product->description = $data['description'] ?? $product->description;
+            $product->specifications = $data['specifications'] ?? $product->specifications;
             $product->package_contents = $data['package_contents'] ?? $product->package_contents;
 
             if (isset($data['attributes'])) {
@@ -222,25 +223,46 @@ class AdminProductController extends Controller
     private function erpRules(?Product $product = null): array
     {
         return [
-            'name'        => 'required|string|max:255',
-            'sku'         => ['required', 'string', 'max:100', Rule::unique('products', 'sku')->ignore($product?->id)],
-            'brand'       => 'nullable|string|max:255',
-            'price'       => 'required|numeric|min:0',
-            'vat_rate'    => ['sometimes', 'required', VatCalculator::rateRule()],
-            'stock'       => 'required|integer|min:0',
-            'on_order'    => 'boolean',
+            'name' => 'required|string|max:255',
+            'sku' => ['required', 'string', 'max:100', Rule::unique('products', 'sku')->ignore($product?->id)],
+            'brand' => 'nullable|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'vat_rate' => ['sometimes', 'required', VatCalculator::rateRule()],
+            'stock' => 'required|integer|min:0',
+            'on_order' => 'boolean',
+            // Кратность заказа: не отправлены — остаются прежние (по умолчанию 1)
+            'min_qty' => 'sometimes|required|integer|min:1',
+            'qty_step' => 'sometimes|required|integer|min:1',
+            'default_qty' => ['sometimes', 'required', 'integer', 'min:1', $this->defaultQtyRule($product)],
         ];
+    }
+
+    /**
+     * Количество по умолчанию — одно из допустимых: min_qty, min_qty + qty_step, …
+     */
+    private function defaultQtyRule(?Product $product): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) use ($product) {
+            $min = (int) request('min_qty', $product?->min_qty ?? 1);
+            $step = max(1, (int) request('qty_step', $product?->qty_step ?? 1));
+
+            if ($min >= 1 && ((int) $value < $min || ((int) $value - $min) % $step !== 0)) {
+                $fail("Количество по умолчанию — не меньше минимума ({$min}) и с шагом {$step}.");
+            }
+        };
     }
 
     private function siteRules(?Product $product = null): array
     {
         return [
-            'category_id'      => 'nullable|exists:categories,id',
-            'display_name'     => 'nullable|string|max:255',
-            'slug'             => ['nullable', 'string', 'max:255', Rule::unique('products', 'slug')->ignore($product?->id)],
-            'description'      => 'nullable|string',
-            'specifications'   => 'nullable|string',
+            'category_id' => 'nullable|exists:categories,id',
+            'display_name' => 'nullable|string|max:255',
+            'slug' => ['nullable', 'string', 'max:255', Rule::unique('products', 'slug')->ignore($product?->id)],
+            'description' => 'nullable|string',
+            'specifications' => 'nullable|string',
             'package_contents' => 'nullable|string',
+            'is_hit' => 'boolean',
+            'is_new' => 'boolean',
         ];
     }
 
@@ -292,22 +314,22 @@ class AdminProductController extends Controller
     private function attributeRows($values): array
     {
         if (is_array(old('attributes'))) {
-            $units = \App\Models\ProductAttribute::pluck('unit', 'name_key');
+            $units = ProductAttribute::pluck('unit', 'name_key');
 
             return collect(old('attributes'))
                 ->map(fn ($row) => [
-                    'name'  => (string) ($row['name'] ?? ''),
+                    'name' => (string) ($row['name'] ?? ''),
                     'value' => (string) ($row['value'] ?? ''),
-                    'unit'  => $units[\App\Models\ProductAttribute::key($row['name'] ?? '')] ?? null,
+                    'unit' => $units[ProductAttribute::key($row['name'] ?? '')] ?? null,
                 ])
                 ->filter(fn ($row) => $row['name'] !== '' || $row['value'] !== '')
                 ->values()->all();
         }
 
         return collect($values)->map(fn ($v) => [
-            'name'  => $v->attribute->name,
+            'name' => $v->attribute->name,
             'value' => $v->value,
-            'unit'  => $v->attribute->unit,
+            'unit' => $v->attribute->unit,
         ])->values()->all();
     }
 
@@ -320,11 +342,11 @@ class AdminProductController extends Controller
             $data = $draft->data;
 
             $product->update([
-                'display_name'    => $data['display_name'] ?? null,
-                'description'     => $data['description'] ?? $product->description,
-                'specifications'  => $data['specifications'] ?? $product->specifications,
+                'display_name' => $data['display_name'] ?? null,
+                'description' => $data['description'] ?? $product->description,
+                'specifications' => $data['specifications'] ?? $product->specifications,
                 'package_contents' => $data['package_contents'] ?? $product->package_contents,
-                'is_published'    => true,
+                'is_published' => true,
             ]);
 
             if (isset($data['attributes'])) {
@@ -352,7 +374,7 @@ class AdminProductController extends Controller
             $saved = 'Товар опубликован';
         }
 
-        $message = $saved . ($uploaded ? ", загружено фото: {$uploaded}" : '');
+        $message = $saved.($uploaded ? ", загружено фото: {$uploaded}" : '');
 
         if ($imageErrors) {
             return redirect("/admin/product/{$product->id}#images")

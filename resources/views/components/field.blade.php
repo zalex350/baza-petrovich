@@ -9,7 +9,7 @@
 <div {{ $attributes->class('min-w-0') }}>
 
     @if($label)
-        <label for="{{ $id }}" class="block text-sm font-medium text-slate-600 mb-1">
+        <label for="{{ $id }}" class="block text-sm font-medium text-ink-muted mb-1">
             {{ $label }}@if($required) <span class="text-tone-danger-text" aria-hidden="true">*</span>@endif
         </label>
     @endif
@@ -17,7 +17,7 @@
     {{ $slot }}
 
     @if($hint)
-        <p id="{{ $id }}-hint" class="mt-1 text-sm text-slate-500">{{ $hint }}</p>
+        <p id="{{ $id }}-hint" class="mt-1 text-sm text-ink-muted">{{ $hint }}</p>
     @endif
 
     @if($error && isset($errors) && $errors->has($error))

@@ -21,7 +21,7 @@
 <span
     @if($status) data-status="{{ $status->value }}" @endif
     {{ $attributes->class([
-        'inline-flex items-center rounded-full whitespace-nowrap',
+        'inline-flex items-center rounded-full font-medium whitespace-nowrap',
         $color,
         $size === 'md' ? 'px-3 py-1 text-sm' : 'px-2 py-0.5 text-xs',
     ]) }}

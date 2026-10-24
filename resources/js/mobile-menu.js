@@ -1,6 +1,6 @@
 // Мобильная шапка (<1024px). Alpine-компонент mobileMenu.
 //
-// - строка поиска по иконке;
+// - поиск — постоянной строкой под шапкой (макет CartMobile), без переключателя;
 // - off-canvas панель слева: блокирует прокрутку страницы, закрывается
 //   по оверлею и Esc;
 // - каталог — пошаговая навигация по уровням (drill-down), без hover:
@@ -8,7 +8,6 @@
 
 export default ({ menuUrl }) => ({
     panel: false,
-    search: false,
     view: 'main', // 'main' | 'catalog'
 
     tree: null,
@@ -23,13 +22,7 @@ export default ({ menuUrl }) => ({
         });
     },
 
-    toggleSearch() {
-        this.search = !this.search;
-        if (this.search) this.$nextTick(() => this.$refs.searchRow?.querySelector('input')?.focus());
-    },
-
     openPanel() {
-        this.search = false;
         this.view = 'main';
         this.stack = [];
         this.panel = true;

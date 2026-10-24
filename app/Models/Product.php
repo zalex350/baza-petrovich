@@ -6,6 +6,7 @@ use App\Services\Vat\VatCalculator;
 use App\Services\Vat\VatLine;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 
 class Product extends Model
 {
@@ -19,6 +20,9 @@ class Product extends Model
         'vat_rate',
         'stock',
         'on_order',
+        'min_qty',
+        'qty_step',
+        'default_qty',
         'description',
         'category_id',
         'specifications',
@@ -26,16 +30,28 @@ class Product extends Model
         'slug',
         'is_active',
         'is_published',
+        'is_hit',
+        'is_new',
         'package_contents',
     ];
 
     protected $attributes = [
         'vat_rate' => 20.00,
         'on_order' => false,
+        'min_qty' => 1,
+        'qty_step' => 1,
+        'default_qty' => 1,
+        'is_hit' => false,
+        'is_new' => false,
     ];
 
     protected $casts = [
         'on_order' => 'boolean',
+        'min_qty' => 'integer',
+        'qty_step' => 'integer',
+        'default_qty' => 'integer',
+        'is_hit' => 'boolean',
+        'is_new' => 'boolean',
     ];
 
     /**
@@ -64,7 +80,7 @@ class Product extends Model
 
     public function category()
     {
-        return $this->belongsTo(\App\Models\Category::class);
+        return $this->belongsTo(Category::class);
     }
 
     /**
@@ -78,7 +94,7 @@ class Product extends Model
     /**
      * Галерея карточки: основное фото первым, остальные — в порядке из админки (BR-051, BR-052).
      *
-     * @return \Illuminate\Support\Collection<int, ProductImage>
+     * @return Collection<int, ProductImage>
      */
     public function gallery()
     {
@@ -95,7 +111,7 @@ class Product extends Model
 
     public function draft()
     {
-        return $this->hasOne(\App\Models\ProductDraft::class);
+        return $this->hasOne(ProductDraft::class);
     }
 
     /**
@@ -109,7 +125,7 @@ class Product extends Model
     /**
      * Строки таблицы характеристик карточки: в заданном порядке, пустые не выводятся (BR-062).
      *
-     * @return \Illuminate\Support\Collection<int, array{name: string, value: string}>
+     * @return Collection<int, array{name: string, value: string}>
      */
     public function specRows()
     {

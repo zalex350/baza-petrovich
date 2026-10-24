@@ -13,6 +13,10 @@
         @yield('title', config('shop.name'))
     </title>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     @vite([
         'resources/css/app.css',
         'resources/js/app.js'
@@ -20,11 +24,11 @@
 
 </head>
 
-<body class="bg-gray-100 text-gray-900">
+<body class="bg-canvas text-ink">
 
     @include('partials.header')
 
-    <main class="max-w-7xl mx-auto py-6 px-4">
+    <main class="max-w-page mx-auto py-5 px-4 lg:px-6">
 
         <x-alert.flash :validation="trim($__env->yieldContent('flash-validation', 'list'))" />
 
