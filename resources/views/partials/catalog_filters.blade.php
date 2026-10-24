@@ -1,9 +1,21 @@
 {{--
-    Фильтры категории (SRS §3.9). Одна GET-форма: на десктопе — колонка слева,
-    на мобильном — выезжающая панель («Фильтры (N)» / «Показать товары»).
-    Без JS — обычная отправка формы; с JS — список обновляется без перезагрузки (catalog-filters.js).
+    Фильтры категории (SRS §3.9), макет docs/design/Catalog. Одна GET-форма: на десктопе — карточка
+    слева, на мобильном — выезжающая панель («Фильтры (N)» / «Показать товары»).
+    Порядок: «Только в наличии» (stock[]=in_stock) первым, затем остальные фильтры категории
+    в порядке настройки; у списков больше BRIEF значений — «Показать все». «Сбросить фильтры» — внизу.
+    Без JS — обычная отправка формы («Применить»); с JS — список обновляется без перезагрузки (catalog-filters.js).
     Данные: $listing, $facets, $baseUrl.
 --}}
+@php
+    // Значений списка видно сразу; остальные — по «Показать все» (отмеченные видны всегда)
+    $brief = 5;
+
+    $stockFacet = collect($facets)->firstWhere('key', 'stock');
+    $inStock = $stockFacet ? collect($stockFacet['options'])->firstWhere('value', 'in_stock') : null;
+
+    $fmt = fn ($n) => $n === null ? '' : rtrim(rtrim(number_format($n, 2, '.', ''), '0'), '.');
+@endphp
+
 <form
     id="catalog-form"
     method="GET"
@@ -28,67 +40,103 @@
         id="catalog-filters-panel"
         class="lg:block"
         :class="open
-            ? 'fixed inset-y-0 left-0 z-[70] w-[min(22rem,88vw)] bg-white shadow-xl flex flex-col lg:static lg:w-auto lg:shadow-none lg:bg-transparent'
+            ? 'fixed inset-y-0 left-0 z-[70] w-[min(22rem,88vw)] bg-surface shadow-xl flex flex-col lg:static lg:w-auto lg:shadow-none'
             : 'hidden lg:block'"
         aria-label="Фильтры"
         data-catalog-filters
     >
 
-        <div class="h-14 px-4 flex items-center justify-between border-b border-slate-200 shrink-0 lg:hidden">
+        <div class="h-14 px-4 flex items-center justify-between border-b border-line shrink-0 lg:hidden">
             <span class="font-semibold">Фильтры</span>
-            <button type="button" @click="open = false" aria-label="Закрыть фильтры" class="w-10 h-10 flex items-center justify-center text-slate-600">
+            <button type="button" @click="open = false" aria-label="Закрыть фильтры" class="w-touch h-touch -mr-2.5 flex items-center justify-center text-ink-muted">
                 @svg('heroicon-o-x-mark', 'w-6 h-6')
             </button>
         </div>
 
-        <div class="flex-1 overflow-y-auto p-4 lg:p-0 space-y-6">
+        <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-5 lg:overflow-visible lg:rounded-card lg:border lg:border-line lg:bg-surface lg:p-4">
+
+            {{-- «Только в наличии» — тот же параметр stock[]=in_stock, что и в списке «Наличие» --}}
+            @if($inStock)
+                <div data-facet="stock">
+                    <x-checkbox
+                        name="stock[]"
+                        id="f-stock-in_stock"
+                        value="in_stock"
+                        label="Только в наличии"
+                        :checked="$inStock['checked']"
+                        :unchecked="false"
+                        position="end"
+                        class="font-semibold"
+                    />
+
+                    {{-- «Под заказ» / «Нет в наличии» отдельными галочками не показываются, но выбор из URL сохраняется --}}
+                    @foreach($stockFacet['options'] as $option)
+                        @if($option['checked'] && $option['value'] !== 'in_stock')
+                            <input type="hidden" name="stock[]" value="{{ $option['value'] }}">
+                        @endif
+                    @endforeach
+                </div>
+            @endif
 
             @forelse($facets as $facet)
 
-                <fieldset class="bg-white lg:rounded-2xl lg:border lg:border-slate-200 lg:p-4" data-facet="{{ $facet['key'] }}">
+                @continue($facet['key'] === 'stock')
 
-                    <legend class="font-semibold mb-2 lg:float-left lg:w-full">{{ $facet['title'] }}</legend>
+                <fieldset data-facet="{{ $facet['key'] }}">
+
+                    <legend class="mb-2 font-semibold">{{ $facet['title'] }}</legend>
 
                     @if($facet['kind'] === 'list')
 
-                        <ul @class(['space-y-1.5 clear-both', 'max-h-64 overflow-y-auto pr-1' => count($facet['options']) > 10])>
+                        @php($more = count($facet['options']) > $brief)
+
+                        <ul class="flex flex-col gap-2" @if($more) x-data="{ all: false }" @endif>
                             @foreach($facet['options'] as $option)
-                                <li>
-                                    <label class="flex items-center gap-2 text-sm cursor-pointer">
-                                        <input type="checkbox" name="{{ $facet['name'] }}" value="{{ $option['value'] }}" @checked($option['checked']) class="rounded border-slate-300">
-                                        <span class="grow">{{ $option['label'] }}</span>
-                                        <span class="text-xs text-slate-400">{{ $option['count'] }}</span>
-                                    </label>
+                                <li @if($more && $loop->index >= $brief && ! $option['checked']) x-show="all" x-cloak @endif>
+                                    <x-checkbox
+                                        :name="$facet['name']"
+                                        :id="'f-'.\Illuminate\Support\Str::slug($facet['key']).'-'.$loop->index"
+                                        :value="$option['value']"
+                                        :label="$option['label']"
+                                        :checked="$option['checked']"
+                                        :unchecked="false"
+                                        :meta="$option['count']"
+                                    />
                                 </li>
                             @endforeach
+
+                            @if($more)
+                                <li>
+                                    <button type="button" class="text-sm text-link hover:underline" @click="all = ! all" x-text="all ? 'Свернуть' : 'Показать все'" :aria-expanded="all.toString()">
+                                        Показать все
+                                    </button>
+                                </li>
+                            @endif
                         </ul>
 
                     @else
 
-                        @php($fmt = fn ($n) => $n === null ? '' : rtrim(rtrim(number_format($n, 2, '.', ''), '0'), '.'))
-
-                        <div class="flex items-center gap-2 clear-both">
-                            <input
+                        <div class="flex items-center gap-2">
+                            <x-input
+                                :name="$facet['name'].'[from]'"
                                 type="number"
                                 step="any"
                                 inputmode="decimal"
-                                name="{{ $facet['name'] }}[from]"
-                                value="{{ $fmt($facet['from']) }}"
-                                placeholder="от {{ $fmt($facet['min']) }}"
-                                aria-label="{{ $facet['title'] }}: от"
-                                class="w-full border rounded px-2 py-1.5 text-sm"
-                            >
-                            <span class="text-slate-400">—</span>
-                            <input
+                                :value="$fmt($facet['from'])"
+                                :placeholder="'от '.$fmt($facet['min'])"
+                                :aria-label="$facet['title'].': от'"
+                                class="flex-1"
+                            />
+                            <x-input
+                                :name="$facet['name'].'[to]'"
                                 type="number"
                                 step="any"
                                 inputmode="decimal"
-                                name="{{ $facet['name'] }}[to]"
-                                value="{{ $fmt($facet['to']) }}"
-                                placeholder="до {{ $fmt($facet['max']) }}"
-                                aria-label="{{ $facet['title'] }}: до"
-                                class="w-full border rounded px-2 py-1.5 text-sm"
-                            >
+                                :value="$fmt($facet['to'])"
+                                :placeholder="'до '.$fmt($facet['max'])"
+                                :aria-label="$facet['title'].': до'"
+                                class="flex-1"
+                            />
                         </div>
 
                     @endif
@@ -97,23 +145,24 @@
 
             @empty
 
-                <p class="text-sm text-slate-500">Для этой категории фильтров нет.</p>
+                <p class="text-sm text-ink-muted">Для этой категории фильтров нет.</p>
 
             @endforelse
 
+            {{-- Без JS фильтры применяются этой кнопкой; с JS — сразу при изменении --}}
+            <noscript>
+                <x-button class="hidden w-full lg:flex" data-apply>Применить</x-button>
+            </noscript>
 
-            {{-- Без JS и на десктопе — «Применить»; на мобильном — «Показать товары» внизу панели --}}
-            <button type="submit" class="hidden lg:block w-full bg-slate-800 hover:bg-slate-700 text-white py-2.5 rounded-xl" data-apply>
-                Применить
-            </button>
+            <x-button variant="secondary" :href="$listing->resetUrl($baseUrl)" class="hidden w-full lg:flex" data-catalog-link data-reset-filters>
+                Сбросить фильтры
+            </x-button>
 
         </div>
 
-        <div class="border-t border-slate-200 p-4 shrink-0 lg:hidden flex gap-3">
-            <a href="{{ $listing->resetUrl($baseUrl) }}" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700" data-catalog-link>Сбросить</a>
-            <button type="submit" class="grow bg-slate-800 hover:bg-slate-700 text-white py-2.5 rounded-xl">
-                Показать товары
-            </button>
+        <div class="border-t border-line p-4 shrink-0 lg:hidden flex gap-3">
+            <x-button variant="secondary" :href="$listing->resetUrl($baseUrl)" data-catalog-link>Сбросить</x-button>
+            <x-button class="grow">Показать товары</x-button>
         </div>
 
     </aside>

@@ -189,8 +189,8 @@ class UiKitTest extends TestCase
 
     public function test_floating_flash_is_styled_by_kit_css(): void
     {
-        // cart-add.js только ставит атрибут; положение — в CSS кита (вне @layer: класс из JS не выбрасывается)
-        $js = file_get_contents(resource_path('js/cart-add.js'));
+        // cart-actions.js только ставит атрибут; положение — в CSS кита (вне @layer: класс из JS не выбрасывается)
+        $js = file_get_contents(resource_path('js/cart-actions.js'));
         $css = file_get_contents(resource_path('css/app.css'));
 
         $this->assertStringContainsString("flash.dataset.floating = ''", $js);

@@ -5,15 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Services\CartSummary;
+use App\Services\Catalog\KeyAttributes;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\DB;
 
 class SearchController extends Controller
 {
     /** Товаров на странице результатов */
     public const PER_PAGE = 24;
 
-    public function index()
+    public function index(KeyAttributes $keyAttributes, CartSummary $cart)
     {
         $query = trim((string) request('q', ''));
 
@@ -21,19 +22,20 @@ class SearchController extends Controller
             return view('search', [
                 'query' => $query,
                 'products' => new LengthAwarePaginator([], 0, self::PER_PAGE),
+                'cartItems' => collect(),
             ]);
         }
 
         $words = preg_split('/\s+/', $query, -1, PREG_SPLIT_NO_EMPTY);
 
         $products = Product::query()
-            ->with('mainImage')
+            ->with(['mainImage', 'category'])
             ->where('is_active', 1)
             ->where('is_published', true)
             ->where(function ($outer) use ($words) {
                 foreach ($words as $word) {
                     $outer->where(function ($inner) use ($word) {
-                        $like = '%' . mb_strtolower($word) . '%';
+                        $like = '%'.mb_strtolower($word).'%';
 
                         $inner->whereRaw('LOWER(sku) LIKE ?', [$like])
                             ->orWhereRaw('LOWER(name) LIKE ?', [$like])
@@ -49,9 +51,16 @@ class SearchController extends Controller
             ->paginate(self::PER_PAGE)
             ->withQueryString();
 
+        // Строка товара: ключевые характеристики — из фильтров категории каждого товара
+        $keyAttributes->load($products->getCollection());
+
+        // «← Продолжить покупки» в корзине вернёт к этому поиску
+        session([CatalogController::CONTINUE_URL => request()->getRequestUri()]);
+
         return view('search', [
             'query' => $query,
             'products' => $products,
+            'cartItems' => $cart->items(auth()->user()),
         ]);
     }
 
@@ -71,7 +80,7 @@ class SearchController extends Controller
             ->where(function ($outer) use ($words) {
                 foreach ($words as $word) {
                     $outer->where(function ($inner) use ($word) {
-                        $like = '%' . mb_strtolower($word) . '%';
+                        $like = '%'.mb_strtolower($word).'%';
 
                         $inner->whereRaw('LOWER(sku) LIKE ?', [$like])
                             ->orWhereRaw('LOWER(name) LIKE ?', [$like])
@@ -86,7 +95,7 @@ class SearchController extends Controller
         $categories = Category::query()
             ->where(function ($outer) use ($words) {
                 foreach ($words as $word) {
-                    $outer->whereRaw('LOWER(name) LIKE ?', ['%' . mb_strtolower($word) . '%']);
+                    $outer->whereRaw('LOWER(name) LIKE ?', ['%'.mb_strtolower($word).'%']);
                 }
             })
             ->limit(5)

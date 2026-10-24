@@ -41,9 +41,10 @@
 
 <div class="min-h-screen lg:flex" x-data="{ sidebar: false }">
 
-    {{-- Боковое меню --}}
+    {{-- Боковое меню: на десктопе прилипает, высотой в экран, со своей прокруткой --}}
     <aside
-        class="bg-slate-900 text-slate-200 w-64 shrink-0 fixed inset-y-0 left-0 z-40 transform transition-transform lg:static lg:translate-x-0"
+        class="bg-slate-900 text-slate-200 w-64 shrink-0 fixed inset-y-0 left-0 z-40 overflow-y-auto overscroll-contain transform transition-transform lg:sticky lg:top-0 lg:h-screen lg:self-start lg:translate-x-0"
+        data-admin-sidebar
         :class="sidebar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
     >
 
@@ -83,18 +84,6 @@
 
         </nav>
 
-        <div class="absolute bottom-0 inset-x-0 p-3 border-t border-slate-800">
-
-            <a
-                href="/"
-                class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
-            >
-                @svg('heroicon-o-arrow-left', 'w-5 h-5 shrink-0')
-                На сайт
-            </a>
-
-        </div>
-
     </aside>
 
     <div
@@ -115,6 +104,12 @@
             </button>
 
             <div class="ml-auto flex items-center gap-4 text-sm">
+
+                <a href="/" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-link hover:underline" data-open-site>
+                    Открыть сайт
+                    <span aria-hidden="true">↗</span>
+                    <span class="sr-only">(в новой вкладке)</span>
+                </a>
 
                 <span class="text-slate-600">
                     {{ auth()->user()->name }}

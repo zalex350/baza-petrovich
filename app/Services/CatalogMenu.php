@@ -22,17 +22,60 @@ class CatalogMenu
     /** Защита от циклов в parent_id */
     private const MAX_DEPTH = 10;
 
+    /** Дерево, уже прочитанное из кэша этим экземпляром (путь, узел и меню — одним чтением) */
+    private ?array $tree = null;
+
     /**
      * @return list<array{id: int, name: string, url: string, image: ?string, count: int, children: list<array>}>
      */
     public function tree(): array
     {
-        return Cache::remember(self::CACHE_KEY, config('shop.catalog_menu_ttl'), fn () => $this->build());
+        return $this->tree ??= Cache::remember(self::CACHE_KEY, config('shop.catalog_menu_ttl'), fn () => $this->build());
     }
 
     public static function flush(): void
     {
         Cache::forget(self::CACHE_KEY);
+    }
+
+    /**
+     * Путь к категории по дереву меню (из кэша, без запросов): корень … сама категория.
+     * Пустая категория в дерево не попадает — тогда пустой список.
+     *
+     * @return list<array{id: int, name: string, url: string, count: int, children: list<array>}>
+     */
+    public function path(int $id): array
+    {
+        return $this->find($this->tree(), $id) ?? [];
+    }
+
+    /**
+     * Узел категории в дереве меню (с прямыми подкатегориями и счётчиками) или null.
+     */
+    public function node(int $id): ?array
+    {
+        $path = $this->path($id);
+
+        return $path ? end($path) : null;
+    }
+
+    private function find(array $nodes, int $id, int $depth = 0): ?array
+    {
+        if ($depth >= self::MAX_DEPTH) {
+            return null;
+        }
+
+        foreach ($nodes as $node) {
+            if ($node['id'] === $id) {
+                return [$node];
+            }
+
+            if ($found = $this->find($node['children'], $id, $depth + 1)) {
+                return [$node, ...$found];
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -95,12 +138,12 @@ class CatalogMenu
             }
 
             $nodes[] = [
-                'id'       => $category->id,
-                'name'     => $category->name,
-                'url'      => route('catalog.show', $category->slug, false),
+                'id' => $category->id,
+                'name' => $category->name,
+                'url' => route('catalog.show', $category->slug, false),
                 // Колонки image у категорий пока нет — подхватится, когда появится
-                'image'    => $category->image ? asset('storage/'.$category->image) : null,
-                'count'    => $count,
+                'image' => $category->image ? asset('storage/'.$category->image) : null,
+                'count' => $count,
                 'children' => $children,
             ];
         }

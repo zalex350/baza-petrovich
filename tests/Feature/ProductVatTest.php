@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
+use App\Support\Money;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -15,10 +16,10 @@ class ProductVatTest extends TestCase
     private function makeProduct(array $attributes = []): Product
     {
         return Product::create(array_merge([
-            'name'      => 'Grohe Start',
-            'sku'       => 'GR-001',
-            'price'     => 100,
-            'stock'     => 5,
+            'name' => 'Grohe Start',
+            'sku' => 'GR-001',
+            'price' => 100,
+            'stock' => 5,
             'is_active' => true,
         ], $attributes));
     }
@@ -82,11 +83,11 @@ class ProductVatTest extends TestCase
         $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin)->post('/admin/product', [
-            'name'     => 'VAT Product',
-            'sku'      => 'VAT-001',
-            'price'    => 100,
+            'name' => 'VAT Product',
+            'sku' => 'VAT-001',
+            'price' => 100,
             'vat_rate' => 10,
-            'stock'    => 1,
+            'stock' => 1,
         ])->assertSessionHasNoErrors();
 
         $this->assertEquals(10, Product::where('sku', 'VAT-001')->first()->vat_rate);
@@ -97,8 +98,8 @@ class ProductVatTest extends TestCase
         $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin)->post('/admin/product', [
-            'name'  => 'No VAT field',
-            'sku'   => 'VAT-002',
+            'name' => 'No VAT field',
+            'sku' => 'VAT-002',
             'price' => 100,
             'stock' => 1,
         ])->assertSessionHasNoErrors();
@@ -112,11 +113,11 @@ class ProductVatTest extends TestCase
         $product = $this->makeProduct();
 
         $this->actingAs($admin)->post("/admin/product/{$product->id}", [
-            'name'     => $product->name,
-            'sku'      => $product->sku,
-            'price'    => 100,
+            'name' => $product->name,
+            'sku' => $product->sku,
+            'price' => 100,
             'vat_rate' => 0,
-            'stock'    => 5,
+            'stock' => 5,
         ])->assertSessionHasNoErrors();
 
         $this->assertEquals(0, $product->fresh()->vat_rate);
@@ -129,19 +130,19 @@ class ProductVatTest extends TestCase
 
         foreach ([-1, 100.01, 'abc', ''] as $invalid) {
             $this->actingAs($admin)->post("/admin/product/{$product->id}", [
-                'name'     => $product->name,
-                'sku'      => $product->sku,
-                'price'    => 100,
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'price' => 100,
                 'vat_rate' => $invalid,
-                'stock'    => 5,
+                'stock' => 5,
             ])->assertSessionHasErrors(['vat_rate']);
 
             $this->actingAs($admin)->post('/admin/product', [
-                'name'     => 'Invalid VAT',
-                'sku'      => 'VAT-BAD',
-                'price'    => 100,
+                'name' => 'Invalid VAT',
+                'sku' => 'VAT-BAD',
+                'price' => 100,
                 'vat_rate' => $invalid,
-                'stock'    => 1,
+                'stock' => 1,
             ])->assertSessionHasErrors(['vat_rate']);
         }
 
@@ -187,7 +188,7 @@ class ProductVatTest extends TestCase
 
         $this->actingAs($user)->get('/catalog/smesiteli')
             ->assertStatus(200)
-            ->assertSeeInOrder(['100.00 BYN', '(с НДС: 120.00 BYN)']);
+            ->assertSeeInOrder([Money::format(100), 'без НДС · с НДС '.Money::format(120, false)]);
     }
 
     public function test_search_shows_price_with_vat(): void
@@ -197,6 +198,6 @@ class ProductVatTest extends TestCase
 
         $this->actingAs($user)->get('/search?q=Grohe')
             ->assertStatus(200)
-            ->assertSeeInOrder(['100.00 BYN', '(с НДС: 120.00 BYN)']);
+            ->assertSeeInOrder([Money::format(100), 'без НДС · с НДС '.Money::format(120, false)]);
     }
 }

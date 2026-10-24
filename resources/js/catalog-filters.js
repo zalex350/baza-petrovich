@@ -129,6 +129,14 @@ export default () => ({
                 }
             }
 
+            // Количество товаров у заголовка — вне компонента
+            const found = html.querySelector('[data-found]');
+            const foundHere = document.querySelector('[data-found]');
+
+            if (found && foundHere) {
+                foundHere.textContent = found.textContent;
+            }
+
             if (push && url !== location.href) {
                 history.pushState({ catalog: true }, '', url);
             }

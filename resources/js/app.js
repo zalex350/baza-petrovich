@@ -1,6 +1,6 @@
 import './bootstrap';
 import './search-suggest';
-import './cart-add';
+import './cart-actions';
 
 import Alpine from 'alpinejs';
 import focus from '@alpinejs/focus';

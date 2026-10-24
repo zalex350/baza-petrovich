@@ -73,14 +73,12 @@
                 @if($isCart) aria-current="page" @endif
                 aria-label="Корзина: {{ $cartSummary['count'] }} поз."
                 data-cart
+                data-cart-link
             >
                 <span class="relative">
                     @svg('heroicon-o-shopping-cart', $iconClass)
-                    @if($cartSummary['count'] > 0)
-                        <span class="absolute -top-2 -right-2.5 min-w-4 px-1.5 rounded-full bg-link text-white text-counter font-bold text-center tabular-nums" data-cart-count>
-                            {{ $cartSummary['count'] }}
-                        </span>
-                    @endif
+                    {{-- Пустая корзина — счётчик скрыт; cart-actions.js показывает его после «В корзину» --}}
+                    <span class="absolute -top-2 -right-2.5 min-w-4 px-1.5 rounded-full bg-link text-white text-counter font-bold text-center tabular-nums" data-cart-count @if($cartSummary['count'] < 1) hidden @endif>{{ $cartSummary['count'] }}</span>
                 </span>
                 {{-- На 1024px подписи скрыты, чтобы поиску хватило ширины --}}
                 <span class="leading-tight hidden xl:block">

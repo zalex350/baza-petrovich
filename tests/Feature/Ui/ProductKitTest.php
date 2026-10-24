@@ -3,6 +3,7 @@
 namespace Tests\Feature\Ui;
 
 use App\Models\Product;
+use App\Support\Plural;
 use Tests\TestCase;
 
 /**
@@ -10,6 +11,30 @@ use Tests\TestCase;
  */
 class ProductKitTest extends TestCase
 {
+    // --- x-checkbox: количество справа, галочка в конце ---
+
+    public function test_checkbox_meta_and_end_position(): void
+    {
+        $this->blade('<x-checkbox name="brand[]" id="f-brand-0" value="Grohe" label="Grohe" :meta="12" :unchecked="false" />')
+            ->assertSee('id="f-brand-0"', false)
+            ->assertSeeInOrder(['Grohe', '12'])
+            ->assertDontSee('type="hidden"', false);
+
+        $this->blade('<x-checkbox name="stock[]" value="in_stock" label="Только в наличии" position="end" :unchecked="false" />')
+            ->assertSee('flex-row-reverse justify-between', false);
+    }
+
+    // --- App\Support\Plural ---
+
+    public function test_plural_ru(): void
+    {
+        $forms = ['товар', 'товара', 'товаров'];
+
+        foreach ([0 => 'товаров', 1 => 'товар', 2 => 'товара', 5 => 'товаров', 11 => 'товаров', 14 => 'товаров', 21 => 'товар', 24 => 'товара', 112 => 'товаров'] as $n => $word) {
+            $this->assertSame("{$n} {$word}", Plural::ru($n, $forms));
+        }
+    }
+
     // --- x-logo ---
 
     public function test_logo_highlights_domain_zone(): void

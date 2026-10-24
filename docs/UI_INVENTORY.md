@@ -95,11 +95,10 @@
 | `flash` | flash + `$errors` | `layouts/app`, `layouts/admin` |
 | `order_status` | бейдж статуса заказа | `admin/orders`, `admin/order`, `order_placed`, `order_show`, `orders_table`, `order_history` |
 | `cancel_request_badge` | бейдж запроса на отмену | `admin/orders`, `order_show`, `orders_table` |
-| `stock_badge` | наличие | `product`, `search`, `catalog_product_card` |
+| `stock_badge` | наличие | `product` (в списках — `x-stock`) |
 | `vat_totals` | итог без НДС / НДС / с НДС | `order`, `order_placed`, `order_items` |
 | `vat_rate_select` | выбор ставки НДС | `admin/product_form` |
-| `product_image` | картинка-заглушка | `home`, `order`, `order_items`, `product_gallery`, `catalog_product_card`, `search` |
-| `product_buy` | количество + «В корзину» | `home`, `search`, `catalog_product_card` |
+| `product_image` | картинка-заглушка | `home`, `order`, `order_items`, `product_gallery`, `x-product-row` |
 | `orders_table`, `order_items`, `order_delivery`, `order_history` | блоки заказа | кабинет + админка |
 | `address_fields`, `address_list` | адреса | кабинет + админка |
 
@@ -141,7 +140,7 @@
 | Механизм | Вид | Где |
 |---|---|---|
 | `partials/flash` (`success`/`error`/`warning` + `$errors->any()`) | `bg-green-100 border-green-400 rounded` (стиль Bootstrap-алерта, не карточка `rounded-2xl`) | обе раскладки |
-| `cart-add.js` | тот же блок `[data-flash]`, перемещённый в `fixed top-4 right-4`, исчезает через 4 с | «В корзину» из списков |
+| `cart-actions.js` | тот же блок `[data-flash]` поверх страницы (`[data-flash][data-floating]`), исчезает через 4 с | «В корзину» из списков (fetch, без перезагрузки) |
 | `session('status')` + `x-auth-session-status` | зелёный текст без фона | `login`, `forgot-password` |
 | `status` = `profile-updated` / `password-updated` | «Saved.» (`__('Saved.')`) с Alpine-исчезновением | `profile` |
 | `partials/alerts` | inline-стили | не используется |

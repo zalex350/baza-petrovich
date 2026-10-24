@@ -22,11 +22,11 @@ enum CartProblemType: string
     public function code(): string
     {
         return match ($this) {
-            self::Missing                                    => 'ERR-013',
-            self::OutOfStock, self::InsufficientStock        => 'ERR-014',
-            self::BelowMinQuantity                           => 'ERR-015',
-            self::StepMismatch                               => 'ERR-016',
-            self::PriceChanged                               => 'ERR-017',
+            self::Missing => 'ERR-013',
+            self::OutOfStock, self::InsufficientStock => 'ERR-014',
+            self::BelowMinQuantity => 'ERR-015',
+            self::StepMismatch => 'ERR-016',
+            self::PriceChanged => 'ERR-017',
             self::Inactive, self::Unpublished, self::NoPrice => 'ERR-018',
         };
     }
@@ -41,6 +41,15 @@ enum CartProblemType: string
             'ERR-017' => 'Цена товара изменилась',
             'ERR-018' => 'Товар больше недоступен для заказа',
         };
+    }
+
+    /**
+     * Нарушена кратность заказа (min_qty, qty_step): текст ошибки — готовое предложение
+     * «Количество должно быть не меньше N и кратно M» (CartProblem::$detail).
+     */
+    public function isQuantityRule(): bool
+    {
+        return $this === self::BelowMinQuantity || $this === self::StepMismatch;
     }
 
     /**

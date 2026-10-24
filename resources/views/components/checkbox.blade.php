@@ -8,6 +8,8 @@
     Отмечена: old(name, checked) — после ошибки валидации сохраняется выбор пользователя.
     class — на обёртку, остальные атрибуты — на <input>; form="…" — и на скрытое поле
     (галочка вне своей <form>, как в форме товара).
+    meta — приглушённый текст справа (количество товаров в фильтре каталога);
+    position="end" — галочка справа от подписи («Только в наличии»).
 --}}
 @props([
     'name',
@@ -17,6 +19,8 @@
     'value' => '1',
     'unchecked' => '0',
     'id' => null,
+    'meta' => null,
+    'position' => 'start',
 ])
 
 @php
@@ -31,7 +35,7 @@
 @endphp
 
 <div {{ $attributes->only('class')->class('min-w-0') }}>
-    <label for="{{ $id }}" class="flex items-start gap-3 cursor-pointer">
+    <label for="{{ $id }}" @class(['flex items-start gap-3 cursor-pointer', 'flex-row-reverse justify-between' => $position === 'end'])>
         @if($unchecked !== false)
             <input {{ $attributes->only(['form', 'disabled'])->merge(['type' => 'hidden', 'name' => $name, 'value' => $unchecked]) }}>
         @endif
@@ -50,12 +54,16 @@
             ]) }}
         >
 
-        <span>
+        <span @class(['min-w-0', 'grow' => $meta !== null])>
             <span class="block text-ink">{{ $label }}</span>
             @if($hint)
                 <span id="{{ $id }}-hint" class="block text-sm text-ink-muted">{{ $hint }}</span>
             @endif
         </span>
+
+        @if($meta !== null)
+            <span class="ml-auto shrink-0 text-meta text-ink-muted tabular-nums">{{ $meta }}</span>
+        @endif
     </label>
 
     @if($invalid)

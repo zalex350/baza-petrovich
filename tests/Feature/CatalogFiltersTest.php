@@ -57,24 +57,24 @@ class CatalogFiltersTest extends TestCase
         $n++;
 
         $product = Product::create($data + [
-            'name'         => $name,
-            'sku'          => "SKU-{$n}",
-            'brand'        => 'Grohe',
-            'price'        => 100,
-            'stock'        => 5,
-            'category_id'  => $this->child->id,
-            'is_active'    => true,
+            'name' => $name,
+            'sku' => "SKU-{$n}",
+            'brand' => 'Grohe',
+            'price' => 100,
+            'stock' => 5,
+            'category_id' => $this->child->id,
+            'is_active' => true,
             'is_published' => true,
         ]);
 
         $order = 0;
         foreach ($attrs as $attributeId => $value) {
             ProductAttributeValue::create([
-                'product_id'   => $product->id,
+                'product_id' => $product->id,
                 'attribute_id' => $attributeId,
-                'value'        => (string) $value,
+                'value' => (string) $value,
                 'value_number' => ProductAttribute::parseNumber((string) $value),
-                'sort_order'   => $order++,
+                'sort_order' => $order++,
             ]);
         }
 
@@ -181,12 +181,12 @@ class CatalogFiltersTest extends TestCase
         // Выбран только Grohe — в «Цвете» всё равно оба значения, в «Производителе» — оба бренда
         $html = $this->actingAs($this->client)->get('/catalog/smesiteli?brand[]=Grohe')->getContent();
 
-        $this->assertStringContainsString('name="a[' . $this->color->id . '][]" value="Белый"', $html);
-        $this->assertStringContainsString('name="brand[]" value="Oras"', $html);
-        $this->assertMatchesRegularExpression('#name="brand\[\]" value="Grohe"\s+checked#', $html);
+        $this->assertMatchesRegularExpression('#name="a\['.$this->color->id.'\]\[\]"\s+value="Белый"#', $html);
+        $this->assertMatchesRegularExpression('#name="brand\[\]"\s+value="Oras"#', $html);
+        $this->assertMatchesRegularExpression('#name="brand\[\]"\s+value="Grohe"\s+checked#', $html);
     }
 
-    public function test_chips_and_reset_all(): void
+    public function test_chips_and_reset_filters(): void
     {
         $this->product('Grohe хром', [], [$this->color->id => 'Хром']);
         $c = $this->color->id;
@@ -196,17 +196,17 @@ class CatalogFiltersTest extends TestCase
             ->assertOk()
             ->assertSee('Производитель: Grohe')
             ->assertSee('Цвет: Хром')
-            ->assertSee('Сбросить всё')
-            ->assertSee('Найдено товаров: 1')
+            ->assertSee('Сбросить фильтры')
+            ->assertSee('1 товар')
             ->getContent();
 
         // Удаление одного чипа: остальное и сортировка остаются, страница — сброшена
         $this->assertStringContainsString(
-            'href="/catalog/smesiteli?' . e(http_build_query(['a' => [$c => ['Хром']], 'sort' => 'name_asc'])) . '"',
+            'href="/catalog/smesiteli?'.e(http_build_query(['a' => [$c => ['Хром']], 'sort' => 'name_asc'])).'"',
             $html
         );
-        // «Сбросить всё» — без фильтров, сортировка остаётся (BR-022)
-        $this->assertStringContainsString('href="/catalog/smesiteli?sort=name_asc" class="text-sm text-slate-500', $html);
+        // «Сбросить фильтры» — без фильтров, сортировка остаётся (BR-022)
+        $this->assertMatchesRegularExpression('#<a href="/catalog/smesiteli\?sort=name_asc"[^>]*data-reset-filters#', $html);
     }
 
     public function test_inactive_unpublished_and_other_categories_are_excluded(): void
@@ -231,7 +231,7 @@ class CatalogFiltersTest extends TestCase
         $this->product('Хромовый', [], [$this->color->id => 'Хром']);
 
         $this->actingAs($this->client)->get('/catalog/dlya-kuhni')
-            ->assertSee('data-facet="attribute:' . $this->color->id . '"', false);
+            ->assertSee('data-facet="attribute:'.$this->color->id.'"', false);
 
         $this->assertSame(['Хромовый'], $this->names("/catalog/dlya-kuhni?a[{$this->color->id}][]=Хром"));
     }
@@ -242,7 +242,7 @@ class CatalogFiltersTest extends TestCase
         app(CatalogFilters::class)->save($this->child, ["attribute:{$this->color->id}", 'brand']);
 
         $this->actingAs($this->client)->get('/catalog/dlya-kuhni')
-            ->assertSeeInOrder(['data-facet="attribute:' . $this->color->id . '"', 'data-facet="brand"'], false)
+            ->assertSeeInOrder(['data-facet="attribute:'.$this->color->id.'"', 'data-facet="brand"'], false)
             ->assertDontSee('data-facet="stock"', false);
 
         // Фильтр, которого нет в наборе, не применяется
@@ -252,10 +252,11 @@ class CatalogFiltersTest extends TestCase
     public function test_without_settings_anywhere_standard_filters_are_used(): void
     {
         CategoryFilter::query()->delete();
-        $this->product('Товар', ['stock' => 0]);
+        $this->product('Товар', ['stock' => 3]);
 
         $this->actingAs($this->client)->get('/catalog/smesiteli')
-            ->assertSeeInOrder(['data-facet="brand"', 'data-facet="price"', 'data-facet="stock"'], false)
+            // «Только в наличии» — первым (макет Catalog), остальные — в порядке настройки
+            ->assertSeeInOrder(['data-facet="stock"', 'data-facet="brand"', 'data-facet="price"'], false)
             ->assertDontSee('data-facet="attribute:', false);
     }
 
@@ -265,7 +266,7 @@ class CatalogFiltersTest extends TestCase
         $this->color->update(['is_filterable' => false]);
 
         $this->actingAs($this->client)->get('/catalog/smesiteli')
-            ->assertDontSee('data-facet="attribute:' . $this->color->id . '"', false);
+            ->assertDontSee('data-facet="attribute:'.$this->color->id.'"', false);
     }
 
     public function test_admin_configures_filters_with_order_and_inherit(): void
@@ -278,9 +279,9 @@ class CatalogFiltersTest extends TestCase
             ->assertSee('наследует от «Смесители»');
 
         $this->actingAs($admin)->post("/admin/catalog-filters/{$this->child->id}", [
-            'mode'    => 'own',
+            'mode' => 'own',
             'filters' => ['brand', "attribute:{$this->color->id}"],
-            'order'   => ['brand' => 2, "attribute:{$this->color->id}" => 1],
+            'order' => ['brand' => 2, "attribute:{$this->color->id}" => 1],
         ])->assertRedirect('/admin/catalog-filters');
 
         $this->assertSame(["attribute:{$this->color->id}", 'brand'],
@@ -323,10 +324,10 @@ class CatalogFiltersTest extends TestCase
         $this->product('Без заказов');
 
         $order = fn (Product $p, int $qty, OrderStatus $status) => OrderItem::create([
-            'order_id'   => Order::create(['user_id' => $this->client->id, 'status' => $status])->id,
+            'order_id' => Order::create(['user_id' => $this->client->id, 'status' => $status])->id,
             'product_id' => $p->id,
-            'quantity'   => $qty,
-            'price'      => 100,
+            'quantity' => $qty,
+            'price' => 100,
         ]);
 
         $order($hit, 10, OrderStatus::Completed);
@@ -363,7 +364,7 @@ class CatalogFiltersTest extends TestCase
         $this->assertStringNotContainsString('data-facet="price"', $html);
         $this->assertStringNotContainsString('value="price_asc"', $html);
         // Параметр цены у гостя не действует
-        $this->assertStringContainsString('Найдено товаров: 2', $html);
+        $this->assertStringContainsString('2 товара', $html);
     }
 
     // --- Пагинация и возврат из карточки ---
@@ -376,7 +377,7 @@ class CatalogFiltersTest extends TestCase
 
         $html = $this->actingAs($this->client)->get('/catalog/smesiteli?brand[]=Grohe&sort=name_asc')->getContent();
 
-        $this->assertStringContainsString(e('/catalog/smesiteli?' . http_build_query(['brand' => ['Grohe'], 'sort' => 'name_asc', 'page' => 2])), $html);
+        $this->assertStringContainsString(e('/catalog/smesiteli?'.http_build_query(['brand' => ['Grohe'], 'sort' => 'name_asc', 'page' => 2])), $html);
 
         $this->assertSame(['Товар 25', 'Товар 26', 'Товар 27', 'Товар 28', 'Товар 29', 'Товар 30'],
             $this->names('/catalog/smesiteli?brand[]=Grohe&sort=name_asc&page=2'));
@@ -385,14 +386,14 @@ class CatalogFiltersTest extends TestCase
     public function test_product_back_link_returns_to_same_list_url(): void
     {
         $product = $this->product('Хромовый', [], [$this->color->id => 'Хром']);
-        $url = "/catalog/smesiteli?brand%5B0%5D=Grohe&sort=name_asc&page=1";
+        $url = '/catalog/smesiteli?brand%5B0%5D=Grohe&sort=name_asc&page=1';
 
         $this->actingAs($this->client)->get($url)->assertOk();
 
         $this->actingAs($this->client)->get("/product/{$product->id}")
             ->assertOk()
             ->assertSee('← Вернуться к списку')
-            ->assertSee('href="' . e($url) . '"', false);
+            ->assertSee('href="'.e($url).'"', false);
     }
 
     public function test_product_back_link_without_list_goes_to_category(): void
@@ -420,7 +421,7 @@ class CatalogFiltersTest extends TestCase
         $count = function () {
             DB::flushQueryLog();
             DB::enableQueryLog();
-            $this->actingAs($this->client)->get('/catalog/smesiteli?brand[]=Grohe&a[' . $this->color->id . '][]=Хром&sort=popular')->assertOk();
+            $this->actingAs($this->client)->get('/catalog/smesiteli?brand[]=Grohe&a['.$this->color->id.'][]=Хром&sort=popular')->assertOk();
             $n = count(DB::getQueryLog());
             DB::disableQueryLog();
 

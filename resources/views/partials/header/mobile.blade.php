@@ -32,14 +32,11 @@
                 href="/order"
                 aria-label="Корзина: {{ $cartSummary['count'] }} поз."
                 @if($isCart) aria-current="page" @endif
+                data-cart-link
                 @class(['relative w-touch h-touch -mr-2.5 flex items-center justify-center', 'text-link' => $isCart, 'text-primary' => ! $isCart])
             >
                 @svg('heroicon-o-shopping-cart', 'w-6 h-6')
-                @if($cartSummary['count'] > 0)
-                    <span class="absolute top-1 right-0.5 min-w-4 px-1.5 rounded-full bg-link text-white text-counter font-bold text-center tabular-nums" data-cart-count-mobile>
-                        {{ $cartSummary['count'] }}
-                    </span>
-                @endif
+                <span class="absolute top-1 right-0.5 min-w-4 px-1.5 rounded-full bg-link text-white text-counter font-bold text-center tabular-nums" data-cart-count-mobile @if($cartSummary['count'] < 1) hidden @endif>{{ $cartSummary['count'] }}</span>
             </a>
 
         </div>
@@ -164,7 +161,12 @@
                     Назад
                 </button>
 
-                <div class="px-2 pb-1 font-semibold" x-text="current ? current.name : 'Каталог'"></div>
+                <template x-if="current">
+                    <a :href="current.url" class="block px-2 pb-1 font-semibold hover:text-link" x-text="current.name"></a>
+                </template>
+                <template x-if="! current">
+                    <div class="px-2 pb-1 font-semibold">Каталог</div>
+                </template>
 
                 <template x-if="current">
                     <a :href="current.url" class="block px-2 pb-1 text-sm text-link">
@@ -187,12 +189,17 @@
                     <template x-for="node in items" :key="node.id">
                         <li class="border-b border-line">
 
+                            {{-- Раздел с подразделами: название — ссылка на весь раздел, стрелка — вглубь --}}
                             <template x-if="node.children.length">
-                                <button type="button" @click="enter(node)" class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-canvas">
-                                    <span class="flex-1 min-w-0" x-text="node.name"></span>
-                                    <span class="text-xs text-ink-muted" x-text="node.count"></span>
-                                    @svg('heroicon-o-chevron-right', 'w-4 h-4 text-ink-muted shrink-0')
-                                </button>
+                                <div class="flex items-stretch">
+                                    <a :href="node.url" class="flex-1 min-w-0 flex items-center gap-3 px-4 py-3 hover:bg-canvas" data-mobile-parent-link>
+                                        <span class="flex-1 min-w-0" x-text="node.name"></span>
+                                        <span class="text-xs text-ink-muted" x-text="node.count"></span>
+                                    </a>
+                                    <button type="button" @click="enter(node)" class="w-touch shrink-0 flex items-center justify-center border-l border-line text-ink-muted hover:bg-canvas" :aria-label="'Подразделы: ' + node.name">
+                                        @svg('heroicon-o-chevron-right', 'w-4 h-4')
+                                    </button>
+                                </div>
                             </template>
 
                             <template x-if="! node.children.length">
