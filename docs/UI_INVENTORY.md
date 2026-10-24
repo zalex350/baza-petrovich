@@ -99,7 +99,6 @@
 | `vat_totals` | итог без НДС / НДС / с НДС | `order`, `order_placed`, `order_items` |
 | `vat_rate_select` | выбор ставки НДС | `admin/product_form` |
 | `product_image` | картинка-заглушка | `home`, `order`, `order_items`, `product_gallery`, `x-product-row` |
-| `product_buy` | количество + «В корзину» | `home` (каталог и поиск — `x-product-row.buy`) |
 | `orders_table`, `order_items`, `order_delivery`, `order_history` | блоки заказа | кабинет + админка |
 | `address_fields`, `address_list` | адреса | кабинет + админка |
 

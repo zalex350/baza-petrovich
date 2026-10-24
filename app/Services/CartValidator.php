@@ -8,7 +8,8 @@ use App\Models\Product;
 
 /**
  * Проверка корзины перед показом и перед оформлением (BR-101, BR-123…BR-125):
- * существование, активность, публикация, остаток и изменение цены каждой позиции.
+ * существование, активность, публикация, кратность заказа (min_qty, qty_step), остаток
+ * и изменение цены каждой позиции.
  * Возвращает все проблемы сразу, а не первую найденную.
  */
 class CartValidator
@@ -45,10 +46,10 @@ class CartValidator
 
         $unavailable = match (true) {
             ! $product || $product->trashed() => CartProblemType::Missing,
-            ! $product->is_active             => CartProblemType::Inactive,
-            ! $product->is_published          => CartProblemType::Unpublished,
-            $product->price === null          => CartProblemType::NoPrice,
-            default                           => null,
+            ! $product->is_active => CartProblemType::Inactive,
+            ! $product->is_published => CartProblemType::Unpublished,
+            $product->price === null => CartProblemType::NoPrice,
+            default => null,
         };
 
         // Недоступный товар: остаток и цена уже не имеют значения
@@ -57,6 +58,11 @@ class CartValidator
         }
 
         $problems = [];
+
+        if ($rule = $this->quantityRule($product, $quantity, $name)) {
+            $problems[] = $rule;
+        }
+
         $stock = (int) $product->stock;
 
         if ($stock < 1) {
@@ -74,13 +80,40 @@ class CartValidator
             $problems[] = new CartProblem(
                 CartProblemType::PriceChanged,
                 $name,
-                'было ' . $this->money($priceAtAdd) . ' BYN, стало ' . $this->money($product->price) . ' BYN',
+                'было '.$this->money($priceAtAdd).' BYN, стало '.$this->money($product->price).' BYN',
                 oldPrice: (float) $priceAtAdd,
                 newPrice: (float) $product->price,
             );
         }
 
         return $problems;
+    }
+
+    /**
+     * Кратность заказа: количество ≥ min_qty и (количество − min_qty) делится на qty_step.
+     */
+    public function quantityRule(Product $product, int $quantity, string $name): ?CartProblem
+    {
+        $min = max(1, (int) $product->min_qty);
+        $step = max(1, (int) $product->qty_step);
+
+        if ($quantity >= $min && ($quantity - $min) % $step === 0) {
+            return null;
+        }
+
+        return new CartProblem(
+            $quantity < $min ? CartProblemType::BelowMinQuantity : CartProblemType::StepMismatch,
+            $name,
+            self::quantityMessage($min, $step),
+        );
+    }
+
+    /**
+     * «Количество должно быть не меньше N и кратно M»; при шаге 1 — без «кратно 1».
+     */
+    public static function quantityMessage(int $min, int $step): string
+    {
+        return "Количество должно быть не меньше {$min}".($step > 1 ? " и кратно {$step}" : '');
     }
 
     private function money($value): string

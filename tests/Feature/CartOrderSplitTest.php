@@ -200,7 +200,8 @@ class CartOrderSplitTest extends TestCase
         $this->actingAs($this->client)->get('/')
             ->assertOk()
             ->assertSee('Корзина: 1 поз.')
-            ->assertSee('30.00 BYN');
+            // Сумма с НДС в шапке: 30 + 20 % — только оставшийся товар
+            ->assertSee(\App\Support\Money::format(36));
     }
 
     public function test_checkout_is_refused_while_cart_has_deleted_product(): void

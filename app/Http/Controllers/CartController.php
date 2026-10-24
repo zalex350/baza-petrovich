@@ -135,9 +135,12 @@ class CartController extends Controller
         $problem = $this->validator->check($item->product, $quantity, null, $item->title())[0] ?? null;
 
         if ($problem) {
-            $error = $problem->type === CartProblemType::InsufficientStock
-                ? $problem->title().": доступно {$problem->available}"
-                : $problem->fullMessage();
+            $error = match (true) {
+                $problem->type === CartProblemType::InsufficientStock => $problem->title().": доступно {$problem->available}",
+                // Кратность: «Количество должно быть не меньше N и кратно M»
+                $problem->type->isQuantityRule() => $problem->text(),
+                default => $problem->fullMessage(),
+            };
 
             return $this->updateResult($error, $item);
         }

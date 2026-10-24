@@ -17,8 +17,7 @@ class CartProblem
         public readonly ?float $oldPrice = null,
         public readonly ?float $newPrice = null,
         public readonly ?int $available = null,
-    ) {
-    }
+    ) {}
 
     public function title(): string
     {
@@ -30,7 +29,12 @@ class CartProblem
      */
     public function text(): string
     {
-        return $this->detail ? $this->title() . ': ' . $this->detail : $this->title();
+        // Кратность: уточнение — уже полное предложение, заголовок его только повторил бы
+        if ($this->type->isQuantityRule()) {
+            return $this->detail;
+        }
+
+        return $this->detail ? $this->title().': '.$this->detail : $this->title();
     }
 
     /**
@@ -38,6 +42,10 @@ class CartProblem
      */
     public function fullMessage(): string
     {
-        return $this->productName . ': ' . $this->title() . ($this->detail ? " ({$this->detail})" : '');
+        if ($this->type->isQuantityRule()) {
+            return $this->productName.': '.$this->detail;
+        }
+
+        return $this->productName.': '.$this->title().($this->detail ? " ({$this->detail})" : '');
     }
 }
