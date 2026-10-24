@@ -12,6 +12,7 @@ import imageQueue from './image-queue';
 import attributeRows from './attribute-rows';
 import catalogFilters from './catalog-filters';
 import productGallery from './product-gallery';
+import skuSuggest from './sku-suggest';
 
 window.Alpine = Alpine;
 
@@ -25,5 +26,6 @@ Alpine.data('imageQueue', imageQueue);
 Alpine.data('attributeRows', attributeRows);
 Alpine.data('catalogFilters', catalogFilters);
 Alpine.data('productGallery', productGallery);
+Alpine.data('skuSuggest', skuSuggest);
 
 Alpine.start();

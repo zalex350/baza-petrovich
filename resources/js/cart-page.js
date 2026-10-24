@@ -1,5 +1,5 @@
 // Страница корзины ([data-cart-page]) без перезагрузки: количество (x-qty), галочки «в заказ»,
-// «Выбрать все», удаление позиции (x-confirm).
+// «Выбрать все», удаление позиции (x-confirm), «Добавить по артикулу» (x-cart-quick-add).
 //
 // Действие — fetch с Accept: application/json на CartController (update / select / select-all /
 // delete); ответ {ok, message, cart, quantity?}. Затем страница корзины запрашивается заново
@@ -11,6 +11,7 @@
 import { updateHeader } from './cart-actions';
 
 const DEBOUNCE = 400;
+const HIGHLIGHT_MS = 2000;
 
 const timers = new WeakMap();
 let refreshing = null;
@@ -170,6 +171,65 @@ async function remove(form) {
     }
 }
 
+// «Добавить по артикулу»: ошибки — под полем; успех — новая/обновлённая строка подсвечивается,
+// поля очищаются, фокус — снова в артикул
+async function quickAdd(form) {
+    const fields = { sku: form.querySelector('input[name="sku"]'), qty: form.querySelector('input[name="qty"]') };
+
+    const showErrors = (errors = {}) => {
+        for (const [name, input] of Object.entries(fields)) {
+            const box = form.querySelector(`[data-quick-error="${name}"]`);
+            const text = errors[name] ?? '';
+
+            box.textContent = text;
+            box.classList.toggle('hidden', text === '');
+            if (text) {
+                input?.setAttribute('aria-invalid', 'true');
+            } else {
+                input?.removeAttribute('aria-invalid');
+            }
+        }
+    };
+
+    showErrors();
+
+    let data;
+
+    try {
+        data = await post(form.action, { sku: fields.sku.value, qty: fields.qty.value });
+    } catch {
+        form.submit();
+
+        return;
+    }
+
+    if (! data.ok) {
+        showErrors(data.errors);
+        (data.errors?.qty && ! data.errors?.sku ? fields.qty : fields.sku).focus();
+
+        return;
+    }
+
+    updateHeader(data.cart);
+
+    // Корзина была пустой — нужна страница со строками и панелью
+    if (! document.querySelector('[data-cart-item]')) {
+        location.reload();
+
+        return;
+    }
+
+    document.querySelectorAll('form[data-quick-add]').forEach((f) => f.reset());
+    fields.sku.focus();
+
+    await refresh();
+
+    document.querySelectorAll(`[data-cart-item="${data.item_id}"]`).forEach((row) => {
+        row.dataset.highlight = '';
+        setTimeout(() => delete row.dataset.highlight, HIGHLIGHT_MS);
+    });
+}
+
 document.addEventListener('change', (event) => {
     if (! page()) {
         return;
@@ -208,6 +268,9 @@ document.addEventListener('submit', (event) => {
         event.preventDefault();
         clearTimeout(timers.get(form));
         changeQuantity(form);
+    } else if (form.matches('form[data-quick-add]')) {
+        event.preventDefault();
+        quickAdd(form);
     } else if (/\/order\/delete\/\d+$/.test(form.getAttribute('action') ?? '')) {
         event.preventDefault();
         remove(form);

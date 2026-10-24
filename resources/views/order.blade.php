@@ -2,7 +2,7 @@
 
 @section('title', 'Корзина')
 
-{{-- Ошибки оформления — в панели «Ваш заказ», «Быстро добавить» — под полями: общий список не нужен --}}
+{{-- Ошибки оформления — в панели «Ваш заказ», «Добавить по артикулу» — под полями: общий список не нужен --}}
 @section('flash-validation', 'none')
 
 {{--
@@ -58,20 +58,17 @@
                 </p>
             @endif
         </div>
-
-        {{-- Быстро добавить: артикул + количество --}}
-        @if($client)
-            <form method="POST" action="/order/quick-add" class="flex w-full flex-wrap items-start gap-2 sm:w-auto" data-quick-add>
-                @csrf
-                <span class="w-full text-sm text-ink-muted sm:w-auto sm:pt-2.5">Быстро добавить</span>
-                <x-input name="sku" placeholder="Артикул" aria-label="Артикул" class="flex-1 sm:w-44 sm:flex-none" />
-                <x-input name="qty" type="number" min="1" placeholder="Кол-во" aria-label="Количество" class="w-24" />
-                <x-button variant="secondary">Добавить</x-button>
-            </form>
-        @endif
     </div>
 
 @if($items->isEmpty())
+
+    {{-- Пустая корзина: «Добавить по артикулу» — над пустым состоянием --}}
+    @if($client)
+        <div class="mb-4 hidden overflow-hidden rounded-card border border-line xl:block">
+            <x-cart-quick-add />
+        </div>
+        <x-cart-quick-add layout="card" class="mb-4 xl:hidden" />
+    @endif
 
     <x-empty-state title="Корзина пуста" icon="shopping-cart" data-cart-empty>
         Добавьте товары из каталога или найдите их по артикулу.
@@ -104,6 +101,11 @@
             {{-- Таблица (xl и шире) --}}
             <div class="hidden overflow-hidden rounded-card border border-line bg-surface xl:block">
 
+                {{-- Добавить по артикулу — полосой над строкой заголовков --}}
+                @if($client)
+                    <x-cart-quick-add />
+                @endif
+
                 <div class="grid grid-cols-[1.5rem_minmax(0,1fr)_6rem_8rem_6rem_7rem_2.5rem] items-center gap-x-3 bg-field px-4 py-3 text-meta font-medium text-ink-muted">
                     <span data-refresh="select-all">
                         <input
@@ -122,7 +124,8 @@
                     <span class="sr-only">Удалить</span>
                 </div>
 
-                <div class="divide-y divide-line-soft border-t border-line-soft">
+                {{-- data-refresh="rows": после «Добавить по артикулу» появляется новая строка --}}
+                <div class="divide-y divide-line-soft border-t border-line-soft" data-refresh="rows">
                     @foreach($items as $item)
                         <x-cart-row :item="$item" :validation="$validation" />
                     @endforeach
@@ -138,6 +141,10 @@
 
             {{-- Карточки (уже xl, макет CartMobile) --}}
             <div class="flex flex-col gap-3 xl:hidden">
+                @if($client)
+                    <x-cart-quick-add layout="card" />
+                @endif
+
                 <label class="flex items-center gap-3 px-1 text-sm text-ink-muted">
                     <span data-refresh="select-all-m">
                         <input
@@ -150,9 +157,11 @@
                     Выбрать все
                 </label>
 
-                @foreach($items as $item)
-                    <x-cart-row :item="$item" :validation="$validation" layout="card" />
-                @endforeach
+                <div class="flex flex-col gap-3" data-refresh="cards">
+                    @foreach($items as $item)
+                        <x-cart-row :item="$item" :validation="$validation" layout="card" />
+                    @endforeach
+                </div>
 
                 <div class="flex flex-wrap justify-between gap-2 px-1 text-sm text-ink-muted">
                     <span>В заказ попадут только отмеченные позиции.</span>

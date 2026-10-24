@@ -27,6 +27,18 @@
 }
 
 /*
+ * Корзина: строка, добавленная через «Добавить по артикулу», подсвечивается ~2 с
+ * (cart-page.js ставит data-highlight). Вне @layer — атрибут ставится из JS.
+ */
+[data-cart-item] {
+    transition: background-color 0.6s ease;
+}
+
+[data-cart-item][data-highlight] {
+    @apply bg-tone-info-bg;
+}
+
+/*
  * x-table stack: ниже брейкпоинта строки таблицы — карточки «подпись колонки — значение».
  * Подпись — из data-label ячейки (x-table.td label="…"), шапка скрыта визуально.
  * Классы .ui-table-stack-{sm|md|lg|xl} ставит компонент; блоки одинаковые, отличается только ширина.

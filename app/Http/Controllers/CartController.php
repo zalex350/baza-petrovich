@@ -134,25 +134,31 @@ class CartController extends Controller
     }
 
     /**
-     * «Быстро добавить» на странице корзины: артикул + количество (пусто — количество товара
-     * по умолчанию). Ошибки — под полями формы: не найден / недоступен — у артикула,
-     * кратность и остаток — у количества.
+     * «Добавить по артикулу» на странице корзины: артикул + количество (пусто — количество товара
+     * по умолчанию). Ошибки — под полями: не найден / недоступен — у артикула, кратность и
+     * остаток — у количества. JSON (cart-page.js) — {ok, message, cart, item_id} или {ok: false,
+     * errors: {sku|qty: текст}}; обычная форма — назад в корзину с ошибками у полей.
      */
     public function quickAdd()
     {
         if (! auth()->user()->isClient()) {
-            return redirect('/order')->with('error', 'Оформлять заказы могут только клиенты');
+            return $this->quickAddResult(['sku' => 'Оформлять заказы могут только клиенты']);
         }
 
-        $data = Validator::make(request()->all(), [
+        $validator = Validator::make(request()->all(), [
             'sku' => ['required', 'string', 'max:100'],
             'qty' => ['nullable', 'integer', 'min:1', 'max:100000'],
         ], [
             'sku.required' => 'Укажите артикул',
             'qty.integer' => 'Количество — целое число',
             'qty.min' => 'Количество — не меньше 1',
-        ])->validate();
+        ]);
 
+        if ($validator->fails()) {
+            return $this->quickAddResult(collect($validator->errors()->messages())->map(fn ($m) => $m[0])->all());
+        }
+
+        $data = $validator->validated();
         $sku = trim($data['sku']);
 
         $product = Product::query()
@@ -162,21 +168,40 @@ class CartController extends Controller
             ->first();
 
         if (! $product) {
-            return $this->quickAddError('sku', "Товар с артикулом «{$sku}» не найден");
+            return $this->quickAddResult(['sku' => "Товар с артикулом «{$sku}» не найден"]);
         }
 
         $error = $this->addProduct($product, (int) ($data['qty'] ?? $product->default_qty ?? 1));
 
         if ($error) {
-            return $this->quickAddError($product->price === null ? 'sku' : 'qty', $error);
+            return $this->quickAddResult([$product->price === null ? 'sku' : 'qty' => $error]);
         }
 
-        return redirect('/order')->with('success', 'Добавлено в корзину: '.($product->display_name ?: $product->name));
+        $message = 'Добавлено в корзину: '.($product->display_name ?: $product->name);
+        $item = $this->summary->items(auth()->user())->get($product->id);
+
+        if (request()->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'message' => $message,
+                'cart' => $this->summary->forHeader(auth()->user()),
+                'item_id' => $item?->id,
+            ], 200, [], JSON_UNESCAPED_UNICODE);
+        }
+
+        return redirect('/order')->with('success', $message);
     }
 
-    private function quickAddError(string $field, string $message)
+    /**
+     * @param  array<string, string>  $errors  поле (sku | qty) → текст
+     */
+    private function quickAddResult(array $errors)
     {
-        return redirect('/order')->withErrors([$field => $message])->withInput();
+        if (request()->expectsJson()) {
+            return response()->json(['ok' => false, 'errors' => $errors], 422, [], JSON_UNESCAPED_UNICODE);
+        }
+
+        return redirect('/order')->withErrors($errors)->withInput();
     }
 
     /**

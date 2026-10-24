@@ -90,7 +90,7 @@ class SearchController extends Controller
             })
             ->with('mainImage')
             ->limit(5)
-            ->get(['id', 'name', 'display_name', 'sku', 'price']);
+            ->get(['id', 'name', 'display_name', 'sku', 'price', 'default_qty']);
 
         $categories = Category::query()
             ->where(function ($outer) use ($words) {
@@ -106,6 +106,8 @@ class SearchController extends Controller
                 'id' => $p->id,
                 'name' => $p->display_name ?: $p->name,
                 'sku' => $p->sku,
+                // «Добавить по артикулу» в корзине подставляет количество товара по умолчанию
+                'default_qty' => (int) ($p->default_qty ?: 1),
                 'price' => $p->price ? number_format($p->price, 2) : null,
                 'image' => $p->mainImage?->url('thumb') ?? ProductImage::placeholderUrl(),
                 'placeholder' => ProductImage::placeholderUrl(),

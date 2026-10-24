@@ -259,8 +259,72 @@ class CartSelectionTest extends TestCase
         // Ошибка видна под полем
         $this->actingAs($this->client)->withSession(['errors' => (new ViewErrorBag)->put('default', new MessageBag(['sku' => 'Товар с артикулом «NOPE» не найден']))])
             ->get('/order')
-            ->assertSee('id="f-sku-error"', false)
+            ->assertSee('id="quick-sku-error"', false)
             ->assertSee('Товар с артикулом «NOPE» не найден');
+    }
+
+    public function test_quick_add_answers_json_with_item_and_header(): void
+    {
+        $product = $this->product('FLX-050', ['min_qty' => 10, 'qty_step' => 10, 'default_qty' => 10, 'stock' => 100]);
+
+        $this->actingAs($this->client)->postJson('/order/quick-add', ['sku' => 'FLX-050'])
+            ->assertOk()
+            ->assertJson(['ok' => true])
+            ->assertJsonPath('item_id', CartItem::sole()->id)
+            ->assertJsonPath('cart.count', 1)
+            ->assertJsonPath('cart.total_text', Money::format(1200));
+
+        $this->assertSame(10, CartItem::sole()->quantity);
+        $this->assertSame($product->id, CartItem::sole()->product_id);
+    }
+
+    public function test_quick_add_json_errors_by_field(): void
+    {
+        $this->product('FLX-050', ['min_qty' => 10, 'qty_step' => 10, 'stock' => 100]);
+
+        $this->actingAs($this->client)->postJson('/order/quick-add', ['sku' => ''])
+            ->assertStatus(422)->assertExactJson(['ok' => false, 'errors' => ['sku' => 'Укажите артикул']]);
+
+        $this->actingAs($this->client)->postJson('/order/quick-add', ['sku' => 'NOPE'])
+            ->assertStatus(422)->assertJsonPath('errors.sku', 'Товар с артикулом «NOPE» не найден');
+
+        $this->actingAs($this->client)->postJson('/order/quick-add', ['sku' => 'FLX-050', 'qty' => 5])
+            ->assertStatus(422)->assertJsonPath('errors.qty', 'Количество должно быть не меньше 10 и кратно 10');
+
+        $this->assertSame(0, CartItem::count());
+    }
+
+    public function test_quick_add_strip_is_inside_table_card_above_headers(): void
+    {
+        $this->inCart($this->product('A-1'));
+
+        $html = $this->actingAs($this->client)->get('/order')->assertOk()->getContent();
+
+        // Полоса — в карточке таблицы, перед строкой заголовков; на телефоне — над карточками
+        $this->assertMatchesRegularExpression('#xl:block">\s*(<!--.*?-->\s*)?<form[^>]*action="/order/quick-add".*?Добавить по артикулу.*?aria-label="Выбрать все"#s', $html);
+        $this->assertSame(2, substr_count($html, 'data-quick-add'));
+        $this->assertStringContainsString('id="quick-sku-m"', $html);
+        $this->assertStringContainsString('skuSuggest(', $html);
+        // Старой формы в шапке страницы нет
+        $this->assertStringNotContainsString('Быстро добавить', $html);
+    }
+
+    public function test_quick_add_is_available_in_empty_cart(): void
+    {
+        $this->actingAs($this->client)->get('/order')
+            ->assertOk()
+            ->assertSee('Корзина пуста')
+            ->assertSee('Добавить по артикулу');
+    }
+
+    public function test_suggest_gives_default_qty_for_quick_add(): void
+    {
+        $this->product('FLX-050', ['default_qty' => 10]);
+
+        $this->getJson('/search/suggest?q=FLX')
+            ->assertOk()
+            ->assertJsonPath('products.0.sku', 'FLX-050')
+            ->assertJsonPath('products.0.default_qty', 10);
     }
 
     // --- прочее ---
