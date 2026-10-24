@@ -42,12 +42,12 @@ class ListAddToCartTest extends TestCase
         $n++;
 
         return Product::create(array_merge([
-            'name'         => "Товар {$n}",
-            'sku'          => "SKU-{$n}",
-            'price'        => 100,
-            'stock'        => 5,
-            'category_id'  => $this->category->id,
-            'is_active'    => true,
+            'name' => "Товар {$n}",
+            'sku' => "SKU-{$n}",
+            'price' => 100,
+            'stock' => 5,
+            'category_id' => $this->category->id,
+            'is_active' => true,
             'is_published' => true,
         ], $attributes));
     }
@@ -68,8 +68,7 @@ class ListAddToCartTest extends TestCase
                 ->assertSee("action=\"/order/add/{$this->product->id}\"", false)
                 ->assertSee('data-cart-add', false)
                 ->assertSee('name="qty"', false)
-                ->assertSee('В корзину')
-                ->assertSee('Подробнее');
+                ->assertSee('В корзину');
         }
     }
 
@@ -86,7 +85,7 @@ class ListAddToCartTest extends TestCase
 
     public function test_guest_returns_to_list_after_login(): void
     {
-        $this->get('/login?return=' . urlencode('/catalog/smesiteli?page=2'))->assertOk();
+        $this->get('/login?return='.urlencode('/catalog/smesiteli?page=2'))->assertOk();
 
         $this->post('/login', ['email' => $this->client->email, 'password' => 'password'])
             ->assertRedirect(url('/catalog/smesiteli?page=2'));
@@ -95,7 +94,7 @@ class ListAddToCartTest extends TestCase
     public function test_login_ignores_external_return_url(): void
     {
         foreach (['https://evil.example/x', '//evil.example/x', '/\\evil.example'] as $return) {
-            $this->get('/login?return=' . urlencode($return))->assertOk();
+            $this->get('/login?return='.urlencode($return))->assertOk();
 
             $this->post('/login', ['email' => $this->client->email, 'password' => 'password'])
                 ->assertRedirect('/');
@@ -139,9 +138,9 @@ class ListAddToCartTest extends TestCase
 
         $html = $this->actingAs($this->client)->get('/catalog/smesiteli')->getContent();
 
-        // Формы есть только у товара с ценой и остатком
+        // Формы есть только у товара с ценой и остатком, у остальных — неактивные кнопки
         $this->assertSame(1, substr_count($html, 'data-cart-add'));
-        $this->assertSame(2, substr_count($html, 'disabled'));
+        $this->assertSame(2, substr_count($html, 'data-buy-disabled='));
     }
 
     public function test_add_from_list_returns_to_same_page_with_filters(): void
@@ -190,7 +189,8 @@ class ListAddToCartTest extends TestCase
         $this->actingAs($this->client)
             ->postJson("/order/add/{$this->product->id}", ['qty' => 1])
             ->assertOk()
-            ->assertExactJson(['ok' => true, 'message' => 'Товар добавлен в корзину']);
+            ->assertJson(['ok' => true, 'message' => 'Товар добавлен в корзину'])
+            ->assertJsonStructure(['cart' => ['count', 'total', 'vat', 'total_text', 'title', 'label'], 'html', 'toast']);
 
         $this->actingAs($this->client)
             ->postJson("/order/add/{$this->product->id}", ['qty' => 10])

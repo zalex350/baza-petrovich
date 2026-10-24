@@ -1,79 +1,93 @@
 {{--
-    Список товаров категории: количество, выбранные фильтры (чипы), сортировка, товары, пагинация.
-    Данные: $listing, $products, $chips, $baseUrl.
+    Список товаров категории (макет docs/design/Catalog): выбранные фильтры (чипы с ×) и сортировка,
+    строки товаров (x-product-row) в одной карточке, пагинация.
+    Данные: $listing, $products, $chips, $baseUrl, $cartItems.
 --}}
-<div data-catalog-results aria-live="polite">
+<div class="flex flex-col gap-3" data-catalog-results aria-live="polite">
 
-    <div class="flex flex-wrap items-center gap-3 mb-4">
-
-        <p class="text-slate-500 grow" data-found>
-            Найдено товаров: {{ $products->total() }}
-        </p>
+    <div class="flex flex-wrap items-center justify-between gap-2.5">
 
         {{-- Мобильный: открыть панель фильтров --}}
-        <button
+        <x-button
+            variant="secondary"
             type="button"
-            @click="open = true"
-            class="lg:hidden inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm"
+            x-on:click="open = true"
+            class="lg:hidden"
             aria-controls="catalog-filters-panel"
             data-filters-toggle
         >
             @svg('heroicon-o-adjustments-horizontal', 'w-5 h-5')
             Фильтры{{ $listing->activeCount() ? ' (' . $listing->activeCount() . ')' : '' }}
-        </button>
+        </x-button>
 
-        <label class="flex items-center gap-2 text-sm">
-            <span class="text-slate-500">Сортировка:</span>
-            <select name="sort" form="catalog-form" class="border rounded-lg px-2 py-1.5" @change="changed($event)" data-sort>
-                @foreach($listing->sorts() as $value => $label)
-                    <option value="{{ $value === 'default' ? '' : $value }}" @selected($listing->sort === $value)>{{ $label }}</option>
+        @if($chips)
+            <ul class="hidden flex-wrap items-center gap-2 lg:flex" data-chips>
+                @foreach($chips as $chip)
+                    <li>
+                        <a href="{{ $chip['url'] }}" class="inline-flex items-center gap-1.5 rounded-full bg-chip py-1 pl-3 pr-2 text-sm text-primary hover:bg-chip/70" data-catalog-link data-chip>
+                            {{ $chip['label'] }}
+                            <span aria-hidden="true" class="flex h-6 w-6 items-center justify-center text-base leading-none">×</span>
+                            <span class="sr-only">— убрать</span>
+                        </a>
+                    </li>
                 @endforeach
-            </select>
-        </label>
+            </ul>
+        @endif
+
+        <div class="ml-auto flex items-center gap-2">
+            <label for="f-sort" class="text-sm text-ink-muted">Сортировка</label>
+            <x-select
+                name="sort"
+                form="catalog-form"
+                :options="collect($listing->sorts())->mapWithKeys(fn ($label, $value) => [$value === 'default' ? '' : $value => $label])->all()"
+                :value="$listing->sort === 'default' ? '' : $listing->sort"
+                class="text-sm"
+                x-on:change="changed($event)"
+                data-sort
+            />
+        </div>
 
     </div>
 
+    {{-- На телефоне чипы — отдельной строкой под кнопкой «Фильтры» --}}
     @if($chips)
-
-        <ul class="flex flex-wrap items-center gap-2 mb-6" data-chips>
+        <ul class="flex flex-wrap items-center gap-2 lg:hidden" data-chips-mobile>
             @foreach($chips as $chip)
                 <li>
-                    <a href="{{ $chip['url'] }}" class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 hover:bg-slate-200 px-3 py-1 text-sm" data-catalog-link data-chip>
+                    <a href="{{ $chip['url'] }}" class="inline-flex items-center gap-1.5 rounded-full bg-chip py-1 pl-3 pr-2 text-sm text-primary" data-catalog-link>
                         {{ $chip['label'] }}
-                        <span aria-hidden="true" class="text-slate-500">×</span>
+                        <span aria-hidden="true" class="flex h-6 w-6 items-center justify-center text-base leading-none">×</span>
                         <span class="sr-only">— убрать</span>
                     </a>
                 </li>
             @endforeach
-            <li>
-                <a href="{{ $listing->resetUrl($baseUrl) }}" class="text-sm text-slate-500 hover:text-slate-900 underline" data-catalog-link data-reset>
-                    Сбросить всё
-                </a>
-            </li>
         </ul>
-
     @endif
 
     @if($products->isEmpty())
 
-        <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500" data-empty>
-            Товаров не найдено.
+        <x-empty-state title="Товаров не найдено" icon="magnifying-glass" data-empty>
             @if($chips)
-                <a href="{{ $listing->resetUrl($baseUrl) }}" class="underline" data-catalog-link>Сбросить фильтры</a>
+                Попробуйте убрать часть фильтров.
+                <x-slot:action>
+                    <x-button variant="secondary" :href="$listing->resetUrl($baseUrl)" data-catalog-link data-reset>Сбросить фильтры</x-button>
+                </x-slot:action>
+            @else
+                В этом разделе пока нет товаров.
             @endif
-        </div>
+        </x-empty-state>
 
     @else
 
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div class="divide-y divide-line-soft overflow-hidden rounded-card border border-line bg-surface" data-product-list>
             @foreach($products as $product)
-                @include('partials.catalog_product_card', ['product' => $product])
+                <x-product-row :product="$product" :in-cart="$cartItems[$product->id] ?? null" />
             @endforeach
         </div>
 
     @endif
 
-    <div class="mt-8" data-pagination>
+    <div class="mt-2" data-pagination>
         {{ $products->links() }}
     </div>
 

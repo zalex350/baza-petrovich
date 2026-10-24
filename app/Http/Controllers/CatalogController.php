@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Services\CartSummary;
 use App\Services\Catalog\CatalogFilters;
 use App\Services\Catalog\CatalogListing;
+use App\Services\Catalog\KeyAttributes;
 use App\Services\CatalogMenu;
 
 class CatalogController extends Controller
@@ -16,8 +18,8 @@ class CatalogController extends Controller
     {
         $parents = Category::whereNull('parent_id')
             ->with(['children' => function ($q) {
-                $q->withCount(['products' => fn($q2) => $q2->where('is_active', 1)])
-                  ->orderBy('name');
+                $q->withCount(['products' => fn ($q2) => $q2->where('is_active', 1)])
+                    ->orderBy('name');
             }])
             ->orderBy('name')
             ->get();
@@ -40,7 +42,7 @@ class CatalogController extends Controller
      * и мобильного меню — с фильтрами и сортировкой (SRS §3.9, §3.10). Всё состояние — в URL
      * (BR-029, BR-030); адрес списка запоминается для «← Вернуться к списку» в карточке (BR-084).
      */
-    public function show($slug, CatalogMenu $menu, CatalogFilters $filters)
+    public function show($slug, CatalogMenu $menu, CatalogFilters $filters, KeyAttributes $keyAttributes, CartSummary $cart)
     {
         $category = Category::where('slug', $slug)->firstOrFail();
 
@@ -52,18 +54,46 @@ class CatalogController extends Controller
             auth()->check(),
         );
 
-        $baseUrl = '/catalog/' . $category->slug;
+        $baseUrl = '/catalog/'.$category->slug;
 
         session([self::BACK_URL => request()->getRequestUri()]);
 
+        $products = $listing->products();
+
+        // Строка товара: ключевые характеристики — из фильтров этой категории
+        $keyAttributes->load($products->getCollection(), $keyAttributes->attributeIds($listing->filters));
+
         return view('catalog', [
             'category' => $category,
-            'listing'  => $listing,
-            'products' => $listing->products(),
-            'facets'   => $listing->facets(),
-            'chips'    => $listing->chips($baseUrl),
-            'baseUrl'  => $baseUrl,
+            'listing' => $listing,
+            'products' => $products,
+            'cartItems' => $cart->items(auth()->user()),
+            'breadcrumbs' => $this->breadcrumbs($category),
+            'facets' => $listing->facets(),
+            'chips' => $listing->chips($baseUrl),
+            'baseUrl' => $baseUrl,
         ]);
+    }
+
+    /**
+     * Главная / Каталог / родители / раздел.
+     *
+     * @return list<array{label: string, url?: string}>
+     */
+    private function breadcrumbs(Category $category): array
+    {
+        $chain = [];
+
+        for ($current = $category->parent, $guard = 0; $current && $guard < 20; $current = $current->parent, $guard++) {
+            array_unshift($chain, ['label' => $current->name, 'url' => '/catalog/'.$current->slug]);
+        }
+
+        return [
+            ['label' => 'Главная', 'url' => '/'],
+            ['label' => 'Каталог', 'url' => route('catalog.index')],
+            ...$chain,
+            ['label' => $category->name],
+        ];
     }
 
     /**
@@ -78,6 +108,6 @@ class CatalogController extends Controller
             return $url;
         }
 
-        return $category ? '/catalog/' . $category->slug : route('catalog.index');
+        return $category ? '/catalog/'.$category->slug : route('catalog.index');
     }
 }

@@ -7,8 +7,10 @@ use App\Exceptions\CheckoutException;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
+use App\Services\CartSummary;
 use App\Services\CartValidator;
 use App\Services\CheckoutService;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -16,9 +18,10 @@ use Throwable;
 
 class CartController extends Controller
 {
-    public function __construct(private readonly CartValidator $validator)
-    {
-    }
+    public function __construct(
+        private readonly CartValidator $validator,
+        private readonly CartSummary $summary,
+    ) {}
 
     public function index()
     {
@@ -37,8 +40,8 @@ class CartController extends Controller
 
     /**
      * Добавление из карточки и из списков товаров. Обычная форма возвращает на ту же
-     * страницу (с фильтрами и пагинацией); запрос с Accept: application/json получает
-     * JSON — для будущей отправки через fetch без переделки разметки.
+     * страницу (с фильтрами и пагинацией); запрос с Accept: application/json (cart-actions.js)
+     * получает JSON: сообщение, сводку для шапки и новый блок покупки строки списка.
      */
     public function add($id)
     {
@@ -72,8 +75,8 @@ class CartController extends Controller
 
             if ($problem) {
                 return $problem->type === CartProblemType::InsufficientStock
-                    ? $problem->title() . ": доступно {$problem->available}"
-                        . ($inCart ? ", в корзине уже {$inCart}" : '')
+                    ? $problem->title().": доступно {$problem->available}"
+                        .($inCart ? ", в корзине уже {$inCart}" : '')
                     : $problem->text();
             }
 
@@ -82,10 +85,10 @@ class CartController extends Controller
                 $item->save();
             } else {
                 CartItem::create([
-                    'cart_id'      => $cart->id,
-                    'product_id'   => $product->id,
+                    'cart_id' => $cart->id,
+                    'product_id' => $product->id,
                     'product_name' => $product->display_name ?: $product->name,
-                    'quantity'     => $qty,
+                    'quantity' => $qty,
                     'price_at_add' => $product->price,
                 ]);
             }
@@ -93,21 +96,28 @@ class CartController extends Controller
             return null;
         });
 
-        return $this->addResult($error);
+        return $this->addResult($error, $product);
     }
 
     /**
      * Ответ на добавление в корзину: $error = null — успех.
      */
-    private function addResult(?string $error)
+    private function addResult(?string $error, ?Product $product = null)
     {
         if (request()->expectsJson()) {
-            return response()->json(
-                ['ok' => $error === null, 'message' => $error ?? 'Товар добавлен в корзину'],
-                $error === null ? 200 : 422,
-                [],
-                JSON_UNESCAPED_UNICODE
-            );
+            $data = ['ok' => $error === null, 'message' => $error ?? 'Товар добавлен в корзину'];
+
+            if ($error === null) {
+                $data['cart'] = $this->summary->forHeader(auth()->user());
+                $data['toast'] = Blade::render('<x-alert type="success">{{ $message }}</x-alert>', ['message' => $data['message']]);
+                // Строка списка переходит в состояние «В корзине»: количество и «перейти»
+                $data['html'] = Blade::render('<x-product-row.buy :product="$product" :in-cart="$item" />', [
+                    'product' => $product,
+                    'item' => $this->summary->items(auth()->user())->get($product->id),
+                ]);
+            }
+
+            return response()->json($data, $error === null ? 200 : 422, [], JSON_UNESCAPED_UNICODE);
         }
 
         return $error
@@ -125,15 +135,37 @@ class CartController extends Controller
         $problem = $this->validator->check($item->product, $quantity, null, $item->title())[0] ?? null;
 
         if ($problem) {
-            return back()->with('error', $problem->type === CartProblemType::InsufficientStock
-                ? $problem->title() . ": доступно {$problem->available}"
-                : $problem->fullMessage());
+            $error = $problem->type === CartProblemType::InsufficientStock
+                ? $problem->title().": доступно {$problem->available}"
+                : $problem->fullMessage();
+
+            return $this->updateResult($error, $item);
         }
 
         $item->quantity = $quantity;
         $item->save();
 
-        return back()->with('success', 'Корзина обновлена');
+        return $this->updateResult(null, $item);
+    }
+
+    /**
+     * Ответ на изменение количества: обычная форма — назад с сообщением; JSON (+/− в списках) —
+     * сообщение, количество в корзине (после ошибки — прежнее) и сводка для шапки.
+     */
+    private function updateResult(?string $error, CartItem $item)
+    {
+        if (request()->expectsJson()) {
+            return response()->json([
+                'ok' => $error === null,
+                'message' => $error ?? 'Корзина обновлена',
+                'quantity' => $item->quantity,
+                'cart' => $this->summary->forHeader(auth()->user()),
+            ], $error === null ? 200 : 422, [], JSON_UNESCAPED_UNICODE);
+        }
+
+        return $error
+            ? back()->with('error', $error)
+            : back()->with('success', 'Корзина обновлена');
     }
 
     public function delete($id)
@@ -178,10 +210,10 @@ class CartController extends Controller
 
         $validator = Validator::make(request()->all(), [
             'delivery_address_id' => ['nullable', 'integer'],
-            'comment'             => ['nullable', 'string', 'max:1000'],
+            'comment' => ['nullable', 'string', 'max:1000'],
         ], [
             'delivery_address_id.integer' => CheckoutException::ADDRESS_REQUIRED,
-            'comment.max'                 => 'Комментарий к заказу не длиннее 1000 символов',
+            'comment.max' => 'Комментарий к заказу не длиннее 1000 символов',
         ]);
 
         if ($validator->fails()) {

@@ -32,14 +32,11 @@
                 href="/order"
                 aria-label="Корзина: {{ $cartSummary['count'] }} поз."
                 @if($isCart) aria-current="page" @endif
+                data-cart-link
                 @class(['relative w-touch h-touch -mr-2.5 flex items-center justify-center', 'text-link' => $isCart, 'text-primary' => ! $isCart])
             >
                 @svg('heroicon-o-shopping-cart', 'w-6 h-6')
-                @if($cartSummary['count'] > 0)
-                    <span class="absolute top-1 right-0.5 min-w-4 px-1.5 rounded-full bg-link text-white text-counter font-bold text-center tabular-nums" data-cart-count-mobile>
-                        {{ $cartSummary['count'] }}
-                    </span>
-                @endif
+                <span class="absolute top-1 right-0.5 min-w-4 px-1.5 rounded-full bg-link text-white text-counter font-bold text-center tabular-nums" data-cart-count-mobile @if($cartSummary['count'] < 1) hidden @endif>{{ $cartSummary['count'] }}</span>
             </a>
 
         </div>

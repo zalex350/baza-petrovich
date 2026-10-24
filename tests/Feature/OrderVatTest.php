@@ -7,6 +7,7 @@ use App\Models\Organization;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\Vat\VatCalculator;
+use App\Support\Money;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -40,11 +41,11 @@ class OrderVatTest extends TestCase
         $n++;
 
         return Product::create(array_merge([
-            'name'         => "Товар {$n}",
-            'sku'          => "VAT-{$n}",
-            'price'        => 100,
-            'stock'        => 50,
-            'is_active'    => true,
+            'name' => "Товар {$n}",
+            'sku' => "VAT-{$n}",
+            'price' => 100,
+            'stock' => 50,
+            'is_active' => true,
             'is_published' => true,
         ], $attributes));
     }
@@ -256,7 +257,7 @@ class OrderVatTest extends TestCase
 
         $this->actingAs($this->client)->get('/search?q=Grohe')
             ->assertOk()
-            ->assertSeeInOrder(['80.00 BYN', '(без НДС)']);
+            ->assertSeeInOrder([Money::format(80), 'без НДС · НДС не облагается']);
     }
 
     // --- Админка: ставка «Без НДС» ---
@@ -266,11 +267,11 @@ class OrderVatTest extends TestCase
         $product = $this->makeProduct();
 
         $this->actingAs($this->admin)->post("/admin/product/{$product->id}", [
-            'name'     => $product->name,
-            'sku'      => $product->sku,
-            'price'    => 100,
+            'name' => $product->name,
+            'sku' => $product->sku,
+            'price' => 100,
             'vat_rate' => 'none',
-            'stock'    => 5,
+            'stock' => 5,
         ])->assertSessionHasNoErrors();
 
         $this->assertNull($product->fresh()->vat_rate);
@@ -280,11 +281,11 @@ class OrderVatTest extends TestCase
             ->assertSee('<option value="none" selected', false);
 
         $this->actingAs($this->admin)->post('/admin/product', [
-            'name'     => 'Новый без НДС',
-            'sku'      => 'NEW-NONE',
-            'price'    => 10,
+            'name' => 'Новый без НДС',
+            'sku' => 'NEW-NONE',
+            'price' => 10,
             'vat_rate' => 'none',
-            'stock'    => 1,
+            'stock' => 1,
         ])->assertSessionHasNoErrors();
 
         $this->assertNull(Product::where('sku', 'NEW-NONE')->value('vat_rate'));

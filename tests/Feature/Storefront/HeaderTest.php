@@ -187,23 +187,25 @@ class HeaderTest extends TestCase
 
     public function test_empty_cart_for_guest(): void
     {
-        $this->get('/')
+        $html = $this->get('/')
             ->assertSee('Корзина: 0 поз.')
             ->assertSee(Money::format(0))
             ->assertSee('title="с НДС, в т.ч. НДС '.Money::format(0).'"', false)
-            ->assertDontSee('data-cart-count', false);
+            ->getContent();
+
+        // Счётчик в разметке есть (его показывает cart-actions.js), но скрыт
+        $this->assertMatchesRegularExpression('#data-cart-count\s+hidden#', $html);
+        $this->assertMatchesRegularExpression('#data-cart-count-mobile\s+hidden#', $html);
     }
 
     // --- BR-008: активный раздел ---
 
     public function test_active_catalog_section_is_highlighted(): void
     {
-        $this->get('/catalog')
-            ->assertOk()
-            ->assertSee('bg-link text-white', false);
+        $active = '#bg-link text-white[^>]*data-mega-button#s';
 
-        $this->get('/')
-            ->assertDontSee('bg-link text-white', false);
+        $this->assertMatchesRegularExpression($active, $this->get('/catalog')->assertOk()->getContent());
+        $this->assertDoesNotMatchRegularExpression($active, $this->get('/')->getContent());
     }
 
     public function test_active_cart_section_is_highlighted(): void
