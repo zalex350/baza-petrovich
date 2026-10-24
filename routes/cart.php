@@ -1,10 +1,7 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Product;
 use App\Http\Controllers\CartController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -33,6 +30,15 @@ Route::middleware('auth')->group(function () {
         '/order/delete/{id}',
         [CartController::class, 'delete']
     );
+
+    // Галочки «в заказ», очистка, «Быстро добавить» (страница корзины)
+    Route::post('/order/select/{id}', [CartController::class, 'select']);
+    Route::post('/order/select-all', [CartController::class, 'selectAll']);
+    Route::post('/order/clear', [CartController::class, 'clear']);
+    Route::post('/order/quick-add', [CartController::class, 'quickAdd']);
+
+    // Отдельной страницы оформления нет — оформление в корзине
+    Route::get('/order/checkout', fn () => redirect('/order'));
 
     Route::post(
         '/order/accept-prices',

@@ -44,6 +44,14 @@ enum CartProblemType: string
     }
 
     /**
+     * Не хватает остатка (нет в наличии или меньше, чем в корзине): позиция снимается с заказа.
+     */
+    public function isShortage(): bool
+    {
+        return $this === self::OutOfStock || $this === self::InsufficientStock;
+    }
+
+    /**
      * Нарушена кратность заказа (min_qty, qty_step): текст ошибки — готовое предложение
      * «Количество должно быть не меньше N и кратно M» (CartProblem::$detail).
      */

@@ -7,6 +7,8 @@ use App\Models\Order;
 use App\Models\Organization;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\CheckoutService;
+use App\Support\Money;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -39,11 +41,11 @@ class CheckoutValidationTest extends TestCase
     private function product(string $sku, array $attributes = []): Product
     {
         return Product::create(array_merge([
-            'name'         => "Смеситель {$sku}",
-            'sku'          => $sku,
-            'price'        => 100,
-            'stock'        => 10,
-            'is_active'    => true,
+            'name' => "Смеситель {$sku}",
+            'sku' => $sku,
+            'price' => 100,
+            'stock' => 10,
+            'is_active' => true,
             'is_published' => true,
         ], $attributes));
     }
@@ -75,10 +77,10 @@ class CheckoutValidationTest extends TestCase
     public static function unavailableProducts(): array
     {
         return [
-            'скрыт'               => [['is_active' => false], 'Товар больше недоступен для заказа'],
-            'снят с публикации'   => [['is_published' => false], 'Товар больше недоступен для заказа'],
-            'без цены'            => [['price' => null], 'Товар больше недоступен для заказа'],
-            'нет остатка'         => [['stock' => 0], 'Недостаточный остаток товара: нет в наличии'],
+            'скрыт' => [['is_active' => false], 'Товар больше недоступен для заказа'],
+            'снят с публикации' => [['is_published' => false], 'Товар больше недоступен для заказа'],
+            'без цены' => [['price' => null], 'Товар больше недоступен для заказа'],
+            'нет остатка' => [['stock' => 0], 'Недостаточный остаток товара: нет в наличии'],
         ];
     }
 
@@ -169,12 +171,12 @@ class CheckoutValidationTest extends TestCase
 
     public function test_cart_marks_problem_items_with_reasons(): void
     {
-        $hidden      = $this->product('HID');
+        $hidden = $this->product('HID');
         $unpublished = $this->product('UNP');
-        $deleted     = $this->product('DEL');
-        $outOfStock  = $this->product('OUT');
-        $low         = $this->product('LOW');
-        $fine        = $this->product('OK', ['price' => 30]);
+        $deleted = $this->product('DEL');
+        $outOfStock = $this->product('OUT');
+        $low = $this->product('LOW');
+        $fine = $this->product('OK', ['price' => 30]);
 
         foreach ([$hidden, $unpublished, $deleted, $outOfStock, $fine] as $product) {
             $this->add($product);
@@ -189,18 +191,26 @@ class CheckoutValidationTest extends TestCase
 
         $response = $this->actingAs($this->client)->get('/order')
             ->assertOk()
-            ->assertSee('data-cart-state="needs_correction"', false)
-            ->assertSee('Требует корректировки')
+            // Причины — в строках
             ->assertSee('Товар больше недоступен для заказа')
             ->assertSee('Товар отсутствует в каталоге')
-            ->assertSee('Нет в наличии')
-            ->assertSee('Недостаточный остаток товара')
-            ->assertSee('Доступно 2, в корзине 5')
-            // недоступные в итог не входят: OUT 100 + LOW 500 + OK 30
-            ->assertSeeInOrder(['Сумма без НДС:', '630.00 BYN']);
+            ->assertSee('Доступно 0 шт.')
+            ->assertSee('Доступно 2 шт.')
+            // Нехватка остатка: позиции сняты с заказа, сверху жёлтый баннер
+            ->assertSee('data-shortage-banner', false)
+            ->assertSee('У позиции «Смеситель LOW» на складе 2 шт. из 5.')
+            // В заказе осталась только доступная позиция — можно оформлять
+            ->assertSee('data-cart-state="ready"', false)
+            ->assertSeeInOrder(['Позиций / штук', '1 / 1', 'Сумма без НДС', Money::format(30)]);
 
-        // Оформление недоступно, пока корзина не исправлена
-        $this->assertMatchesRegularExpression('/<button\s+disabled/', $response->getContent());
+        // Снятие сохранено: недоступные и с нехваткой — не в заказе
+        foreach ([$hidden, $unpublished, $deleted, $outOfStock, $low] as $product) {
+            $this->assertFalse(CartItem::where('product_id', $product->id)->sole()->selected, $product->sku);
+        }
+        $this->assertTrue(CartItem::where('product_id', $fine->id)->sole()->selected);
+
+        // Проблемные позиции сняты — отмеченная не мешает оформлению (кнопку держит только нехватка адреса)
+        $response->assertDontSee('Исправьте отмеченные позиции.')->assertSee('Добавьте адрес доставки.');
     }
 
     public function test_price_change_is_shown_with_accept_button(): void
@@ -224,7 +234,7 @@ class CheckoutValidationTest extends TestCase
 
     public function test_accept_prices_updates_price_at_add_and_makes_cart_ready(): void
     {
-        $changed   = $this->product('A-1');
+        $changed = $this->product('A-1');
         $unchanged = $this->product('B-1', ['price' => 50]);
 
         $this->add($changed, 2);
@@ -243,14 +253,14 @@ class CheckoutValidationTest extends TestCase
         $this->actingAs($this->client)->get('/order')
             ->assertSee('data-cart-state="ready"', false)
             ->assertDontSee('Цена товара изменилась')
-            ->assertSeeInOrder(['Сумма без НДС:', '290.00 BYN']);
+            ->assertSeeInOrder(['Сумма без НДС', Money::format(290)]);
     }
 
     public function test_accept_prices_does_not_touch_foreign_cart_or_unavailable_items(): void
     {
         $product = $this->product('A-1');
-        $hidden  = $this->product('B-1');
-        $other   = $this->client();
+        $hidden = $this->product('B-1');
+        $other = $this->client();
 
         $this->add($product, 1);
         $this->add($hidden, 1);
@@ -279,11 +289,11 @@ class CheckoutValidationTest extends TestCase
     public static function blockingChanges(): array
     {
         return [
-            'скрыт'              => [['is_active' => false], 'Смеситель A-1: Товар больше недоступен для заказа'],
-            'снят с публикации'  => [['is_published' => false], 'Смеситель A-1: Товар больше недоступен для заказа'],
-            'остаток 0'          => [['stock' => 0], 'Смеситель A-1: Недостаточный остаток товара (нет в наличии)'],
+            'скрыт' => [['is_active' => false], 'Смеситель A-1: Товар больше недоступен для заказа'],
+            'снят с публикации' => [['is_published' => false], 'Смеситель A-1: Товар больше недоступен для заказа'],
+            'остаток 0' => [['stock' => 0], 'Смеситель A-1: Недостаточный остаток товара (нет в наличии)'],
             'недостаток остатка' => [['stock' => 1], 'Смеситель A-1: Недостаточный остаток товара (доступно 1, в корзине 2)'],
-            'изменение цены'     => [['price' => 120], 'Смеситель A-1: Цена товара изменилась (было 100.00 BYN, стало 120.00 BYN)'],
+            'изменение цены' => [['price' => 120], 'Смеситель A-1: Цена товара изменилась (было 100.00 BYN, стало 120.00 BYN)'],
         ];
     }
 
@@ -330,12 +340,12 @@ class CheckoutValidationTest extends TestCase
 
     public function test_checkout_lists_all_problems_at_once_and_changes_nothing(): void
     {
-        $hidden      = $this->product('HID');
+        $hidden = $this->product('HID');
         $unpublished = $this->product('UNP');
-        $deleted     = $this->product('DEL');
-        $low         = $this->product('LOW');
-        $price       = $this->product('PRC');
-        $fine        = $this->product('OK');
+        $deleted = $this->product('DEL');
+        $low = $this->product('LOW');
+        $price = $this->product('PRC');
+        $fine = $this->product('OK');
 
         foreach ([$hidden, $unpublished, $deleted, $price, $fine] as $product) {
             $this->add($product, 2);
@@ -524,7 +534,7 @@ class CheckoutValidationTest extends TestCase
         $product = $this->product('A-1');
         $this->add($product, 2);
 
-        $this->mock(\App\Services\CheckoutService::class)
+        $this->mock(CheckoutService::class)
             ->shouldReceive('place')
             ->andThrow(new \RuntimeException('connection lost'));
 

@@ -37,9 +37,9 @@ class CheckoutDeliveryTest extends TestCase
         ]);
 
         $this->address = DeliveryAddress::createFor($this->client->organization, [
-            'title'         => 'Склад на Промышленной',
-            'address'       => 'г. Минск, ул. Промышленная, 10',
-            'contact_name'  => 'Иван Кладовщик',
+            'title' => 'Склад на Промышленной',
+            'address' => 'г. Минск, ул. Промышленная, 10',
+            'contact_name' => 'Иван Кладовщик',
             'contact_phone' => '+375 29 111-22-33',
         ]);
 
@@ -117,9 +117,9 @@ class CheckoutDeliveryTest extends TestCase
         $order = Order::sole();
 
         $this->actingAs($this->client)->post("/addresses/{$this->address->id}", [
-            'title'         => 'Переименованный',
-            'address'       => 'г. Гомель, ул. Новая, 5',
-            'contact_name'  => 'Другой человек',
+            'title' => 'Переименованный',
+            'address' => 'г. Гомель, ул. Новая, 5',
+            'contact_name' => 'Другой человек',
             'contact_phone' => '000',
         ])->assertRedirect('/addresses');
 
@@ -154,7 +154,7 @@ class CheckoutDeliveryTest extends TestCase
     {
         $this->checkout([
             'delivery_address_id' => $this->address->id,
-            'comment'             => "  Позвонить за час до доставки.\nВъезд со двора.  ",
+            'comment' => "  Позвонить за час до доставки.\nВъезд со двора.  ",
         ])->assertRedirectContains('/placed');
 
         $this->assertSame("Позвонить за час до доставки.\nВъезд со двора.", Order::sole()->comment);
@@ -195,7 +195,7 @@ class CheckoutDeliveryTest extends TestCase
             ->assertSee('Въезд со двора');
 
         $this->assertMatchesRegularExpression(
-            '/value="' . $second->id . '"[^>]*checked/s',
+            '/value="'.$second->id.'"[^>]*checked/s',
             $response->getContent()
         );
     }
@@ -221,8 +221,8 @@ class CheckoutDeliveryTest extends TestCase
 
         $html = $response->getContent();
 
-        $this->assertMatchesRegularExpression('/value="' . $this->address->id . '"[^>]*checked/s', $html);
-        $this->assertDoesNotMatchRegularExpression('/value="' . $second->id . '"[^>]*checked/s', $html);
+        $this->assertMatchesRegularExpression('/value="'.$this->address->id.'"[^>]*checked/s', $html);
+        $this->assertDoesNotMatchRegularExpression('/value="'.$second->id.'"[^>]*checked/s', $html);
     }
 
     public function test_cart_without_addresses_suggests_adding_one(): void
@@ -234,7 +234,8 @@ class CheckoutDeliveryTest extends TestCase
             ->assertSee('У организации нет адресов доставки')
             ->assertSee('href="/addresses/create"', false);
 
-        $this->assertMatchesRegularExpression('/<button\s+disabled/', $response->getContent());
+        $this->assertMatchesRegularExpression('#<button[^>]*\sdisabled="disabled"[^>]*data-checkout-submit#', $response->getContent());
+        $response->assertSee('Добавьте адрес доставки.');
     }
 
     // --- Карточки заказа ---
@@ -265,12 +266,12 @@ class CheckoutDeliveryTest extends TestCase
     public function test_old_order_without_address_opens(): void
     {
         $order = Order::create([
-            'number'          => 'SM-2026-000001',
-            'user_id'         => $this->client->id,
+            'number' => 'SM-2026-000001',
+            'user_id' => $this->client->id,
             'organization_id' => $this->client->organization_id,
-            'status'          => 'new',
-            'total'           => 100,
-            'placed_at'       => now(),
+            'status' => 'new',
+            'total' => 100,
+            'placed_at' => now(),
         ]);
 
         $this->actingAs($this->client)->get("/order/{$order->id}")->assertOk()->assertSee('Не указан');

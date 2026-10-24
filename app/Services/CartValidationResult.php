@@ -21,8 +21,7 @@ class CartValidationResult
     public function __construct(
         private readonly Collection $items,
         private readonly array $problems,
-    ) {
-    }
+    ) {}
 
     public function state(): CartState
     {
@@ -84,6 +83,33 @@ class CartValidationResult
         }
 
         return false;
+    }
+
+    /**
+     * Нехватка остатка у позиции (нет в наличии / меньше, чем в корзине) или null.
+     */
+    public function shortage(CartItem $item): ?CartProblem
+    {
+        foreach ($this->for($item) as $problem) {
+            if ($problem->type->isShortage()) {
+                return $problem;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Позиции в проверке: штук всего.
+     */
+    public function quantity(): int
+    {
+        return (int) $this->items->reject(fn (CartItem $item) => $this->isUnavailable($item))->sum('quantity');
+    }
+
+    public function count(): int
+    {
+        return $this->items->reject(fn (CartItem $item) => $this->isUnavailable($item))->count();
     }
 
     public function priceChange(CartItem $item): ?CartProblem

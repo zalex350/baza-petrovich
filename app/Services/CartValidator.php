@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Enums\CartProblemType;
 use App\Models\Cart;
+use App\Models\CartItem;
 use App\Models\Product;
+use Illuminate\Support\Collection;
 
 /**
  * Проверка корзины перед показом и перед оформлением (BR-101, BR-123…BR-125):
@@ -20,7 +22,16 @@ class CartValidator
      */
     public function validate(?Cart $cart): CartValidationResult
     {
-        $items = $cart ? $cart->items : collect();
+        return $this->validateItems($cart ? $cart->items : collect());
+    }
+
+    /**
+     * Проверка набора позиций — например, только отмеченных для заказа.
+     *
+     * @param  Collection<int, CartItem>  $items
+     */
+    public function validateItems(Collection $items): CartValidationResult
+    {
         $problems = [];
 
         foreach ($items as $item) {

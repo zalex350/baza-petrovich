@@ -18,8 +18,9 @@ class CartSummary
     public function __construct(private readonly VatCalculator $vat) {}
 
     /**
-     * total — сумма с НДС, vat — НДС в ней; НДС считается по позициям (VatCalculator),
-     * поэтому сумма та же, что в «Сумма с НДС» на странице корзины.
+     * count — позиций в корзине (все доступные); total — сумма с НДС отмеченных «в заказ»,
+     * vat — НДС в ней; НДС считается по позициям (VatCalculator), поэтому сумма та же,
+     * что «Итого с НДС» в панели «Ваш заказ».
      *
      * @return array{count: int, total: float, vat: float}
      */
@@ -39,9 +40,9 @@ class CartSummary
             ->where('products.is_active', true)
             ->where('products.is_published', true)
             ->whereNotNull('products.price')
-            ->get(['cart_items.quantity', 'cart_items.price_at_add', 'products.vat_rate']);
+            ->get(['cart_items.quantity', 'cart_items.selected', 'cart_items.price_at_add', 'products.vat_rate']);
 
-        $totals = $this->vat->total($rows->map(
+        $totals = $this->vat->total($rows->filter(fn ($row) => (bool) $row->selected)->map(
             fn ($row) => $this->vat->line($row->price_at_add, (int) $row->quantity, $row->vat_rate)
         ));
 

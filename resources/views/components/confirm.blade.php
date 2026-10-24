@@ -9,7 +9,8 @@
         <x-slot:fields>…доп. поля формы, например x-textarea причины…</x-slot:fields>
     </x-confirm>
 
-    label — текст кнопки-триггера; variant — danger | primary (кнопка подтверждения и триггер);
+    label — текст кнопки-триггера; icon — имя Heroicons (outline, без префикса): триггер — только значок,
+    label — его aria-label (корзина: icon="trash"); variant — danger | primary (кнопка подтверждения и триггер);
     trigger-variant / trigger-size — вид триггера, если нужен другой (например link, sm);
     method — POST | PUT | PATCH | DELETE (не-POST — через @method);
     open — показать окно сразу (после ошибки валидации полей из слота fields: :open="$errors->has('reason')").
@@ -29,6 +30,7 @@
     'triggerSize' => 'md',
     'method' => 'POST',
     'open' => false,
+    'icon' => null,
 ])
 
 @php
@@ -45,15 +47,28 @@
     {{ $attributes->class('inline-block') }}
     data-confirm
 >
-    <x-button
-        :variant="$triggerVariant ?? $variant"
-        :size="$triggerSize"
-        type="button"
-        x-ref="trigger"
-        x-on:click="show()"
-        aria-haspopup="dialog"
-        aria-controls="{{ $id }}"
-    >{{ $label }}</x-button>
+    @if($icon)
+        <button
+            type="button"
+            class="flex h-10 w-10 items-center justify-center rounded-control text-ink-muted transition hover:bg-canvas hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            x-ref="trigger"
+            x-on:click="show()"
+            aria-haspopup="dialog"
+            aria-controls="{{ $id }}"
+            aria-label="{{ $label }}"
+            title="{{ $label }}"
+        ><x-dynamic-component :component="'heroicon-o-'.$icon" class="h-5 w-5" aria-hidden="true" /></button>
+    @else
+        <x-button
+            :variant="$triggerVariant ?? $variant"
+            :size="$triggerSize"
+            type="button"
+            x-ref="trigger"
+            x-on:click="show()"
+            aria-haspopup="dialog"
+            aria-controls="{{ $id }}"
+        >{{ $label }}</x-button>
+    @endif
 
     <template x-teleport="body">
         <div
