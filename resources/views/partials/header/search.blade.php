@@ -10,18 +10,18 @@
             type="search"
             name="q"
             value="{{ request('q') }}"
-            placeholder="Поиск по названию или артикулу"
+            placeholder="Артикул или название"
             autocomplete="off"
-            class="w-full pl-4 pr-11 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            class="w-full h-10 pl-4 pr-11 bg-canvas border border-line rounded-control text-sm text-ink placeholder:text-ink-muted focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
             data-search-input
         >
 
-        <button type="submit" class="-ml-10 w-10 h-9 flex items-center justify-center text-slate-500 hover:text-blue-600" aria-label="Найти">
+        <button type="submit" class="-ml-10 w-10 h-10 flex items-center justify-center text-ink-muted hover:text-link" aria-label="Найти">
             @svg('heroicon-o-magnifying-glass', 'w-5 h-5')
         </button>
 
     </form>
 
-    <div class="absolute top-full left-0 right-0 mt-1 lg:left-1/2 lg:right-auto lg:-translate-x-1/2 lg:w-[min(56rem,88vw)] bg-white rounded-xl border border-slate-200 shadow-lg hidden z-50 max-h-96 overflow-y-auto" data-search-suggestions></div>
+    <div class="absolute top-full left-0 right-0 mt-1 lg:left-1/2 lg:right-auto lg:-translate-x-1/2 lg:w-[min(56rem,88vw)] bg-surface rounded-panel border border-line shadow-lg hidden z-50 max-h-96 overflow-y-auto" data-search-suggestions></div>
 
 </div>

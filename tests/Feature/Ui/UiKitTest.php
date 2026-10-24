@@ -26,7 +26,7 @@ class UiKitTest extends TestCase
             ->assertSee('bg-danger', false)
             ->assertSee('px-btn-x-sm', false);
 
-        $this->blade('<x-button variant="secondary">Отмена</x-button>')->assertSee('border-slate-300', false);
+        $this->blade('<x-button variant="secondary">Отмена</x-button>')->assertSee('border-line bg-surface', false);
     }
 
     public function test_button_with_href_renders_link(): void

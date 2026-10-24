@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Шрифт Inter (layouts) и табличные цифры: цены, количества и остатки не «прыгают» по ширине */
+@layer base {
+    body {
+        @apply font-sans antialiased tabular-nums;
+    }
+}
+
 [x-cloak] {
     display: none !important;
 }

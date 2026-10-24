@@ -25,11 +25,11 @@
         aria-controls="mega-menu"
         :aria-expanded="open.toString()"
         @class([
-            'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition',
-            'bg-blue-600 text-white' => $isCatalog,
-            'bg-slate-800 hover:bg-slate-700 text-white' => ! $isCatalog,
+            'flex items-center gap-2 h-10 px-4 rounded-control text-sm font-semibold transition',
+            'bg-link text-white' => $isCatalog,
+            'bg-primary hover:bg-primary-hover text-white' => ! $isCatalog,
         ])
-        :class="open && 'ring-2 ring-blue-300'"
+        :class="open && 'ring-2 ring-link/30'"
         data-mega-button
     >
         <span x-show="! open">@svg('heroicon-o-bars-3', 'w-5 h-5')</span>
@@ -45,19 +45,19 @@
         x-cloak
         @mouseenter="panelEnter()"
         @mouseleave="panelLeave()"
-        class="absolute left-6 right-6 top-full mt-px bg-white border border-slate-200 rounded-b-2xl shadow-xl flex max-h-[70vh] overflow-hidden z-50"
+        class="absolute left-6 right-6 top-full mt-px bg-surface border border-line rounded-b-card shadow-xl flex max-h-[70vh] overflow-hidden z-50"
         data-mega-panel
     >
 
         @if(empty($catalogMenu))
 
-            <div class="p-6 text-slate-500">Каталог пока пуст.</div>
+            <div class="p-6 text-ink-muted">Каталог пока пуст.</div>
 
         @else
 
             {{-- Слева: корневые категории --}}
             <nav
-                class="w-80 shrink-0 border-r border-slate-100 overflow-y-auto py-2"
+                class="w-80 shrink-0 border-r border-line overflow-y-auto py-2"
                 aria-label="Разделы каталога"
                 x-ref="rootList"
                 @mousemove="trackMouse($event)"
@@ -68,7 +68,7 @@
                             <a
                                 href="{{ $root['url'] }}"
                                 class="flex items-center gap-3 px-4 py-2.5 text-sm outline-none"
-                                :class="active === {{ $root['id'] }} ? 'bg-slate-100 text-blue-700' : 'text-slate-700 hover:bg-slate-50'"
+                                :class="active === {{ $root['id'] }} ? 'bg-canvas text-link' : 'text-ink hover:bg-canvas'"
                                 @mouseenter="itemEnter({{ $root['id'] }})"
                                 @focus="activate({{ $root['id'] }})"
                                 @keydown.arrow-down.prevent="moveRoot(1)"
@@ -81,19 +81,19 @@
                                 @if($root['image'])
                                     <img src="{{ $root['image'] }}" alt="" class="w-6 h-6 object-contain shrink-0">
                                 @else
-                                    <span class="w-6 h-6 flex items-center justify-center text-slate-400 shrink-0">
+                                    <span class="w-6 h-6 flex items-center justify-center text-ink-muted shrink-0">
                                         @svg('heroicon-o-squares-2x2', 'w-5 h-5')
                                     </span>
                                 @endif
                                 <span class="flex-1 min-w-0 truncate">{{ $root['name'] }}</span>
-                                <span class="text-xs text-slate-400 tabular-nums">{{ $root['count'] }}</span>
+                                <span class="text-xs text-ink-muted tabular-nums">{{ $root['count'] }}</span>
                                 @svg('heroicon-o-chevron-right', 'w-4 h-4 text-slate-300 shrink-0')
                             </a>
                         </li>
                     @endforeach
                 </ul>
 
-                <a href="{{ route('catalog.index') }}" class="block px-4 py-2.5 mt-1 border-t border-slate-100 text-sm text-blue-600 hover:bg-slate-50">
+                <a href="{{ route('catalog.index') }}" class="block px-4 py-2.5 mt-1 border-t border-line text-sm text-link hover:bg-canvas">
                     Все разделы каталога →
                 </a>
             </nav>
@@ -112,15 +112,15 @@
                     >
 
                         <div class="flex items-baseline justify-between gap-4 mb-5">
-                            <h3 class="text-lg font-semibold text-slate-900">{{ $root['name'] }}</h3>
-                            <a href="{{ $root['url'] }}" class="text-sm text-blue-600 hover:underline shrink-0">
+                            <h3 class="text-lg font-semibold text-ink">{{ $root['name'] }}</h3>
+                            <a href="{{ $root['url'] }}" class="text-sm text-link hover:underline shrink-0">
                                 Открыть весь раздел →
                             </a>
                         </div>
 
                         @if(empty($root['children']))
 
-                            <p class="text-sm text-slate-500">
+                            <p class="text-sm text-ink-muted">
                                 Товаров в разделе: {{ $root['count'] }}.
                             </p>
 
@@ -132,9 +132,9 @@
 
                                     <div class="min-w-0">
 
-                                        <a href="{{ $child['url'] }}" class="font-medium text-sm text-slate-900 hover:text-blue-600">
+                                        <a href="{{ $child['url'] }}" class="font-medium text-sm text-ink hover:text-link">
                                             {{ $child['name'] }}
-                                            <span class="text-xs font-normal text-slate-400">{{ $child['count'] }}</span>
+                                            <span class="text-xs font-normal text-ink-muted">{{ $child['count'] }}</span>
                                         </a>
 
                                         @if(! empty($child['children']))
@@ -143,7 +143,7 @@
 
                                                 @foreach(array_slice($child['children'], 0, 5) as $grandchild)
                                                     <li>
-                                                        <a href="{{ $grandchild['url'] }}" class="text-sm text-slate-600 hover:text-blue-600">
+                                                        <a href="{{ $grandchild['url'] }}" class="text-sm text-ink-muted hover:text-link">
                                                             {{ $grandchild['name'] }}
                                                         </a>
                                                     </li>
@@ -151,7 +151,7 @@
 
                                                 @if(count($child['children']) > 5)
                                                     <li>
-                                                        <a href="{{ $child['url'] }}" class="text-sm text-blue-600 hover:underline">
+                                                        <a href="{{ $child['url'] }}" class="text-sm text-link hover:underline">
                                                             ещё {{ count($child['children']) - 5 }}
                                                         </a>
                                                     </li>

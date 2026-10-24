@@ -10,6 +10,7 @@ use App\Models\OrderItem;
 use App\Models\Organization;
 use App\Models\Product;
 use App\Models\User;
+use App\Support\Money;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -20,7 +21,7 @@ class HeaderTest extends TestCase
     private function client(): User
     {
         return User::factory()->create([
-            'name'            => 'Иван Клиентов',
+            'name' => 'Иван Клиентов',
             'organization_id' => Organization::factory()->create(['name' => 'ООО Сантехторг'])->id,
         ]);
     }
@@ -83,8 +84,8 @@ class HeaderTest extends TestCase
     public function test_header_has_contacts_and_info_links(): void
     {
         config([
-            'shop.phone'         => '+375 (17) 123-45-67',
-            'shop.email'         => 'sales@smesitel.by',
+            'shop.phone' => '+375 (17) 123-45-67',
+            'shop.email' => 'sales@smesitel.by',
             'shop.working_hours' => 'Пн–Сб 10:00–19:00',
         ]);
 
@@ -124,7 +125,7 @@ class HeaderTest extends TestCase
         $mobile = substr($html, strpos($html, 'x-data="mobileMenu('));
 
         $burger = strpos($mobile, 'x-ref="burger"');
-        $logo = strpos($mobile, 'aria-label="' . config('shop.name') . ' — на главную"');
+        $logo = strpos($mobile, 'aria-label="'.config('shop.name').' — на главную"');
         $search = strpos($mobile, 'aria-controls="mobile-search"');
 
         $this->assertNotFalse($burger);
@@ -149,8 +150,8 @@ class HeaderTest extends TestCase
         // Сумма с НДС 20%: 200.00 + 40.00 и 50.50 + 10.10
         $this->actingAs($client)->get('/')
             ->assertSee('Корзина: 2 поз.')
-            ->assertSee('300.60 BYN')
-            ->assertSee('title="в т.ч. НДС 50.10 BYN"', false);
+            ->assertSee(Money::format(300.60))
+            ->assertSee('title="в т.ч. НДС '.Money::format(50.10).'"', false);
     }
 
     public function test_cart_sum_is_with_vat_by_lines_and_matches_cart_page(): void
@@ -170,8 +171,8 @@ class HeaderTest extends TestCase
 
         $this->actingAs($client)->get('/')
             ->assertSee('Корзина: 3 поз.')
-            ->assertSee('297.38 BYN')
-            ->assertSee('title="в т.ч. НДС 27.04 BYN"', false);
+            ->assertSee(Money::format(297.38))
+            ->assertSee('title="в т.ч. НДС '.Money::format(27.04).'"', false);
 
         // Та же сумма, что «Сумма с НДС» на странице корзины
         $this->actingAs($client)->get('/order')
@@ -182,8 +183,8 @@ class HeaderTest extends TestCase
     {
         $this->get('/')
             ->assertSee('Корзина: 0 поз.')
-            ->assertSee('0.00 BYN')
-            ->assertSee('title="в т.ч. НДС 0.00 BYN"', false)
+            ->assertSee(Money::format(0))
+            ->assertSee('title="в т.ч. НДС '.Money::format(0).'"', false)
             ->assertDontSee('data-cart-count', false);
     }
 
@@ -193,10 +194,10 @@ class HeaderTest extends TestCase
     {
         $this->get('/catalog')
             ->assertOk()
-            ->assertSee('bg-blue-600 text-white', false);
+            ->assertSee('bg-link text-white', false);
 
         $this->get('/')
-            ->assertDontSee('bg-blue-600 text-white', false);
+            ->assertDontSee('bg-link text-white', false);
     }
 
     public function test_active_cart_section_is_highlighted(): void

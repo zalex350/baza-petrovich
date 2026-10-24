@@ -6,7 +6,8 @@
     :unchecked="false" — без скрытого поля (группы галочек name="ids[]"); null не подходит:
     Blade подставляет вместо него значение по умолчанию.
     Отмечена: old(name, checked) — после ошибки валидации сохраняется выбор пользователя.
-    class — на обёртку, остальные атрибуты — на <input>.
+    class — на обёртку, остальные атрибуты — на <input>; form="…" — и на скрытое поле
+    (галочка вне своей <form>, как в форме товара).
 --}}
 @props([
     'name',
@@ -32,7 +33,7 @@
 <div {{ $attributes->only('class')->class('min-w-0') }}>
     <label for="{{ $id }}" class="flex items-start gap-3 cursor-pointer">
         @if($unchecked !== false)
-            <input type="hidden" name="{{ $name }}" value="{{ $unchecked }}">
+            <input {{ $attributes->only(['form', 'disabled'])->merge(['type' => 'hidden', 'name' => $name, 'value' => $unchecked]) }}>
         @endif
 
         <input
@@ -44,15 +45,15 @@
             @if($invalid) aria-invalid="true" @endif
             @if($describedBy) aria-describedby="{{ $describedBy }}" @endif
             {{ $attributes->except('class')->class([
-                'mt-0.5 h-5 w-5 shrink-0 rounded border-slate-300 text-primary focus:ring-primary',
+                'mt-0.5 h-5 w-5 shrink-0 rounded border-line text-primary focus:ring-primary',
                 'border-tone-danger-border' => $invalid,
             ]) }}
         >
 
         <span>
-            <span class="block text-slate-800">{{ $label }}</span>
+            <span class="block text-ink">{{ $label }}</span>
             @if($hint)
-                <span id="{{ $id }}-hint" class="block text-sm text-slate-500">{{ $hint }}</span>
+                <span id="{{ $id }}-hint" class="block text-sm text-ink-muted">{{ $hint }}</span>
             @endif
         </span>
     </label>

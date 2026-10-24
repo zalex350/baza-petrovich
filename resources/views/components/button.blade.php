@@ -13,9 +13,9 @@
         'disabled:opacity-50 disabled:cursor-not-allowed',
         match ($variant) {
             'primary'   => 'rounded-control bg-primary text-white hover:bg-primary-hover',
-            'secondary' => 'rounded-control border border-slate-300 bg-white text-slate-700 hover:bg-slate-50',
+            'secondary' => 'rounded-control border border-line bg-surface text-ink hover:bg-canvas',
             'danger'    => 'rounded-control bg-danger text-white hover:bg-danger-hover focus-visible:ring-danger',
-            'link'      => 'rounded-sm text-slate-700 underline underline-offset-2 hover:text-slate-900',
+            'link'      => 'rounded-sm text-link underline underline-offset-2 hover:text-link-hover',
         },
         // У ссылки-кнопки нет горизонтальных отступов: она стоит в строке текста
         match ($variant === 'link' ? "link-$size" : $size) {

@@ -114,6 +114,13 @@
             </label>
         </div>
 
+        {{-- Кратность заказа: поле количества на витрине (x-qty) начинается с default_qty и шагает от min_qty на qty_step --}}
+        <div class="md:col-span-2 grid gap-6 sm:grid-cols-3" data-qty-rules>
+            <x-input name="min_qty" type="number" min="1" step="1" label="Минимум в заказе, шт." :value="$product->min_qty" :form="$form" :disabled="$locked" :required="! $locked" />
+            <x-input name="qty_step" type="number" min="1" step="1" label="Шаг (кратность), шт." :value="$product->qty_step" :form="$form" :disabled="$locked" :required="! $locked" />
+            <x-input name="default_qty" type="number" min="1" step="1" label="По умолчанию, шт." hint="Минимум, минимум + шаг, …" :value="$product->default_qty" :form="$form" :disabled="$locked" :required="! $locked" />
+        </div>
+
     </div>
 
 </div>
@@ -153,6 +160,15 @@
             </select>
             <p class="text-sm text-slate-500 mt-1">Раздел каталога на сайте — задаётся здесь, из 1С не приходит.</p>
         </div>
+
+        <fieldset data-product-badges>
+            <legend class="mb-2 font-semibold">Бейджи на витрине</legend>
+            <p class="text-sm text-slate-500 mb-3">Сохраняются сразу, без черновика.</p>
+            <div class="flex flex-wrap gap-6">
+                <x-checkbox name="is_hit" label="ХИТ" :checked="$product->is_hit" :form="$form" />
+                <x-checkbox name="is_new" label="НОВИНКА" :checked="$product->is_new" :form="$form" />
+            </div>
+        </fieldset>
 
         <div>
             <label for="f-display-name" class="block mb-2 font-semibold">

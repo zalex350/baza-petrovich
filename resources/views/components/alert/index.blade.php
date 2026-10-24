@@ -20,7 +20,7 @@
     role="{{ $type === 'error' ? 'alert' : 'status' }}"
     data-alert="{{ $type }}"
     @if($dismissible) x-data="{ shown: true }" x-show="shown" @endif
-    {{ $attributes->class(['flex items-start gap-3 rounded-control border px-4 py-3', $tone]) }}
+    {{ $attributes->class(['flex items-start gap-3 rounded-panel border px-4 py-3', $tone]) }}
 >
     <div class="min-w-0 grow">
         @if($title)

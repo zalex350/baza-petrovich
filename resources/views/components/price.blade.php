@@ -19,12 +19,12 @@
 @endphp
 
 @if($formatted === null)
-    <span {{ $attributes->class('text-slate-500') }} data-price-tbd>{{ $placeholder }}</span>
+    <span {{ $attributes->class('text-ink-muted') }} data-price-tbd>{{ $placeholder }}</span>
 @else
-    <span {{ $attributes->class('whitespace-nowrap') }} data-price>
-        {{ $formatted }}@if($label) <span class="text-[0.75em] font-normal text-slate-500">{{ $label }}</span>@endif
+    <span {{ $attributes->class('whitespace-nowrap tabular-nums') }} data-price>
+        {{ $formatted }}@if($label) <span class="text-[0.75em] font-normal text-ink-muted">{{ $label }}</span>@endif
         @if($product)
-            <span class="block text-[0.75em] font-normal text-slate-500" data-price-vat>
+            <span class="block text-[0.75em] font-normal text-ink-muted" data-price-vat>
                 {{ $product->vat_rate === null ? 'НДС не облагается' : 'с НДС: '.\App\Support\Money::format($product->price_with_vat) }}
             </span>
         @endif
