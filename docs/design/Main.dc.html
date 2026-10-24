@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Корзина</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F5F6F8}
+*{box-sizing:border-box}
+a{color:#1D5FD1;text-decoration:none}a:hover{color:#174BA6;text-decoration:underline}
+</style>
+</helmet>
+<div style="font-family: Inter, system-ui, sans-serif; color: #111827; background: #F5F6F8; min-height: 100%; font-size: 15px; line-height: 1.45">
+
+<header style="background: #FFFFFF; border-bottom: 1px solid #E3E6EB">
+  <div style="background: #1E2B45; color: #DDE3EE; font-size: 13px">
+    <div style="max-width: 1320px; margin: 0 auto; padding: 7px 24px; display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between">
+      <div style="display: flex; flex-wrap: wrap; gap: 8px 24px">
+        <span>+375 (29) 000-00-00</span><span>info@smesitel.by</span><span>Пн–Пт 9:00–18:00</span>
+      </div>
+      <div style="display: flex; gap: 20px"><a href="#" style="color: #DDE3EE">Доставка</a><a href="#" style="color: #DDE3EE">Контакты</a></div>
+    </div>
+  </div>
+  <div style="max-width: 1320px; margin: 0 auto; padding: 14px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px 20px">
+    <a href="#" style="font-size: 22px; font-weight: 700; letter-spacing: -0.02em; color: #111827">SMESITEL<span style="color: #1D5FD1">.BY</span></a>
+    <button type="button" style="height: 44px; padding: 0 18px; border: 0; border-radius: 8px; background: #1E2B45; color: #FFFFFF; font: inherit; font-weight: 600; display: flex; align-items: center; gap: 10px; cursor: pointer">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>Каталог
+    </button>
+    <div style="flex: 1 1 320px; min-width: 0; position: relative">
+      <label for="q" style="position: absolute; left: -9999px">Поиск</label>
+      <input id="q" type="search" placeholder="Артикул или название" style="width: 100%; height: 44px; border: 1px solid #D5DAE1; border-radius: 8px; padding: 0 44px 0 14px; font: inherit; background: #F9FAFB">
+      <svg style="position: absolute; right: 14px; top: 13px" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6472" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+    </div>
+    <a href="#" style="color: #111827; font-weight: 500">Производители</a>
+    <a href="#" style="display: flex; align-items: center; gap: 10px; color: #111827">
+      <span style="position: relative; display: inline-flex">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1E2B45" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.4"></circle><circle cx="18" cy="20" r="1.4"></circle><path d="M2.5 3.5h2.6l2.4 11.2h11.3l2-8H6.3"></path></svg>
+        <span style="position: absolute; top: -7px; right: -9px; background: #1D5FD1; color: #FFFFFF; font-size: 11px; font-weight: 700; border-radius: 9px; padding: 1px 6px">4</span>
+      </span>
+      <span style="display: flex; flex-direction: column; line-height: 1.2"><span style="font-size: 13px; color: #5B6472">Корзина</span><span style="font-weight: 600; font-variant-numeric: tabular-nums">849,94 BYN</span></span>
+    </a>
+    <a href="#" style="display: flex; flex-direction: column; line-height: 1.2; color: #111827; padding-left: 16px; border-left: 1px solid #E3E6EB">
+      <span style="font-weight: 600">Иван Петров</span><span style="font-size: 13px; color: #5B6472">ООО «Рога и копыта»</span>
+    </a>
+  </div>
+</header>
+
+<main style="max-width: 1320px; margin: 0 auto; padding: 20px 24px 64px">
+  <nav aria-label="Навигация" style="font-size: 13px; color: #5B6472; display: flex; gap: 8px"><a href="#">Главная</a><span>/</span><span>Корзина</span></nav>
+
+  <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; margin: 12px 0 20px">
+    <div>
+      <h1 style="margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.02em">Корзина</h1>
+      <p style="margin: 4px 0 0; color: #5B6472">4 позиции · к заказу отмечено 3 позиции, 13 шт.</p>
+    </div>
+    <form style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+      <label for="qa" style="font-size: 14px; color: #5B6472">Быстро добавить</label>
+      <input id="qa" placeholder="Артикул" style="height: 40px; width: 180px; border: 1px solid #D5DAE1; border-radius: 8px; padding: 0 12px; font: inherit; background: #FFFFFF">
+      <input aria-label="Количество" value="1" style="height: 40px; width: 64px; border: 1px solid #D5DAE1; border-radius: 8px; padding: 0 10px; font: inherit; text-align: center; background: #FFFFFF">
+      <button type="button" style="height: 40px; padding: 0 16px; border: 1px solid #C9D0DA; border-radius: 8px; background: #FFFFFF; color: #1E2B45; font: inherit; font-weight: 600; cursor: pointer">Добавить</button>
+    </form>
+  </div>
+
+  <div role="status" style="display: flex; gap: 12px; align-items: flex-start; background: #FFF6E5; border: 1px solid #F3D9A6; color: #6B3A00; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="flex: none; margin-top: 1px"><path d="M12 3 2 20h20L12 3z"></path><path d="M12 10v4M12 17.5v.01"></path></svg>
+    <span>У позиции «Сифон для мойки с переливом» на складе 2 шт. из 3. Позиция снята с заказа — уменьшите количество или оставьте её в корзине на потом.</span>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+
+    <section aria-label="Позиции корзины" style="flex: 999 1 640px; min-width: 0; background: #FFFFFF; border: 1px solid #E3E6EB; border-radius: 12px; overflow: hidden">
+      <div style="overflow-x: auto">
+        <table style="width: 100%; min-width: 820px; border-collapse: collapse; font-variant-numeric: tabular-nums">
+          <thead>
+            <tr style="background: #F9FAFB; color: #4B5563; font-size: 13px; text-align: left">
+              <th style="padding: 12px 8px 12px 16px; width: 40px; font-weight: 500"><input type="checkbox" aria-label="Выбрать все" checked="{{ true }}" style="width: 18px; height: 18px; accent-color: #1E2B45"></th>
+              <th style="padding: 12px 8px; font-weight: 500">Товар</th>
+              <th style="padding: 12px 8px; font-weight: 500; text-align: right">Цена без НДС</th>
+              <th style="padding: 12px 8px; font-weight: 500; text-align: center">Количество</th>
+              <th style="padding: 12px 8px; font-weight: 500">Наличие</th>
+              <th style="padding: 12px 8px; font-weight: 500; text-align: right">Сумма без НДС</th>
+              <th style="padding: 12px 16px 12px 8px; width: 48px"><span style="position: absolute; left: -9999px">Удалить</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{ items }}" as="item" hint-placeholder-count="4">
+              <tr style="border-top: 1px solid #EDF0F3; background: {{ item.rowBg }}">
+                <td style="padding: 16px 8px 16px 16px; vertical-align: top"><input type="checkbox" aria-label="Включить в заказ" checked="{{ item.checked }}" style="width: 18px; height: 18px; margin-top: 18px; accent-color: #1E2B45"></td>
+                <td style="padding: 16px 8px; vertical-align: top">
+                  <div style="display: flex; gap: 14px">
+                    <div style="flex: none; width: 56px; height: 56px; border-radius: 8px; background: #F1F3F6; border: 1px solid #E3E6EB; display: flex; align-items: center; justify-content: center">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9AA3AF" stroke-width="1.6" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="9" cy="10" r="2"></circle><path d="m21 16-5-5-8 9"></path></svg>
+                    </div>
+                    <div style="min-width: 0">
+                      <a href="Product.dc.html" style="color: #111827; font-weight: 600">{{ item.name }}</a>
+                      <div style="font-size: 13px; color: #5B6472; margin-top: 2px">{{ item.sku }} · {{ item.brand }}</div>
+                      <div style="font-size: 13px; color: #5B6472; margin-top: 2px">{{ item.pack }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td style="padding: 16px 8px; vertical-align: top; text-align: right; white-space: nowrap; padding-top: 22px">{{ item.price }}</td>
+                <td style="padding: 16px 8px; vertical-align: top; text-align: center">
+                  <div style="display: inline-flex; align-items: center; border: 1px solid #D5DAE1; border-radius: 8px; overflow: hidden; background: #FFFFFF; margin-top: 6px">
+                    <button type="button" aria-label="Уменьшить" style="width: 36px; height: 40px; border: 0; background: #F9FAFB; font: inherit; font-size: 18px; color: #1E2B45; cursor: pointer">−</button>
+                    <input aria-label="Количество" value="{{ item.qty }}" style="width: 56px; height: 40px; border: 0; border-left: 1px solid #E3E6EB; border-right: 1px solid #E3E6EB; text-align: center; font: inherit; font-weight: 600">
+                    <button type="button" aria-label="Увеличить" style="width: 36px; height: 40px; border: 0; background: #F9FAFB; font: inherit; font-size: 18px; color: #1E2B45; cursor: pointer">+</button>
+                  </div>
+                  <sc-if value="{{ item.warn }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size: 12px; color: #B42318; margin-top: 6px">{{ item.warnText }}</div>
+                  </sc-if>
+                </td>
+                <td style="padding: 16px 8px; vertical-align: top; padding-top: 24px">
+                  <div style="display: flex; align-items: center; gap: 8px; white-space: nowrap">
+                    <span aria-hidden="true" style="display: inline-flex; gap: 2px; align-items: flex-end">
+                      <span style="width: 4px; height: 8px; border-radius: 1px; background: {{ item.b1 }}"></span>
+                      <span style="width: 4px; height: 12px; border-radius: 1px; background: {{ item.b2 }}"></span>
+                      <span style="width: 4px; height: 16px; border-radius: 1px; background: {{ item.b3 }}"></span>
+                    </span>
+                    <span style="font-size: 14px; color: {{ item.stockColor }}">{{ item.stock }}</span>
+                  </div>
+                </td>
+                <td style="padding: 16px 8px; vertical-align: top; text-align: right; white-space: nowrap; padding-top: 20px">
+                  <div style="font-weight: 600">{{ item.sum }}</div>
+                  <div style="font-size: 13px; color: #5B6472">с НДС {{ item.sumVat }}</div>
+                </td>
+                <td style="padding: 16px 16px 16px 8px; vertical-align: top">
+                  <button type="button" aria-label="Удалить позицию" style="width: 40px; height: 40px; margin-top: 6px; border: 0; border-radius: 8px; background: transparent; color: #6B7280; cursor: pointer; display: flex; align-items: center; justify-content: center">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg>
+                  </button>
+                </td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; padding: 14px 16px; border-top: 1px solid #EDF0F3; font-size: 14px; color: #5B6472">
+        <span>В заказ попадут только отмеченные позиции. Остальные останутся в корзине.</span>
+        <button type="button" style="border: 0; background: transparent; color: #B42318; font: inherit; cursor: pointer; padding: 0">Очистить корзину</button>
+      </div>
+    </section>
+
+    <aside aria-label="Итог заказа" style="flex: 1 1 340px; max-width: 400px; position: sticky; top: 16px; background: #FFFFFF; border: 1px solid #E3E6EB; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+      <h2 style="margin: 0; font-size: 18px; font-weight: 700">Ваш заказ</h2>
+      <dl style="margin: 0; display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; font-variant-numeric: tabular-nums">
+        <dt style="color: #5B6472">Позиций / штук</dt><dd style="margin: 0; text-align: right">3 / 13</dd>
+        <dt style="color: #5B6472">Сумма без НДС</dt><dd style="margin: 0; text-align: right">708,28 BYN</dd>
+        <dt style="color: #5B6472">НДС 20%</dt><dd style="margin: 0; text-align: right">141,66 BYN</dd>
+      </dl>
+      <div style="border-top: 1px solid #EDF0F3; padding-top: 14px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px">
+        <span style="font-weight: 600">Итого с НДС</span>
+        <span style="font-size: 26px; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums">849,94 BYN</span>
+      </div>
+
+      <fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+        <legend style="font-weight: 600; margin-bottom: 8px">Адрес доставки <span style="color: #B42318">*</span></legend>
+        <label style="display: flex; gap: 10px; align-items: flex-start; border: 1.5px solid #1E2B45; border-radius: 10px; padding: 10px 12px; cursor: pointer">
+          <input type="radio" name="addr" checked="{{ true }}" style="margin-top: 3px; accent-color: #1E2B45">
+          <span><span style="font-weight: 600">Склад №2</span> <span style="font-size: 12px; background: #E8F3EC; color: #146C34; border-radius: 6px; padding: 1px 6px">основной</span><br><span style="font-size: 14px; color: #5B6472">[АДРЕС СКЛАДА 2]</span></span>
+        </label>
+        <label style="display: flex; gap: 10px; align-items: flex-start; border: 1px solid #D5DAE1; border-radius: 10px; padding: 10px 12px; cursor: pointer">
+          <input type="radio" name="addr" style="margin-top: 3px; accent-color: #1E2B45">
+          <span><span style="font-weight: 600">Склад №1</span><br><span style="font-size: 14px; color: #5B6472">[АДРЕС СКЛАДА 1]</span></span>
+        </label>
+        <a href="#" style="font-size: 14px">Управление адресами</a>
+      </fieldset>
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="comment" style="font-weight: 600">Комментарий</label>
+        <textarea id="comment" rows="3" placeholder="Например: позвонить за час до доставки" style="border: 1px solid #D5DAE1; border-radius: 8px; padding: 10px 12px; font: inherit; resize: vertical"></textarea>
+      </div>
+
+      <button type="button" style="height: 52px; border: 0; border-radius: 10px; background: #1E2B45; color: #FFFFFF; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer">Оформить заказ</button>
+      <p style="margin: 0; font-size: 13px; color: #5B6472">Менеджер проверит заказ и передаст его в 1С. Статус будет виден в разделе «Мои заказы».</p>
+    </aside>
+
+  </div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1180}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var G = '#1F8A4C', L = '#D9DEE5', A = '#C27803';
+    var items = [
+      { name: 'Термостатический смесительный клапан', sku: 'TIM ZSM.412.106005', brand: 'TIM', pack: 'В упаковке 1 шт.', price: '44,85 BYN', qty: '2', stock: 'Много', stockColor: '#146C34', b1: G, b2: G, b3: G, sum: '89,70 BYN', sumVat: '107,64', checked: true, warn: false, warnText: '', rowBg: '#FFFFFF' },
+      { name: 'Смеситель для кухни с гибким изливом', sku: 'LEDEME L5069', brand: 'LEDEME', pack: 'В упаковке 1 шт.', price: '576,58 BYN', qty: '1', stock: 'Мало', stockColor: '#8A4B00', b1: A, b2: A, b3: L, sum: '576,58 BYN', sumVat: '691,90', checked: true, warn: false, warnText: '', rowBg: '#FFFFFF' },
+      { name: 'Подводка гибкая для воды 1/2", 50 см', sku: 'FLX-050-12', brand: '[БРЕНД]', pack: 'Кратно 10 шт. · мин. заказ 10 шт.', price: '4,20 BYN', qty: '10', stock: 'Много', stockColor: '#146C34', b1: G, b2: G, b3: G, sum: '42,00 BYN', sumVat: '50,40', checked: true, warn: false, warnText: '', rowBg: '#FFFFFF' },
+      { name: 'Сифон для мойки с переливом', sku: 'SF-1-112', brand: '[БРЕНД]', pack: 'В упаковке 1 шт.', price: '18,40 BYN', qty: '3', stock: '2 шт.', stockColor: '#8A4B00', b1: A, b2: L, b3: L, sum: '55,20 BYN', sumVat: '66,24', checked: false, warn: true, warnText: 'Доступно 2 шт.', rowBg: '#FFFBF3' }
+    ];
+    return { items: items };
+  }
+}
+</script>
+</body>
+</html>

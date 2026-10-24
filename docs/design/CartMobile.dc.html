@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Корзина на телефоне</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F5F6F8}
+*{box-sizing:border-box}
+a{color:#1D5FD1;text-decoration:none}a:hover{color:#174BA6}
+</style>
+</helmet>
+<div style="width: 390px; height: 1500px; position: relative; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #111827; background: #F5F6F8; font-size: 15px; line-height: 1.45">
+
+  <header style="background: #FFFFFF; border-bottom: 1px solid #E3E6EB; padding: 10px 16px; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <button type="button" aria-label="Меню" style="width: 44px; height: 44px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E2B45" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+      </button>
+      <a href="#" style="font-size: 19px; font-weight: 700; letter-spacing: -0.02em; color: #111827">SMESITEL<span style="color: #1D5FD1">.BY</span></a>
+      <a href="#" aria-label="Корзина, 4 позиции" style="width: 44px; height: 44px; position: relative; display: flex; align-items: center; justify-content: center">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1E2B45" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.4"></circle><circle cx="18" cy="20" r="1.4"></circle><path d="M2.5 3.5h2.6l2.4 11.2h11.3l2-8H6.3"></path></svg>
+        <span style="position: absolute; top: 4px; right: 2px; background: #1D5FD1; color: #FFFFFF; font-size: 11px; font-weight: 700; border-radius: 9px; padding: 1px 6px">4</span>
+      </a>
+    </div>
+    <input type="search" aria-label="Поиск" placeholder="Артикул или название" style="height: 44px; border: 1px solid #D5DAE1; border-radius: 8px; padding: 0 14px; font: inherit; background: #F9FAFB">
+  </header>
+
+  <main style="padding: 16px 16px 140px; display: flex; flex-direction: column; gap: 12px">
+    <div>
+      <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.02em">Корзина</h1>
+      <p style="margin: 2px 0 0; font-size: 14px; color: #5B6472">В заказе 3 из 4 позиций</p>
+    </div>
+
+    <div role="status" style="background: #FFF6E5; border: 1px solid #F3D9A6; color: #6B3A00; border-radius: 10px; padding: 10px 12px; font-size: 14px">Сифон: на складе 2 шт. из 3 — позиция снята с заказа.</div>
+
+    <sc-for list="{{ items }}" as="item" hint-placeholder-count="4">
+      <article style="background: {{ item.bg }}; border: 1px solid #E3E6EB; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; gap: 12px; align-items: flex-start">
+          <input type="checkbox" aria-label="Включить в заказ" checked="{{ item.checked }}" style="width: 20px; height: 20px; margin-top: 2px; accent-color: #1E2B45; flex: none">
+          <div style="flex: none; width: 56px; height: 56px; border-radius: 8px; background: #F1F3F6; border: 1px solid #E3E6EB"></div>
+          <div style="min-width: 0; flex: 1">
+            <div style="font-weight: 600; line-height: 1.3">{{ item.name }}</div>
+            <div style="font-size: 13px; color: #5B6472; margin-top: 2px">{{ item.sku }} · {{ item.price }}/шт.</div>
+            <div style="font-size: 13px; color: {{ item.stockColor }}; margin-top: 2px">{{ item.stock }}</div>
+          </div>
+          <button type="button" aria-label="Удалить позицию" style="width: 40px; height: 40px; border: 0; background: transparent; color: #6B7280; flex: none; cursor: pointer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg>
+          </button>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
+          <div style="display: inline-flex; align-items: center; border: 1px solid #D5DAE1; border-radius: 8px; overflow: hidden; background: #FFFFFF">
+            <button type="button" aria-label="Уменьшить" style="width: 44px; height: 44px; border: 0; background: #F9FAFB; font: inherit; font-size: 18px; color: #1E2B45">−</button>
+            <input aria-label="Количество" value="{{ item.qty }}" style="width: 52px; height: 44px; border: 0; border-left: 1px solid #E3E6EB; border-right: 1px solid #E3E6EB; text-align: center; font: inherit; font-weight: 600">
+            <button type="button" aria-label="Увеличить" style="width: 44px; height: 44px; border: 0; background: #F9FAFB; font: inherit; font-size: 18px; color: #1E2B45">+</button>
+          </div>
+          <div style="text-align: right; font-variant-numeric: tabular-nums">
+            <div style="font-weight: 700">{{ item.sum }}</div>
+            <div style="font-size: 12px; color: #5B6472">без НДС</div>
+          </div>
+        </div>
+      </article>
+    </sc-for>
+
+    <section aria-label="Доставка" style="background: #FFFFFF; border: 1px solid #E3E6EB; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+      <label for="addr" style="font-weight: 600">Адрес доставки <span style="color: #B42318">*</span></label>
+      <select id="addr" style="height: 44px; border: 1px solid #D5DAE1; border-radius: 8px; padding: 0 10px; font: inherit; background: #FFFFFF"><option>Склад №2 — [АДРЕС]</option><option>Склад №1 — [АДРЕС]</option></select>
+      <label for="cm" style="font-weight: 600">Комментарий</label>
+      <textarea id="cm" rows="2" style="border: 1px solid #D5DAE1; border-radius: 8px; padding: 10px; font: inherit"></textarea>
+    </section>
+
+    <dl style="margin: 0; display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; font-size: 14px; font-variant-numeric: tabular-nums; padding: 0 4px">
+      <dt style="color: #5B6472">Сумма без НДС</dt><dd style="margin: 0; text-align: right">708,28 BYN</dd>
+      <dt style="color: #5B6472">НДС 20%</dt><dd style="margin: 0; text-align: right">141,66 BYN</dd>
+    </dl>
+  </main>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-top: 1px solid #E3E6EB; padding: 12px 16px 20px; display: flex; align-items: center; gap: 12px; box-shadow: 0 -4px 16px rgba(17, 24, 39, 0.06)">
+    <div style="flex: 1; font-variant-numeric: tabular-nums">
+      <div style="font-size: 12px; color: #5B6472">Итого с НДС · 13 шт.</div>
+      <div style="font-size: 20px; font-weight: 700">849,94 BYN</div>
+    </div>
+    <button type="button" style="height: 48px; padding: 0 20px; border: 0; border-radius: 10px; background: #1E2B45; color: #FFFFFF; font: inherit; font-weight: 600">Оформить</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1500}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { items: [
+      { name: 'Термостатический смесительный клапан', sku: 'TIM ZSM.412.106005', price: '44,85', qty: '2', sum: '89,70 BYN', stock: 'Много', stockColor: '#146C34', checked: true, bg: '#FFFFFF' },
+      { name: 'Смеситель для кухни с гибким изливом', sku: 'LEDEME L5069', price: '576,58', qty: '1', sum: '576,58 BYN', stock: 'Мало', stockColor: '#8A4B00', checked: true, bg: '#FFFFFF' },
+      { name: 'Подводка гибкая для воды 1/2", 50 см', sku: 'FLX-050-12', price: '4,20', qty: '10', sum: '42,00 BYN', stock: 'Много · кратно 10', stockColor: '#146C34', checked: true, bg: '#FFFFFF' },
+      { name: 'Сифон для мойки с переливом', sku: 'SF-1-112', price: '18,40', qty: '3', sum: '55,20 BYN', stock: 'Доступно 2 шт.', stockColor: '#B42318', checked: false, bg: '#FFFBF3' }
+    ] };
+  }
+}
+</script>
+</body>
+</html>
