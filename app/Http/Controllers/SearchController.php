@@ -54,6 +54,9 @@ class SearchController extends Controller
         // Строка товара: ключевые характеристики — из фильтров категории каждого товара
         $keyAttributes->load($products->getCollection());
 
+        // «← Продолжить покупки» в корзине вернёт к этому поиску
+        session([CatalogController::CONTINUE_URL => request()->getRequestUri()]);
+
         return view('search', [
             'query' => $query,
             'products' => $products,

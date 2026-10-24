@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Мой заказ')
+@section('title', 'Корзина')
 
 @section('content')
 
@@ -15,19 +15,23 @@
     };
 @endphp
 
-<h1 class="text-3xl font-bold mb-6">
-    Мой заказ
+{{-- Последняя открытая категория или поиск (из сессии), иначе — каталог --}}
+<a href="{{ $continueUrl }}" class="text-sm text-link hover:underline" data-continue-shopping>
+    ← Продолжить покупки
+</a>
+
+<h1 class="text-3xl font-bold mt-2 mb-6">
+    Корзина
 </h1>
 
 @if($state === \App\Enums\CartState::Empty)
 
-    <div class="bg-white border rounded p-6">
-
-        <p>
-            Заказ пуст
-        </p>
-
-    </div>
+    <x-empty-state title="Корзина пуста" icon="shopping-cart" data-cart-empty>
+        Добавьте товары из каталога или найдите их по артикулу.
+        <x-slot:action>
+            <x-button :href="route('catalog.index')">Перейти в каталог</x-button>
+        </x-slot:action>
+    </x-empty-state>
 
 @else
 
@@ -465,17 +469,6 @@
             </form>
 
         @endif
-
-    </div>
-
-    <div class="mt-6">
-
-        <a
-            href="/catalog/smesiteli"
-            class="underline"
-        >
-            ← Продолжить покупки
-        </a>
 
     </div>
 

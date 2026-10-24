@@ -14,6 +14,9 @@ class CatalogController extends Controller
     /** Ключ сессии: адрес последнего списка каталога с фильтрами */
     public const BACK_URL = 'catalog.back_url';
 
+    /** Ключ сессии: последний открытый список — категория или поиск («← Продолжить покупки» в корзине) */
+    public const CONTINUE_URL = 'shop.continue_url';
+
     public function index()
     {
         $parents = Category::whereNull('parent_id')
@@ -56,7 +59,10 @@ class CatalogController extends Controller
 
         $baseUrl = '/catalog/'.$category->slug;
 
-        session([self::BACK_URL => request()->getRequestUri()]);
+        session([
+            self::BACK_URL => request()->getRequestUri(),
+            self::CONTINUE_URL => request()->getRequestUri(),
+        ]);
 
         $products = $listing->products();
 
@@ -103,6 +109,21 @@ class CatalogController extends Controller
             ...$chain,
             ['label' => $category->name],
         ];
+    }
+
+    /**
+     * Куда ведёт «← Продолжить покупки» из корзины: последняя открытая категория или поиск,
+     * иначе — каталог. Только адреса витрины — не открытый редирект.
+     */
+    public static function continueUrl(): string
+    {
+        $url = session(self::CONTINUE_URL);
+
+        if (is_string($url) && (str_starts_with($url, '/catalog/') || str_starts_with($url, '/search?'))) {
+            return $url;
+        }
+
+        return route('catalog.index', [], false);
     }
 
     /**

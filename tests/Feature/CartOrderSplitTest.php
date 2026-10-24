@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\Organization;
 use App\Models\Product;
 use App\Models\User;
+use App\Support\Money;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -39,11 +40,11 @@ class CartOrderSplitTest extends TestCase
     private function product(string $sku, array $attributes = []): Product
     {
         return Product::create(array_merge([
-            'name'         => "Смеситель {$sku}",
-            'sku'          => $sku,
-            'price'        => 100,
-            'stock'        => 10,
-            'is_active'    => true,
+            'name' => "Смеситель {$sku}",
+            'sku' => $sku,
+            'price' => 100,
+            'stock' => 10,
+            'is_active' => true,
             'is_published' => true,
         ], $attributes));
     }
@@ -95,9 +96,9 @@ class CartOrderSplitTest extends TestCase
         $this->expectException(UniqueConstraintViolationException::class);
 
         CartItem::create([
-            'cart_id'      => $this->client->cart->id,
-            'product_id'   => $this->product->id,
-            'quantity'     => 1,
+            'cart_id' => $this->client->cart->id,
+            'product_id' => $this->product->id,
+            'quantity' => 1,
             'price_at_add' => 100,
         ]);
     }
@@ -201,7 +202,7 @@ class CartOrderSplitTest extends TestCase
             ->assertOk()
             ->assertSee('Корзина: 1 поз.')
             // Сумма с НДС в шапке: 30 + 20 % — только оставшийся товар
-            ->assertSee(\App\Support\Money::format(36));
+            ->assertSee(Money::format(36));
     }
 
     public function test_checkout_is_refused_while_cart_has_deleted_product(): void
@@ -280,7 +281,7 @@ class CartOrderSplitTest extends TestCase
         $this->assertSame(1, Cart::count());
         $this->assertSame(0, CartItem::count());
 
-        $this->actingAs($this->client)->get('/order')->assertOk()->assertSee('Заказ пуст');
+        $this->actingAs($this->client)->get('/order')->assertOk()->assertSee('Корзина пуста');
     }
 
     public function test_order_numbers_are_sequential_within_year(): void
@@ -325,11 +326,11 @@ class CartOrderSplitTest extends TestCase
         $order = $this->checkout();
 
         $this->product->update([
-            'name'         => 'Переименованный',
+            'name' => 'Переименованный',
             'display_name' => 'Новое витринное имя',
-            'sku'          => 'NEW-SKU',
-            'price'        => 999,
-            'vat_rate'     => 10,
+            'sku' => 'NEW-SKU',
+            'price' => 999,
+            'vat_rate' => 10,
         ]);
 
         $item = $order->items()->sole();

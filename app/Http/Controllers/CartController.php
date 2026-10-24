@@ -35,7 +35,9 @@ class CartController extends Controller
         // Адреса доставки организации для выбора при оформлении (BR-128)
         $addresses = auth()->user()->organization?->deliveryAddresses ?? collect();
 
-        return view('order', compact('cart', 'validation', 'checkoutToken', 'addresses'));
+        $continueUrl = CatalogController::continueUrl();
+
+        return view('order', compact('cart', 'validation', 'checkoutToken', 'addresses', 'continueUrl'));
     }
 
     /**
