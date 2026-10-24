@@ -50,6 +50,27 @@ class CatalogMenu
     }
 
     /**
+     * Цепочка разделов до категории включительно — ссылками: из дерева меню (кэш);
+     * если категории в нём нет (пустая) — по parent_id.
+     *
+     * @return list<array{label: string, url: string}>
+     */
+    public function chain(Category $category): array
+    {
+        if ($path = $this->path($category->id)) {
+            return array_map(fn ($node) => ['label' => $node['name'], 'url' => $node['url']], $path);
+        }
+
+        $chain = [['label' => $category->name, 'url' => route('catalog.show', $category->slug, false)]];
+
+        for ($current = $category->parent, $guard = 0; $current && $guard < self::MAX_DEPTH; $current = $current->parent, $guard++) {
+            array_unshift($chain, ['label' => $current->name, 'url' => route('catalog.show', $current->slug, false)]);
+        }
+
+        return $chain;
+    }
+
+    /**
      * Узел категории в дереве меню (с прямыми подкатегориями и счётчиками) или null.
      */
     public function node(int $id): ?array

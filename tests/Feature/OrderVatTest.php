@@ -253,7 +253,7 @@ class OrderVatTest extends TestCase
 
         $this->actingAs($this->client)->get("/product/{$product->id}")
             ->assertOk()
-            ->assertSeeInOrder(['Цена без НДС:', '80.00 BYN', 'НДС: Без НДС', 'Цена с НДС:', '80.00 BYN']);
+            ->assertSeeInOrder(['Цена без НДС, за шт.', Money::format(80), 'НДС не облагается']);
 
         $this->actingAs($this->client)->get('/search?q=Grohe')
             ->assertOk()

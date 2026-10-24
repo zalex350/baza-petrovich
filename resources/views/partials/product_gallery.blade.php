@@ -14,13 +14,15 @@
 
 @if(! $first)
 
-    @include('partials.product_image', [
-        'image' => null,
-        'alt'   => $alt,
-        'size'  => 'medium',
-        'eager' => true,
-        'class' => 'w-full h-auto rounded-xl object-contain',
-    ])
+    <div class="flex aspect-square max-h-[35rem] items-center justify-center rounded-card border border-line bg-surface p-6">
+        @include('partials.product_image', [
+            'image' => null,
+            'alt'   => $alt,
+            'size'  => 'medium',
+            'eager' => true,
+            'class' => 'max-h-full w-auto object-contain',
+        ])
+    </div>
 
 @else
 
@@ -34,14 +36,14 @@
 
         {{-- Основное фото: клик — увеличенный просмотр; стрелки и свайп — соседние фото --}}
         <div
-            class="relative"
+            class="relative flex aspect-square max-h-[35rem] items-center justify-center rounded-card border border-line bg-surface p-4"
             @touchstart.passive="touchStart($event)"
             @touchend="touchEnd($event)"
         >
 
             <a
                 href="{{ $first->url('large') }}"
-                class="block cursor-zoom-in"
+                class="flex h-full w-full cursor-zoom-in items-center justify-center"
                 @click.prevent="zoom()"
                 aria-label="Увеличить фото"
             >
@@ -54,7 +56,7 @@
                     width="{{ $mw }}"
                     height="{{ $mh }}"
                     decoding="async"
-                    class="w-full h-auto max-h-[520px] rounded-xl object-contain select-none"
+                    class="max-h-full max-w-full object-contain select-none"
                     onerror="this.onerror=null;this.src='{{ $placeholder }}'"
                     data-gallery-main
                 >
@@ -92,7 +94,7 @@
         {{-- Миниатюры — только если фото больше одного --}}
         @if($gallery->count() > 1)
 
-            <ul class="flex gap-2 mt-4 flex-wrap" data-gallery-thumbs>
+            <ul class="mt-3 flex flex-wrap gap-2.5" data-gallery-thumbs>
 
                 @foreach($gallery as $index => $image)
 
@@ -102,8 +104,8 @@
                         <a
                             href="{{ $image->url('large') }}"
                             @click.prevent="select({{ $index }})"
-                            class="block rounded-lg border-2 p-0.5 transition"
-                            :class="current === {{ $index }} ? 'border-slate-800 ring-2 ring-slate-800/20' : 'border-transparent hover:border-slate-300'"
+                            class="block overflow-hidden rounded-control border-2 bg-surface p-0.5 transition"
+                            :class="current === {{ $index }} ? 'border-primary' : 'border-line hover:border-line-control'"
                             :aria-current="current === {{ $index }} ? 'true' : 'false'"
                             aria-label="Фото {{ $index + 1 }} из {{ $gallery->count() }}"
                             data-gallery-thumb
@@ -115,7 +117,7 @@
                                 height="{{ $th }}"
                                 loading="lazy"
                                 decoding="async"
-                                class="w-16 h-16 object-contain rounded-md bg-white"
+                                class="h-16 w-16 object-contain"
                                 onerror="this.onerror=null;this.src='{{ $placeholder }}'"
                             >
                         </a>

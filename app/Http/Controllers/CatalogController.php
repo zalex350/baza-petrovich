@@ -85,29 +85,18 @@ class CatalogController extends Controller
 
     /**
      * Главная / Каталог / родители (ссылки на их страницы — товары всего раздела) / раздел.
-     * Родители — из дерева меню (кэш); если категории в нём нет (пустая) — по parent_id.
      *
      * @return list<array{label: string, url?: string}>
      */
     private function breadcrumbs(Category $category, CatalogMenu $menu): array
     {
-        $path = $menu->path($category->id);
-
-        if ($path) {
-            $chain = array_map(fn ($node) => ['label' => $node['name'], 'url' => $node['url']], array_slice($path, 0, -1));
-        } else {
-            $chain = [];
-
-            for ($current = $category->parent, $guard = 0; $current && $guard < 20; $current = $current->parent, $guard++) {
-                array_unshift($chain, ['label' => $current->name, 'url' => '/catalog/'.$current->slug]);
-            }
-        }
+        $chain = $menu->chain($category);
+        $chain[count($chain) - 1] = ['label' => $category->name];
 
         return [
             ['label' => 'Главная', 'url' => '/'],
             ['label' => 'Каталог', 'url' => route('catalog.index')],
             ...$chain,
-            ['label' => $category->name],
         ];
     }
 

@@ -174,9 +174,8 @@ class ProductVatTest extends TestCase
         $this->actingAs($user)->get("/product/{$product->id}")
             ->assertStatus(200)
             ->assertSeeInOrder([
-                'Цена без НДС:', '100.00 BYN',
-                'НДС (20%):', '20.00 BYN',
-                'Цена с НДС:', '120.00 BYN',
+                'Цена без НДС, за шт.', Money::format(100),
+                'с НДС 20% — '.Money::format(120),
             ]);
     }
 

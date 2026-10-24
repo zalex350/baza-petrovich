@@ -2,12 +2,21 @@
 
 @section('title', $product->display_name ?: $product->name)
 
+{{--
+    Карточка товара (макет docs/design/Product), без вкладок: слева галерея, справа бейджи, название,
+    артикул, производитель, карточка цены и покупки, ключевые характеристики; ниже — характеристики
+    и описание, справа — документы (если есть). Покупка — x-product-row.buy layout="card"
+    («В корзину» без перезагрузки, как в каталоге).
+    Данные: ProductController::cardData() — $product, $breadcrumbs, $keyRows, $brandUrl, $inCart, $documents;
+    $preview — предпросмотр из админки.
+--}}
+
 @section('content')
 
 @isset($preview)
 
     {{-- Предпросмотр из админки: страница как на сайте, с черновыми текстами --}}
-    <div class="max-w-6xl mx-auto mb-6 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex flex-wrap items-center gap-3 text-sm" data-preview-bar>
+    <div class="mb-6 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex flex-wrap items-center gap-3 text-sm" data-preview-bar>
 
         <strong class="text-amber-800">Предпросмотр</strong>
 
@@ -40,261 +49,171 @@
 
 @endisset
 
-<div class="max-w-6xl mx-auto">
+@php
+    $name = $product->display_name ?: $product->name;
 
-    <div class="flex flex-col md:flex-row gap-6 md:gap-10">
+    // BR-082: ошибка в характеристиках не роняет карточку — блок просто не показывается
+    $specRows = rescue(fn () => $product->specRows(), collect());
+    $specText = trim((string) $product->specifications);
+    $description = trim((string) $product->description);
+    $package = trim((string) $product->package_contents);
+    $hasSpecs = $specRows->isNotEmpty() || $specText !== '';
+    $hasDetails = $hasSpecs || $description !== '' || $package !== '';
+@endphp
 
-        <!-- Images -->
-        <div class="flex-1 min-w-0">
+<div class="flex flex-col gap-6">
 
-            <div class="border border-slate-200 bg-white p-5 rounded-2xl">
+    <x-breadcrumbs :items="$breadcrumbs" data-back-to-list />
 
-                @include('partials.product_gallery')
+    <div class="grid gap-8 lg:grid-cols-2 lg:items-start">
 
-            </div>
-
+        {{-- Галерея: основное фото, миниатюры, увеличенный просмотр --}}
+        <div class="min-w-0">
+            @include('partials.product_gallery')
         </div>
 
-        <!-- Product Info -->
-        <div class="flex-1 min-w-0">
+        <div class="flex min-w-0 flex-col gap-4">
 
-            <p class="mb-4">
-                {{-- BR-084: тот же список с фильтрами, сортировкой и страницей; прокрутка восстановится --}}
-                <a
-                    href="{{ \App\Http\Controllers\CatalogController::backUrl($product->category) }}"
-                    class="underline"
-                    data-back-to-list
-                >
-                    ← Вернуться к списку
-                </a>
-            </p>
+            <div>
+                <x-product-badge :product="$product" class="mb-2" />
 
-            <h1 class="text-3xl font-bold mb-4">
-                {{ $product->display_name ?: $product->name }}
-            </h1>
+                <h1 class="text-2xl font-bold leading-tight tracking-tight sm:text-3xl">{{ $name }}</h1>
 
-            <p class="mb-2">
-                <strong>Артикул:</strong>
-                {{ $product->sku }}
-            </p>
-
-            @if($product->brand)
-                <p class="mb-2">
-                    <strong>Производитель:</strong>
-                    {{ $product->brand }}
-                </p>
-            @endif
-
-            @auth
-
-                @if($product->price === null)
-
-                <p class="mb-6 text-2xl font-semibold text-slate-500" data-price-tbd>
-                    Цена уточняется
-                </p>
-
-                @else
-
-                <div class="mb-6 space-y-1">
-
-                    <p class="text-slate-600">
-                        Цена без НДС:
-                        {{ number_format($product->price, 2) }} BYN
-                    </p>
-
-                    <p class="text-slate-600">
-                        @if($product->vat_rate === null)
-                            НДС: Без НДС
-                        @else
-                            НДС ({{ $product->vat_rate_label }}):
-                            {{ number_format($product->vat_amount, 2) }} BYN
-                        @endif
-                    </p>
-
-                    <h2 class="text-4xl font-semibold text-green-800">
-                        Цена с НДС:
-                        {{ number_format($product->price_with_vat, 2) }} BYN
-                    </h2>
-
-                </div>
-
-                @endif
-
-                <p class="mb-4">
-                    @include('partials.stock_badge', ['product' => $product])
-                </p>
-
-                @if(! auth()->user()->isClient())
-
-                    {{-- BR-121: оформлять заказы могут только клиенты --}}
-
-                @elseif($product->price === null)
-
-                    {{-- Цена уточняется (показано выше) — заказать нельзя --}}
-
-                @elseif($product->stock > 0 && $product->is_active)
-
-                    <form
-                        method="POST"
-                        action="/order/add/{{ $product->id }}"
-                        class="flex items-center gap-4"
-                    >
-
-                        @csrf
-
-                        <input
-                            type="number"
-                            name="qty"
-                            value="1"
-                            min="1"
-                            max="{{ $product->stock }}"
-                            class="border rounded px-2 py-1 w-20"
-                        >
-
+                <div class="mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-ink-muted">
+                    <span x-data="{ copied: false }" data-sku>
+                        Артикул: <span class="font-medium text-ink">{{ $product->sku }}</span>
                         <button
-                            type="submit"
-                            class="w-full bg-slate-800 hover:bg-slate-700 text-white py-4 rounded-xl transition font-semibold"
-                        >
-                            Добавить в заказ
-                        </button>
+                            type="button"
+                            class="px-1 text-link hover:underline"
+                            @click="navigator.clipboard?.writeText(@js((string) $product->sku)).then(() => { copied = true; setTimeout(() => copied = false, 1500) })"
+                            x-text="copied ? 'скопировано' : 'копировать'"
+                            aria-label="Скопировать артикул"
+                        >копировать</button>
+                    </span>
 
-                    </form>
+                    @if($product->brand)
+                        <span>Производитель: <a href="{{ $brandUrl }}" class="text-link hover:underline" data-brand-link>{{ $product->brand }}</a></span>
+                    @endif
+                </div>
+            </div>
 
-                @else
+            {{-- Цена и заказ --}}
+            <section aria-label="Цена и заказ" class="flex flex-col gap-4 rounded-card border border-line bg-surface p-5" data-buy-card>
 
-                    <div class="bg-red-100 border border-red-400 p-4 rounded mt-4">
-                        {{ $product->on_order ? 'Под заказ — уточните срок у менеджера' : 'Нет в наличии' }}
+                <div class="flex flex-wrap items-end justify-between gap-3 tabular-nums">
+                    <div>
+                        @auth
+                            @if($product->price === null)
+                                <div class="text-xl font-semibold text-ink-muted" data-price-tbd>Цена уточняется</div>
+                            @else
+                                <div class="text-meta text-ink-muted">Цена без НДС, за шт.</div>
+                                <x-price :amount="$product->price" class="block text-price font-bold" data-card-price />
+                                <div class="text-sm text-ink-muted" data-card-vat>
+                                    @if($product->vat_rate === null)
+                                        НДС не облагается
+                                    @else
+                                        с НДС {{ $product->vat_rate_label }} — {{ \App\Support\Money::format($product->price_with_vat) }}
+                                    @endif
+                                </div>
+                            @endif
+                        @else
+                            <div class="text-ink-muted">Цена доступна после входа</div>
+                        @endauth
                     </div>
 
-                @endif
+                    <x-stock :product="$product" />
+                </div>
 
-            @else
+                <x-product-row.buy :product="$product" :in-cart="$inCart" layout="card" />
 
-                <p class="mb-4">
-                    Цена доступна после входа
-                </p>
+                <div class="text-meta text-ink-muted" data-qty-rules>
+                    Мин. заказ {{ $product->min_qty }} шт. · кратность {{ $product->qty_step }} шт.
+                </div>
 
-                <a
-                    href="/login"
-                    class="underline"
-                >
-                    Войти
-                </a>
+            </section>
 
-            @endauth
-
-        </div>
-
-    </div>
-
-    @php
-        // BR-082: ошибка в характеристиках не роняет карточку — блок просто не показывается
-        $specRows = rescue(fn () => $product->specRows(), collect());
-        $specText = trim((string) $product->specifications);
-        $hasSpecs = $specRows->isNotEmpty() || $specText !== '';
-    @endphp
-
-    <!-- Tabs -->
-    <div class="mt-10">
-
-        <div class="flex gap-4 mb-6">
-
-            <button
-                onclick="showTab('desc')"
-                class="border px-4 py-2 rounded"
-            >
-                Описание
-            </button>
-
-            {{-- §4.9.4: нет характеристик — нет и вкладки --}}
-            @if($hasSpecs)
-                <button
-                    onclick="showTab('chars')"
-                    class="border px-4 py-2 rounded"
-                >
-                    Характеристики
-                </button>
+            {{-- Коротко: ключевые характеристики --}}
+            @if($keyRows->isNotEmpty())
+                <section aria-label="Коротко" class="grid grid-cols-2 gap-x-6 gap-y-2.5 text-sm" data-key-rows>
+                    @foreach($keyRows as $row)
+                        <div class="min-w-0">
+                            <div class="text-ink-muted">{{ $row['name'] }}</div>
+                            <div class="font-medium">{{ $row['value'] }}</div>
+                        </div>
+                    @endforeach
+                </section>
             @endif
 
-            <button
-                onclick="showTab('kit')"
-                class="border px-4 py-2 rounded"
-            >
-                Комплектация
-            </button>
-
-        </div>
-
-        <!-- Description -->
-        <div id="desc" class="tab-content">
-
-            <p>
-                {{ $product->description ?? 'Описание отсутствует' }}
-            </p>
-
-        </div>
-
-        <!-- Specifications: «Характеристика — Значение» в заданном порядке, пустые не выводятся (BR-062) -->
-        @if($hasSpecs)
-
-            <div
-                id="chars"
-                class="tab-content hidden"
-                data-specs
-            >
-
-                @if($specRows->isNotEmpty())
-
-                    <table class="w-full border-collapse text-sm sm:text-base">
-                        <tbody class="divide-y divide-slate-200 border-y border-slate-200">
-                            @foreach($specRows as $row)
-                                <tr data-spec-row>
-                                    <th scope="row" class="py-2 pr-4 text-left font-normal text-slate-500 align-top w-1/2">{{ $row['name'] }}</th>
-                                    <td class="py-2 text-slate-900">{{ $row['value'] }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-
-                @endif
-
-                @if($specText !== '')
-                    <p @class(['text-slate-700', 'mt-4' => $specRows->isNotEmpty()])>
-                        {!! nl2br(e($specText)) !!}
-                    </p>
-                @endif
-
-            </div>
-
-        @endif
-
-        <!-- Package -->
-        <div
-            id="kit"
-            class="tab-content hidden"
-        >
-
-            <p>
-                {!! nl2br(e($product->package_contents ?? 'Не указано')) !!}
-            </p>
+            @if($hasSpecs)
+                <a href="#specs" class="self-start text-sm text-link hover:underline">Все характеристики</a>
+            @endif
 
         </div>
 
     </div>
 
+    @if($hasDetails || $documents->isNotEmpty())
+
+        <div @class(['grid items-start gap-6', 'lg:grid-cols-[minmax(0,1fr)_24rem]' => $hasDetails && $documents->isNotEmpty()])>
+
+            @if($hasDetails)
+                <section id="specs" aria-label="Характеристики и описание" class="min-w-0 scroll-mt-24 rounded-card border border-line bg-surface px-6 py-5">
+
+                    {{-- «Характеристика — Значение» в заданном порядке, пустые не выводятся (BR-062); нет — нет и блока (§4.9.4) --}}
+                    @if($hasSpecs)
+                        <div data-specs>
+                            <h2 class="mb-3 text-xl font-bold">Характеристики</h2>
+
+                            @if($specRows->isNotEmpty())
+                                <dl class="grid grid-cols-2">
+                                    @foreach($specRows as $row)
+                                        <dt class="border-t border-line-soft py-2.5 pr-4 text-ink-muted" data-spec-row>{{ $row['name'] }}</dt>
+                                        <dd class="border-t border-line-soft py-2.5">{{ $row['value'] }}</dd>
+                                    @endforeach
+                                </dl>
+                            @endif
+
+                            @if($specText !== '')
+                                <p @class(['text-ink', 'mt-4' => $specRows->isNotEmpty()])>
+                                    {!! nl2br(e($specText)) !!}
+                                </p>
+                            @endif
+                        </div>
+                    @endif
+
+                    @if($description !== '')
+                        <h2 @class(['mb-2 text-xl font-bold', 'mt-6' => $hasSpecs])>Описание</h2>
+                        <p class="max-w-prose text-ink" data-description>{!! nl2br(e($description)) !!}</p>
+                    @endif
+
+                    @if($package !== '')
+                        <h2 @class(['mb-2 text-xl font-bold', 'mt-6' => $hasSpecs || $description !== ''])>Комплектация</h2>
+                        <p class="max-w-prose text-ink" data-package>{!! nl2br(e($package)) !!}</p>
+                    @endif
+
+                </section>
+            @endif
+
+            {{-- Документы: только если есть --}}
+            @if($documents->isNotEmpty())
+                <aside aria-label="Документы" class="flex min-w-0 flex-col gap-1 rounded-card border border-line bg-surface px-6 py-5" data-documents>
+                    <h2 class="mb-2 text-xl font-bold">Документы</h2>
+                    @foreach($documents as $document)
+                        <a href="{{ $document['url'] }}" class="flex items-center gap-3 border-t border-line-soft py-2.5 hover:text-link" target="_blank" rel="noopener">
+                            @svg('heroicon-o-document-text', 'h-6 w-6 shrink-0 text-danger')
+                            <span class="flex flex-col leading-snug">
+                                <span>{{ $document['title'] }}</span>
+                                <span class="text-meta text-ink-muted">{{ $document['meta'] ?? '' }}</span>
+                            </span>
+                        </a>
+                    @endforeach
+                </aside>
+            @endif
+
+        </div>
+
+    @endif
+
 </div>
-
-<script>
-
-function showTab(id)
-{
-    document.querySelectorAll('.tab-content').forEach(function(tab) {
-        tab.classList.add('hidden');
-    });
-
-    document.getElementById(id).classList.remove('hidden');
-}
-
-</script>
 
 @endsection
