@@ -107,6 +107,8 @@ export default {
                 meta: ['13px', { lineHeight: '1.4' }],
                 // Счётчик корзины
                 counter: ['11px', { lineHeight: '16px' }],
+                // Цена в карточке товара
+                price: ['32px', { lineHeight: '1.15', letterSpacing: '-0.01em' }],
             },
 
             maxWidth: {

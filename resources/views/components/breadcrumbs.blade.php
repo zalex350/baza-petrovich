@@ -1,8 +1,9 @@
 {{--
     Хлебные крошки.
     <x-breadcrumbs :items="[['label' => 'Каталог', 'url' => '/catalog'], ['label' => 'Смесители', 'url' => '/catalog/mixers'], ['label' => $product->name]]" />
-    items: [['label' => …, 'url' => …], …]; последний пункт — текущая страница (без ссылки, aria-current),
-    url у него не нужен. Пункт без url в середине — просто текст. Пустой список — ничего не выводится.
+    items: [['label' => …, 'url' => …], …]; последний пункт без url — текущая страница (aria-current),
+    с url — ссылка (карточка товара: последней стоит категория). Пункт без url в середине — просто текст.
+    Пустой список — ничего не выводится.
 --}}
 @props(['items' => []])
 
@@ -20,7 +21,7 @@
                         <span class="select-none opacity-50" aria-hidden="true">/</span>
                     @endif
 
-                    @if($i === $last)
+                    @if($i === $last && empty($item['url']))
                         <span class="truncate text-ink" aria-current="page">{{ $item['label'] }}</span>
                     @elseif(! empty($item['url']))
                         <a href="{{ $item['url'] }}" class="truncate hover:text-link hover:underline">{{ $item['label'] }}</a>

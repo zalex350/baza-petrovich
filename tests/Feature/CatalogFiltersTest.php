@@ -392,8 +392,9 @@ class CatalogFiltersTest extends TestCase
 
         $this->actingAs($this->client)->get("/product/{$product->id}")
             ->assertOk()
-            ->assertSee('← Вернуться к списку')
-            ->assertSee('href="'.e($url).'"', false);
+            // Возврат — по категории в хлебных крошках (макет Product)
+            ->assertSee('data-back-to-list', false)
+            ->assertSee('<a href="'.e($url).'"', false);
     }
 
     public function test_product_back_link_without_list_goes_to_category(): void

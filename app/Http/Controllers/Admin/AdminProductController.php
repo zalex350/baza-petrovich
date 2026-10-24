@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Admin\Concerns\UploadsProductImages;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\ProductController;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductAttribute;
@@ -205,7 +206,11 @@ class AdminProductController extends Controller
 
         $preview = ['draft' => (bool) $draft];
 
-        return view('product', compact('product', 'preview'));
+        if (! $product->relationLoaded('attributeValues')) {
+            $product->load('attributeValues.attribute');
+        }
+
+        return view('product', ProductController::cardData($product) + compact('preview'));
     }
 
     // --- Внутреннее ---

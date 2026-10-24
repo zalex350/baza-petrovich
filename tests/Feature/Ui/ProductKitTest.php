@@ -53,20 +53,30 @@ class ProductKitTest extends TestCase
 
     // --- x-breadcrumbs ---
 
-    public function test_breadcrumbs_link_all_but_last(): void
+    public function test_breadcrumbs_last_without_url_is_current_page(): void
     {
         $view = $this->blade('<x-breadcrumbs :items="$items" />', ['items' => [
             ['label' => 'Каталог', 'url' => '/catalog'],
             ['label' => 'Смесители', 'url' => '/catalog/mixers'],
-            ['label' => 'Grohe Start', 'url' => '/product/1'],
+            ['label' => 'Grohe Start'],
         ]]);
 
         $view->assertSee('aria-label="Хлебные крошки"', false)
             ->assertSee('<a href="/catalog"', false)
             ->assertSee('<a href="/catalog/mixers"', false)
-            ->assertDontSee('href="/product/1"', false)
             ->assertSee('aria-current="page">Grohe Start</span>', false)
             ->assertSeeInOrder(['Каталог', 'Смесители', 'Grohe Start']);
+    }
+
+    public function test_breadcrumbs_last_with_url_is_link(): void
+    {
+        // Карточка товара: последней стоит категория — ссылкой
+        $this->blade('<x-breadcrumbs :items="$items" />', ['items' => [
+            ['label' => 'Каталог', 'url' => '/catalog'],
+            ['label' => 'Смесители', 'url' => '/catalog/mixers?page=2'],
+        ]])
+            ->assertSee('<a href="/catalog/mixers?page=2"', false)
+            ->assertDontSee('aria-current', false);
     }
 
     public function test_empty_breadcrumbs_render_nothing(): void

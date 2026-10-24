@@ -113,7 +113,9 @@ class CartController extends Controller
                 $data['cart'] = $this->summary->forHeader(auth()->user());
                 $data['toast'] = Blade::render('<x-alert type="success">{{ $message }}</x-alert>', ['message' => $data['message']]);
                 // Строка списка переходит в состояние «В корзине»: количество и «перейти»
-                $data['html'] = Blade::render('<x-product-row.buy :product="$product" :in-cart="$item" />', [
+                // layout: row — строка списка, card — карточка товара (поле формы, по умолчанию row)
+                $data['html'] = Blade::render('<x-product-row.buy :product="$product" :in-cart="$item" :layout="$layout" />', [
+                    'layout' => request('layout') === 'card' ? 'card' : 'row',
                     'product' => $product,
                     'item' => $this->summary->items(auth()->user())->get($product->id),
                 ]);
