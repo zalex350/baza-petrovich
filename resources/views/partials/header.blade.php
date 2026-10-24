@@ -15,30 +15,27 @@
 <header class="bg-surface border-b border-line sticky top-0 z-50" data-header>
 
     {{-- Верхняя строка: контакты --}}
-    <div class="hidden lg:block bg-primary text-xs text-white/80" data-header-topbar>
+    <div class="hidden lg:block bg-primary text-meta text-primary-fg" data-header-topbar>
 
-        <div class="max-w-7xl mx-auto px-6 h-8 flex items-center justify-between">
+        <div class="max-w-page mx-auto px-6 py-1.5 flex items-center justify-between">
 
             <div class="flex items-center gap-6">
 
-                <a href="tel:{{ preg_replace('/[^+\d]/', '', config('shop.phone')) }}" class="flex items-center gap-1.5 hover:text-white">
-                    @svg('heroicon-o-phone', 'w-4 h-4')
+                <a href="tel:{{ preg_replace('/[^+\d]/', '', config('shop.phone')) }}" class="hover:text-white">
                     {{ config('shop.phone') }}
                 </a>
 
-                <a href="mailto:{{ config('shop.email') }}" class="flex items-center gap-1.5 hover:text-white">
-                    @svg('heroicon-o-envelope', 'w-4 h-4')
+                <a href="mailto:{{ config('shop.email') }}" class="hover:text-white">
                     {{ config('shop.email') }}
                 </a>
 
-                <span class="flex items-center gap-1.5">
-                    @svg('heroicon-o-clock', 'w-4 h-4')
+                <span>
                     {{ config('shop.working_hours') }}
                 </span>
 
             </div>
 
-            <nav class="flex items-center gap-6" aria-label="Информация">
+            <nav class="flex items-center gap-5" aria-label="Информация">
                 <a href="#delivery" class="hover:text-white">Доставка</a>
                 <a href="#contacts" class="hover:text-white">Контакты</a>
             </nav>
@@ -50,11 +47,9 @@
     {{-- Основная строка (desktop) --}}
     <div class="hidden lg:block">
 
-        <div class="relative max-w-7xl mx-auto px-6 h-16 flex items-center gap-4 xl:gap-6">
+        <div class="relative max-w-page mx-auto px-6 py-3.5 flex items-center gap-4 xl:gap-5">
 
-            <a href="/" class="text-2xl font-extrabold tracking-tight text-primary shrink-0" aria-label="{{ config('shop.name') }} — на главную">
-                {{ config('shop.name') }}
-            </a>
+            <x-logo class="shrink-0" />
 
             @include('partials.header.mega-menu')
 
@@ -62,7 +57,7 @@
 
             <a
                 href="#brands"
-                class="text-sm font-medium text-ink hover:text-link shrink-0"
+                class="font-medium text-ink hover:text-link shrink-0"
             >
                 Производители
             </a>
@@ -71,7 +66,7 @@
             <a
                 href="/order"
                 @class([
-                    'flex items-center gap-3 text-sm shrink-0',
+                    'flex items-center gap-3 shrink-0',
                     'text-link' => $isCart,
                     'text-ink hover:text-link' => ! $isCart,
                 ])
@@ -82,20 +77,20 @@
                 <span class="relative">
                     @svg('heroicon-o-shopping-cart', $iconClass)
                     @if($cartSummary['count'] > 0)
-                        <span class="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-link text-white text-xs font-semibold leading-5 text-center tabular-nums" data-cart-count>
+                        <span class="absolute -top-2 -right-2.5 min-w-4 px-1.5 rounded-full bg-link text-white text-counter font-bold text-center tabular-nums" data-cart-count>
                             {{ $cartSummary['count'] }}
                         </span>
                     @endif
                 </span>
                 {{-- На 1024px подписи скрыты, чтобы поиску хватило ширины --}}
                 <span class="leading-tight hidden xl:block">
-                    <span class="block text-ink-muted">Корзина</span>
+                    <span class="block text-meta text-ink-muted">Корзина</span>
+                    {{-- Сумма с НДС; подпись «с НДС» — в title, как в макете --}}
                     <x-price
                         :amount="$cartSummary['total']"
-                        vat="gross"
-                        class="block text-xs font-semibold text-ink"
+                        class="block font-semibold text-ink"
                         data-cart-total
-                        title="в т.ч. НДС {{ \App\Support\Money::format($cartSummary['vat']) }}"
+                        title="с НДС, в т.ч. НДС {{ \App\Support\Money::format($cartSummary['vat']) }}"
                     />
                 </span>
             </a>
@@ -105,7 +100,7 @@
 
                 <a
                     href="{{ route('login') }}"
-                    class="flex items-center gap-2 text-sm text-ink hover:text-link shrink-0"
+                    class="flex items-center gap-2 pl-4 border-l border-line font-medium text-ink hover:text-link shrink-0"
                 >
                     @svg('heroicon-o-user', $iconClass)
                     Войти
@@ -113,7 +108,7 @@
 
             @else
 
-                <div class="relative shrink-0" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false">
+                <div class="relative shrink-0 pl-4 border-l border-line" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false">
 
                     <button
                         type="button"
@@ -124,16 +119,15 @@
                         aria-label="Личный кабинет"
                         title="Личный кабинет"
                         @class([
-                            'flex items-center gap-2 text-sm text-left',
+                            'flex items-center gap-2 text-left',
                             'text-link' => $isCabinet,
                             'text-ink hover:text-link' => ! $isCabinet,
                         ])
                     >
-                        @svg('heroicon-o-user-circle', $iconClass)
-                        <span class="leading-tight max-w-28 xl:max-w-40">
-                            <span class="block truncate font-medium">{{ $user->name }}</span>
+                        <span class="leading-tight max-w-28 xl:max-w-48">
+                            <span class="block truncate font-semibold">{{ $user->name }}</span>
                             @if($user->organization)
-                                <span class="block truncate text-xs text-ink-muted">{{ $user->organization->name }}</span>
+                                <span class="block truncate text-meta text-ink-muted">{{ $user->organization->name }}</span>
                             @endif
                         </span>
                         @svg('heroicon-o-chevron-down', 'w-4 h-4')

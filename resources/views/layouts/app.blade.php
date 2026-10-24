@@ -28,7 +28,7 @@
 
     @include('partials.header')
 
-    <main class="max-w-7xl mx-auto py-6 px-4">
+    <main class="max-w-page mx-auto py-5 px-4 lg:px-6">
 
         <x-alert.flash :validation="trim($__env->yieldContent('flash-validation', 'list'))" />
 

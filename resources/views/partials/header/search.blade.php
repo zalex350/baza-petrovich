@@ -12,11 +12,11 @@
             value="{{ request('q') }}"
             placeholder="Артикул или название"
             autocomplete="off"
-            class="w-full h-10 pl-4 pr-11 bg-canvas border border-line rounded-control text-sm text-ink placeholder:text-ink-muted focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+            class="w-full h-touch pl-3.5 pr-11 bg-field border border-line-strong rounded-control text-ink placeholder:text-ink-muted focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             data-search-input
         >
 
-        <button type="submit" class="-ml-10 w-10 h-10 flex items-center justify-center text-ink-muted hover:text-link" aria-label="Найти">
+        <button type="submit" class="-ml-11 w-11 h-touch flex items-center justify-center text-ink-muted hover:text-link" aria-label="Найти">
             @svg('heroicon-o-magnifying-glass', 'w-5 h-5')
         </button>
 

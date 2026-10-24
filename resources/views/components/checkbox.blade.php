@@ -45,7 +45,7 @@
             @if($invalid) aria-invalid="true" @endif
             @if($describedBy) aria-describedby="{{ $describedBy }}" @endif
             {{ $attributes->except('class')->class([
-                'mt-0.5 h-5 w-5 shrink-0 rounded border-line text-primary focus:ring-primary',
+                'mt-0.5 h-5 w-5 shrink-0 rounded border-line-strong text-primary focus:ring-primary',
                 'border-tone-danger-border' => $invalid,
             ]) }}
         >

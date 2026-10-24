@@ -121,16 +121,22 @@ class HeaderTest extends TestCase
     {
         $html = $this->get('/')->assertOk()->getContent();
 
-        // Мобильная шапка: ☰ — первым, до логотипа, поиска и корзины
+        // Мобильная шапка (макет CartMobile): ☰ — логотип — корзина, поиск — строкой ниже
         $mobile = substr($html, strpos($html, 'x-data="mobileMenu('));
 
         $burger = strpos($mobile, 'x-ref="burger"');
         $logo = strpos($mobile, 'aria-label="'.config('shop.name').' — на главную"');
-        $search = strpos($mobile, 'aria-controls="mobile-search"');
+        $cart = strpos($mobile, 'aria-label="Корзина:');
+        $search = strpos($mobile, 'id="mobile-search"');
 
         $this->assertNotFalse($burger);
         $this->assertLessThan($logo, $burger);
-        $this->assertLessThan($search, $logo);
+        $this->assertLessThan($cart, $logo);
+        $this->assertLessThan($search, $cart);
+
+        // Поиск виден всегда, без переключателя
+        $this->assertStringNotContainsString('toggleSearch', $mobile);
+        $this->assertDoesNotMatchRegularExpression('#id="mobile-search"[^>]*x-show#', $mobile);
     }
 
     public function test_cart_shows_positions_count_and_sum(): void
@@ -151,7 +157,7 @@ class HeaderTest extends TestCase
         $this->actingAs($client)->get('/')
             ->assertSee('Корзина: 2 поз.')
             ->assertSee(Money::format(300.60))
-            ->assertSee('title="в т.ч. НДС '.Money::format(50.10).'"', false);
+            ->assertSee('title="с НДС, в т.ч. НДС '.Money::format(50.10).'"', false);
     }
 
     public function test_cart_sum_is_with_vat_by_lines_and_matches_cart_page(): void
@@ -172,7 +178,7 @@ class HeaderTest extends TestCase
         $this->actingAs($client)->get('/')
             ->assertSee('Корзина: 3 поз.')
             ->assertSee(Money::format(297.38))
-            ->assertSee('title="в т.ч. НДС '.Money::format(27.04).'"', false);
+            ->assertSee('title="с НДС, в т.ч. НДС '.Money::format(27.04).'"', false);
 
         // Та же сумма, что «Сумма с НДС» на странице корзины
         $this->actingAs($client)->get('/order')
@@ -184,7 +190,7 @@ class HeaderTest extends TestCase
         $this->get('/')
             ->assertSee('Корзина: 0 поз.')
             ->assertSee(Money::format(0))
-            ->assertSee('title="в т.ч. НДС '.Money::format(0).'"', false)
+            ->assertSee('title="с НДС, в т.ч. НДС '.Money::format(0).'"', false)
             ->assertDontSee('data-cart-count', false);
     }
 

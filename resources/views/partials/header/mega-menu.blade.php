@@ -25,7 +25,7 @@
         aria-controls="mega-menu"
         :aria-expanded="open.toString()"
         @class([
-            'flex items-center gap-2 h-10 px-4 rounded-control text-sm font-semibold transition',
+            'flex items-center gap-2.5 h-touch px-4 rounded-control font-semibold transition',
             'bg-link text-white' => $isCatalog,
             'bg-primary hover:bg-primary-hover text-white' => ! $isCatalog,
         ])

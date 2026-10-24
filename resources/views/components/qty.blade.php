@@ -4,7 +4,7 @@
     <x-qty name="items[3][qty]" :value="$item->qty" :min="2" :step="2" :max="100" size="sm" />
     Допустимые значения: min, min + step, …; введённое вручную округляется вверх до допустимого,
     больше max — вниз. Кнопки на границе отключаются. После изменения кнопками поле шлёт change.
-    label — подпись для экранного диктора (визуально скрыта); size: md | sm.
+    label — подпись для экранного диктора (визуально скрыта); size: sm (таблицы, 40px) | md (44px) | lg (карточка товара, 48px).
     class — на обёртку, остальные атрибуты (form, data-*…) — на <input>.
 --}}
 @props([
@@ -34,10 +34,14 @@
     }
 
     $button = [
-        'flex shrink-0 items-center justify-center text-ink-muted transition hover:bg-canvas hover:text-ink',
+        'flex shrink-0 items-center justify-center bg-field text-primary transition hover:bg-canvas',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary',
-        'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent',
-        $size === 'sm' ? 'h-8 w-8' : 'h-10 w-10',
+        'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-field',
+        match ($size) {
+            'sm'    => 'h-10 w-9',
+            'lg'    => 'h-12 w-touch',
+            default => 'h-touch w-touch',
+        },
     ];
 @endphp
 
@@ -61,7 +65,7 @@
             if (changed) this.$nextTick(() => this.$refs.input.dispatchEvent(new Event('change', { bubbles: true })));
         },
     }"
-    {{ $attributes->only('class')->class('inline-flex items-stretch overflow-hidden rounded-control border border-line bg-surface') }}
+    {{ $attributes->only('class')->class(['inline-flex items-stretch overflow-hidden border border-line-strong bg-surface', $size === 'lg' ? 'rounded-panel' : 'rounded-control']) }}
     data-qty
 >
     <button
@@ -87,10 +91,14 @@
         inputmode="numeric"
         @change="value = normalize($event.target.value); $event.target.value = value"
         {{ $attributes->except('class')->class([
-            'w-14 border-0 border-x border-line bg-transparent px-1 text-center font-medium text-ink tabular-nums',
+            'border-0 border-x border-line bg-transparent px-1 text-center font-semibold text-ink tabular-nums',
             'focus:border-line focus:ring-2 focus:ring-inset focus:ring-primary',
             '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
-            $size === 'sm' ? 'py-1 text-sm' : 'py-2',
+            match ($size) {
+                'sm'    => 'w-14 py-1',
+                'lg'    => 'w-16 py-2 text-base',
+                default => 'w-14 py-2',
+            },
         ]) }}
     >
 

@@ -10,6 +10,22 @@ use Tests\TestCase;
  */
 class ProductKitTest extends TestCase
 {
+    // --- x-logo ---
+
+    public function test_logo_highlights_domain_zone(): void
+    {
+        config(['shop.name' => 'SMESITEL.BY']);
+
+        $this->blade('<x-logo />')
+            ->assertSee('href="/" aria-label="SMESITEL.BY — на главную"', false)
+            ->assertSee('SMESITEL<span class="text-link">.BY</span>', false)
+            ->assertSee('text-logo', false);
+
+        $this->blade('<x-logo size="sm" :href="null" />')
+            ->assertDontSee('<a ', false)
+            ->assertSee('text-logo-sm', false);
+    }
+
     // --- x-breadcrumbs ---
 
     public function test_breadcrumbs_link_all_but_last(): void
@@ -42,9 +58,10 @@ class ProductKitTest extends TestCase
         $cases = [
             [120, false, 'many', 'Много', 3],
             [50, false, 'many', 'Много', 3],
-            [12, false, 'some', '12 шт.', 2],
-            [5, false, 'few', 'Мало', 1],
-            [1, false, 'few', 'Мало', 1],
+            [49, false, 'few', 'Мало', 2],
+            [6, false, 'few', 'Мало', 2],
+            [5, false, 'count', '5 шт.', 1],
+            [1, false, 'count', '1 шт.', 1],
             [0, true, 'on_order', 'Под заказ', 0],
             [0, false, 'out_of_stock', 'Нет в наличии', 0],
         ];
@@ -54,8 +71,8 @@ class ProductKitTest extends TestCase
 
             $this->assertStringContainsString('data-stock="'.$level.'"', $html, "stock $stock");
             $this->assertStringContainsString($label, $html, "stock $stock");
-            $this->assertSame(3, substr_count($html, 'w-1 rounded-sm'), "stock $stock");
-            $this->assertSame($bars, preg_match_all('/w-1 rounded-sm h-[\d.]+ bg-(success|warning)/', $html), "stock $stock");
+            $this->assertSame(3, substr_count($html, 'w-1 rounded-bar'), "stock $stock");
+            $this->assertSame($bars, preg_match_all('/w-1 rounded-bar h-\d bg-(success|warning)/', $html), "stock $stock");
         }
 
         // Пороги — из конфига
@@ -111,7 +128,7 @@ class ProductKitTest extends TestCase
         $this->blade('<x-product-badge type="new" />')->assertSee('НОВИНКА');
 
         $both = new Product(['is_hit' => true, 'is_new' => true]);
-        $this->blade('<x-product-badge :product="$p" />', ['p' => $both])->assertSeeInOrder(['ХИТ', 'НОВИНКА']);
+        $this->blade('<x-product-badge :product="$p" />', ['p' => $both])->assertSeeInOrder(['НОВИНКА', 'ХИТ']);
 
         $none = new Product;
         $this->blade('<x-product-badge :product="$p" />', ['p' => $none])->assertDontSee('data-product-badge', false);

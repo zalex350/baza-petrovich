@@ -33,7 +33,7 @@
         @if($describedBy) aria-describedby="{{ $describedBy }}" @endif
         {{ $attributes->except('class')->class([
             'block w-full rounded-control bg-surface px-control-x py-control-y text-ink placeholder:text-ink-muted disabled:bg-canvas disabled:text-ink-muted',
-            'border-line focus:border-primary focus:ring-primary' => ! $invalid,
+            'border-line-strong focus:border-primary focus:ring-primary' => ! $invalid,
             'border-tone-danger-border focus:border-danger focus:ring-danger' => $invalid,
         ]) }}
     >

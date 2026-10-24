@@ -1,68 +1,54 @@
 {{--
-    Мобильная шапка (<1024px): ☰ слева (панель тоже выезжает слева), логотип, поиск, корзина, пользователь;
-    off-canvas панель с drill-down каталогом. Поведение — resources/js/mobile-menu.js.
+    Мобильная шапка (<1024px), макет docs/design/CartMobile: ☰ слева (панель тоже выезжает слева),
+    логотип по центру, корзина справа; поиск — отдельной строкой ниже. Кабинет, вход и контакты — в панели.
+    Off-canvas панель с drill-down каталогом. Поведение — resources/js/mobile-menu.js.
 --}}
 <div
     class="lg:hidden"
     x-data="mobileMenu({ menuUrl: @js(route('catalog.menu', [], false)) })"
-    @keydown.escape.window="closePanel(); search = false"
+    @keydown.escape.window="closePanel()"
 >
 
-    {{-- Строка шапки --}}
-    <div class="h-14 px-4 flex items-center gap-1">
+    <div class="px-4 py-2.5 flex flex-col gap-2.5">
 
-        <button
-            type="button"
-            x-ref="burger"
-            @click="openPanel()"
-            :aria-expanded="panel.toString()"
-            aria-controls="mobile-panel"
-            aria-label="Меню"
-            class="w-10 h-10 -ml-2 flex items-center justify-center text-ink"
-        >
-            @svg('heroicon-o-bars-3', $iconClass)
-        </button>
+        {{-- ☰ — логотип — корзина --}}
+        <div class="flex items-center justify-between">
 
-        <a href="/" class="text-lg font-extrabold tracking-tight text-ink mr-auto truncate" aria-label="{{ config('shop.name') }} — на главную">
-            {{ config('shop.name') }}
-        </a>
+            <button
+                type="button"
+                x-ref="burger"
+                @click="openPanel()"
+                :aria-expanded="panel.toString()"
+                aria-controls="mobile-panel"
+                aria-label="Меню"
+                class="w-touch h-touch -ml-2.5 flex items-center justify-center text-primary"
+            >
+                @svg('heroicon-o-bars-3', 'w-6 h-6')
+            </button>
 
-        <button
-            type="button"
-            @click="toggleSearch()"
-            :aria-expanded="search.toString()"
-            aria-controls="mobile-search"
-            aria-label="Поиск"
-            class="w-10 h-10 flex items-center justify-center text-ink"
-        >
-            @svg('heroicon-o-magnifying-glass', $iconClass)
-        </button>
+            <x-logo size="sm" class="min-w-0 truncate" />
 
-        <a
-            href="/order"
-            aria-label="Корзина: {{ $cartSummary['count'] }} поз."
-            @class(['relative w-10 h-10 flex items-center justify-center', 'text-link' => $isCart, 'text-ink' => ! $isCart])
-        >
-            @svg('heroicon-o-shopping-cart', $iconClass)
-            @if($cartSummary['count'] > 0)
-                <span class="absolute top-0.5 right-0 min-w-5 h-5 px-1 rounded-full bg-link text-white text-xs leading-5 text-center" data-cart-count-mobile>
-                    {{ $cartSummary['count'] }}
-                </span>
-            @endif
-        </a>
+            <a
+                href="/order"
+                aria-label="Корзина: {{ $cartSummary['count'] }} поз."
+                @if($isCart) aria-current="page" @endif
+                @class(['relative w-touch h-touch -mr-2.5 flex items-center justify-center', 'text-link' => $isCart, 'text-primary' => ! $isCart])
+            >
+                @svg('heroicon-o-shopping-cart', 'w-6 h-6')
+                @if($cartSummary['count'] > 0)
+                    <span class="absolute top-1 right-0.5 min-w-4 px-1.5 rounded-full bg-link text-white text-counter font-bold text-center tabular-nums" data-cart-count-mobile>
+                        {{ $cartSummary['count'] }}
+                    </span>
+                @endif
+            </a>
 
-        <a
-            href="{{ $user ? '/orders' : route('login') }}"
-            aria-label="{{ $user ? 'Личный кабинет' : 'Войти' }}"
-            @class(['w-10 h-10 flex items-center justify-center', 'text-link' => $isCabinet, 'text-ink' => ! $isCabinet])
-        >
-            @svg($user ? 'heroicon-o-user-circle' : 'heroicon-o-user', $iconClass)
-        </a>
-    </div>
+        </div>
 
-    {{-- Строка поиска --}}
-    <div id="mobile-search" x-ref="searchRow" x-show="search" x-cloak x-transition class="px-4 pb-3">
-        @include('partials.header.search', ['id' => 'mobile'])
+        {{-- Поиск — всегда виден --}}
+        <div id="mobile-search">
+            @include('partials.header.search', ['id' => 'mobile'])
+        </div>
+
     </div>
 
     {{-- Off-canvas --}}
@@ -92,7 +78,7 @@
     >
 
         <div class="h-14 px-4 flex items-center justify-between border-b border-line shrink-0">
-            <span class="font-extrabold tracking-tight">{{ config('shop.name') }}</span>
+            <x-logo size="sm" :href="null" />
             <button type="button" x-ref="close" @click="closePanel()" aria-label="Закрыть меню" class="w-10 h-10 flex items-center justify-center text-ink-muted">
                 @svg('heroicon-o-x-mark', $iconClass)
             </button>
