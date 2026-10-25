@@ -115,6 +115,17 @@ class ProductKitTest extends TestCase
         $this->blade('<x-stock :stock="12" />')->assertSee('data-stock="many"', false);
     }
 
+    public function test_stock_thresholds_default_to_10_and_3(): void
+    {
+        // config/shop.php: SHOP_STOCK_MANY / SHOP_STOCK_FEW, по умолчанию 10 и 3
+        $this->assertSame(10, config('shop.stock_many'));
+        $this->assertSame(3, config('shop.stock_few'));
+
+        $this->blade('<x-stock :stock="10" />')->assertSee('data-stock="many"', false);
+        $this->blade('<x-stock :stock="9" />')->assertSee('data-stock="few"', false);
+        $this->blade('<x-stock :stock="3" />')->assertSee('3 шт.');
+    }
+
     public function test_stock_from_product(): void
     {
         config(['shop.stock_many' => 50, 'shop.stock_few' => 5]);

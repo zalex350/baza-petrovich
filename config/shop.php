@@ -55,9 +55,9 @@ return [
     | (3 полоски); больше stock_few — «Мало» (2); 1…stock_few — точное «N шт.» (1).
     | Нет остатка — «Под заказ» (on_order) или «Нет в наличии».
     */
-    'stock_many' => (int) env('SHOP_STOCK_MANY', 50),
+    'stock_many' => (int) env('SHOP_STOCK_MANY', 10),
 
-    'stock_few' => (int) env('SHOP_STOCK_FEW', 5),
+    'stock_few' => (int) env('SHOP_STOCK_FEW', 3),
 
     'catalog' => [
         // Товары заводятся вручную в админке. false — товары приходят из 1С: создание

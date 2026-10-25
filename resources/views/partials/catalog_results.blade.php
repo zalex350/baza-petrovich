@@ -88,7 +88,7 @@
     @endif
 
     <div class="mt-2" data-pagination>
-        {{ $products->links() }}
+        <x-pagination :paginator="$products" />
     </div>
 
 </div>

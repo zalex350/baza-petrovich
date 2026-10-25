@@ -123,7 +123,7 @@
         <span class="text-slate-500">Если у товара есть обе — остаётся значение основной.</span>
     </div>
 
-    {{ $attributes->links() }}
+    <x-pagination :paginator="$attributes" />
 
 @endif
 

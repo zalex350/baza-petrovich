@@ -168,7 +168,7 @@
 </div>
 
 <div class="mt-8">
-    {{ $organizations->links() }}
+    <x-pagination :paginator="$organizations" />
 </div>
 
 @endsection

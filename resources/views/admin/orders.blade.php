@@ -153,7 +153,7 @@
 @endif
 
 <div class="mt-8">
-    {{ $orders->links() }}
+    <x-pagination :paginator="$orders" />
 </div>
 
 @endsection
