@@ -133,7 +133,7 @@ class CatalogImportCommandTest extends TestCase
                 'Размер картриджа смесителя' => '35 мм', 'Длина' => '150 см',
                 'Ссылка на видео' => '<iframe src="https://vkvideo.ru/video_ext.php?oid=-1&id=2" width="853"></iframe>',
             ]],
-            ['LEDEME-A2', 'A2', 'LEDEME', null, 'Смеситель A2', null, 0, 'кухонные', ['Цвет покрытия' => 'хром']],
+            ['LEDEME-A2', 'A2', 'LEDEME', null, 'Смеситель A2', null, 0, 'кухонные', ['Цвет покрытия' => 'хром', 'Комплектация' => str_repeat('Шайба, ', 40)]],
             ['LEDEME-A3', 'A3', 'LEDEME', null, 'Смеситель A3', null, 0, 'кухонные', ['Цвет' => 'хром']],
             ['LEDEME-B1', 'B1', 'LEDEME', null, 'Смеситель B1', null, 0, 'для умывальника', []],
             ['LEDEME-N1', 'N1', 'LEDEME', null, 'Смеситель для кухни N1', null, 0, 'Новинки', []],
@@ -193,6 +193,7 @@ class CatalogImportCommandTest extends TestCase
         $this->assertStringContainsString('Смесители / на кухню | Смесители / Для кухни', $report);   // переименование
         $this->assertStringContainsString('Длина (единица не см / мм) | 1', $report);               // метры не загружаются
         $this->assertStringContainsString('**Названия капсом после импорта:** нет.', $report);
+        $this->assertStringContainsString('Комплектация (длиннее 255 символов) | 1', $report);
         $this->assertStringContainsString('| Код ТН ВЭД | text |  | только админка |', $report);
         $this->assertStringContainsString('| Вес | number | кг | упаковка и логистика |', $report);
 
@@ -277,6 +278,8 @@ class CatalogImportCommandTest extends TestCase
         $this->assertSame('Пресс-инструмент электрический', $press->name);
         $this->assertSame($this->cat['Крепёж и инструмент / ПРЕСС-ИНСТРУМЕНТ ЭЛЕКТРИЧЕСКИЙ']->id, $press->id);
         $this->assertSame(['хром', null], $values('LEDEME-A2')['Цвет']);  // «Цвет покрытия» → «Цвет»
+        // Длиннее 255 символов — не загружается (не обрезается)
+        $this->assertArrayNotHasKey('Комплектация', $values('LEDEME-A2'));
         $this->assertSame(['Thermo', null], $values('TIM-C1')['Серия']);
         $this->assertSame(['10', 10.0], $values('TIM-C1')['Рабочее давление']);
 

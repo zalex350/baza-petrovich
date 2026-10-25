@@ -16,6 +16,9 @@ use PDO;
  */
 class CatalogImportPlanner
 {
+    /** Длина колонки product_attribute_values.value */
+    public const MAX_VALUE = 255;
+
     /** @var Collection<int, Category> */
     private Collection $categories;
 
@@ -297,6 +300,16 @@ class CatalogImportPlanner
 
             if ($this->map->attributeDef($name)['type'] === 'text') {
                 $value = $spellings[$name][CatalogMapping::key($value)] ?? $value;
+            }
+
+            // Колонка value — 255 символов: длинные значения не обрезаются, а не загружаются (в отчёте)
+            if (mb_strlen($value) > self::MAX_VALUE) {
+                if ($plan) {
+                    $label = "{$name} (длиннее ".self::MAX_VALUE.' символов)';
+                    $plan->droppedKeys[$label] = ($plan->droppedKeys[$label] ?? 0) + 1;
+                }
+
+                continue;
             }
 
             if ($value !== '') {
