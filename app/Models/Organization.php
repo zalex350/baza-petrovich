@@ -34,6 +34,14 @@ class Organization extends Model
     }
 
     /**
+     * Коды наших товаров у этой организации (ProductClientCode).
+     */
+    public function productCodes()
+    {
+        return $this->hasMany(ProductClientCode::class);
+    }
+
+    /**
      * Адреса доставки: адрес по умолчанию первым, остальные по названию.
      */
     public function deliveryAddresses()

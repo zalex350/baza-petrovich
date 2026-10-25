@@ -12,6 +12,7 @@ class OrderItem extends Model
         'product_id',
         'product_name',
         'product_sku',
+        'client_code',
         'quantity',
         'price',
         'vat_rate',
@@ -26,8 +27,8 @@ class OrderItem extends Model
      */
     protected $casts = [
         'amount_without_vat' => 'decimal:2',
-        'vat_amount'         => 'decimal:2',
-        'amount_with_vat'    => 'decimal:2',
+        'vat_amount' => 'decimal:2',
+        'amount_with_vat' => 'decimal:2',
     ];
 
     public function getVatRateLabelAttribute(): string
@@ -37,10 +38,11 @@ class OrderItem extends Model
 
     public function product()
     {
-        return $this->belongsTo(\App\Models\Product::class);
+        return $this->belongsTo(Product::class);
     }
+
     public function order()
     {
-        return $this->belongsTo(\App\Models\Order::class, 'order_id');
+        return $this->belongsTo(Order::class, 'order_id');
     }
 }
