@@ -177,13 +177,15 @@ class OrderVatTest extends TestCase
 
         $this->actingAs($this->client)->get('/order')
             ->assertOk()
-            ->assertSeeInOrder(['Цена без НДС', 'Сумма без НДС', 'НДС', 'Сумма с НДС'])
-            ->assertSeeInOrder(['33.33 BYN', '99.99 BYN', '20%', '20.00 BYN', '119.99 BYN'])
-            ->assertSeeInOrder(['50.00', '100.00 BYN', 'Без НДС', '0.00 BYN', '100.00 BYN'])
+            ->assertSeeInOrder(['Цена без НДС', 'Количество', 'Сумма без НДС'])
+            // Строки: цена, сумма без НДС и «с НДС» — НДС по позиции
+            ->assertSeeInOrder([Money::format(33.33), Money::format(99.99), 'с НДС '.Money::format(119.99, false)])
+            ->assertSeeInOrder([Money::format(50), Money::format(100), 'с НДС '.Money::format(100, false)])
+            // Панель: ставки разные — просто «НДС»
             ->assertSeeInOrder([
-                'Сумма без НДС:', '199.99 BYN',
-                'НДС:', '20.00 BYN',
-                'Сумма с НДС:', '219.99 BYN',
+                'Сумма без НДС', Money::format(199.99),
+                'НДС', Money::format(20),
+                'Итого с НДС', Money::format(219.99),
             ]);
     }
 

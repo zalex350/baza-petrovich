@@ -23,11 +23,35 @@ class CartController extends Controller
         private readonly CartSummary $summary,
     ) {}
 
+    /**
+     * Корзина и оформление — одна страница (макеты Main, CartMobile): слева позиции с галочкой
+     * «в заказ», справа панель «Ваш заказ» по отмеченным. Позиция, которую сейчас нельзя
+     * заказать (нехватка остатка, товар недоступен), снимается с заказа автоматически.
+     */
     public function index()
     {
         $cart = auth()->user()->cart()->with('items.product.mainImage')->first();
+        $items = $cart?->items ?? collect();
 
-        $validation = $this->validator->validate($cart);
+        // Все позиции — для строк (причины, «Доступно N шт.»)
+        $validation = $this->validator->validateItems($items);
+
+        $unselect = $items->filter(fn (CartItem $item) => $item->selected
+            && ($validation->isUnavailable($item) || $validation->shortage($item)));
+
+        if ($unselect->isNotEmpty()) {
+            CartItem::whereKey($unselect->modelKeys())->update(['selected' => false]);
+            // foreach, не each(): стрелочная функция вернула бы false и прервала обход
+            foreach ($unselect as $item) {
+                $item->selected = false;
+            }
+        }
+
+        // Панель «Ваш заказ», состояние и кнопка — только по отмеченным
+        $order = $this->validator->validateItems($items->where('selected', true)->values());
+
+        // Жёлтый баннер: позиции, снятые из-за нехватки остатка
+        $shortages = $items->filter(fn (CartItem $item) => $validation->shortage($item) && ! $validation->isUnavailable($item))->values();
 
         // Одноразовый токен формы оформления — защита от двойной отправки
         $checkoutToken = (string) Str::uuid();
@@ -37,7 +61,7 @@ class CartController extends Controller
 
         $continueUrl = CatalogController::continueUrl();
 
-        return view('order', compact('cart', 'validation', 'checkoutToken', 'addresses', 'continueUrl'));
+        return view('order', compact('cart', 'items', 'validation', 'order', 'shortages', 'checkoutToken', 'addresses', 'continueUrl'));
     }
 
     /**
@@ -59,11 +83,20 @@ class CartController extends Controller
             return $this->addResult(CartProblemType::Missing->title());
         }
 
+        return $this->addResult($this->addProduct($product, $qty), $product);
+    }
+
+    /**
+     * Добавить товар в корзину клиента: проверяется итоговое количество (кратность, остаток,
+     * доступность). Добавленная позиция отмечается «в заказ». null — успех, иначе текст ошибки.
+     */
+    private function addProduct(Product $product, int $qty): ?string
+    {
         $cart = auth()->user()->cart()->firstOrCreate();
 
         // Блокировка строки корзины сериализует параллельные добавления одного товара:
         // вторая вставка не упирается в unique(cart_id, product_id), а увеличивает количество.
-        $error = DB::transaction(function () use ($cart, $product, $qty) {
+        return DB::transaction(function () use ($cart, $product, $qty) {
             Cart::whereKey($cart->id)->lockForUpdate()->first();
 
             $item = CartItem::where('cart_id', $cart->id)
@@ -84,6 +117,7 @@ class CartController extends Controller
 
             if ($item) {
                 $item->quantity += $qty;
+                $item->selected = true;
                 $item->save();
             } else {
                 CartItem::create([
@@ -97,8 +131,77 @@ class CartController extends Controller
 
             return null;
         });
+    }
 
-        return $this->addResult($error, $product);
+    /**
+     * «Добавить по артикулу» на странице корзины: артикул + количество (пусто — количество товара
+     * по умолчанию). Ошибки — под полями: не найден / недоступен — у артикула, кратность и
+     * остаток — у количества. JSON (cart-page.js) — {ok, message, cart, item_id} или {ok: false,
+     * errors: {sku|qty: текст}}; обычная форма — назад в корзину с ошибками у полей.
+     */
+    public function quickAdd()
+    {
+        if (! auth()->user()->isClient()) {
+            return $this->quickAddResult(['sku' => 'Оформлять заказы могут только клиенты']);
+        }
+
+        $validator = Validator::make(request()->all(), [
+            'sku' => ['required', 'string', 'max:100'],
+            'qty' => ['nullable', 'integer', 'min:1', 'max:100000'],
+        ], [
+            'sku.required' => 'Укажите артикул',
+            'qty.integer' => 'Количество — целое число',
+            'qty.min' => 'Количество — не меньше 1',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->quickAddResult(collect($validator->errors()->messages())->map(fn ($m) => $m[0])->all());
+        }
+
+        $data = $validator->validated();
+        $sku = trim($data['sku']);
+
+        $product = Product::query()
+            ->whereRaw('LOWER(sku) = ?', [mb_strtolower($sku)])
+            ->where('is_active', true)
+            ->where('is_published', true)
+            ->first();
+
+        if (! $product) {
+            return $this->quickAddResult(['sku' => "Товар с артикулом «{$sku}» не найден"]);
+        }
+
+        $error = $this->addProduct($product, (int) ($data['qty'] ?? $product->default_qty ?? 1));
+
+        if ($error) {
+            return $this->quickAddResult([$product->price === null ? 'sku' : 'qty' => $error]);
+        }
+
+        $message = 'Добавлено в корзину: '.($product->display_name ?: $product->name);
+        $item = $this->summary->items(auth()->user())->get($product->id);
+
+        if (request()->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'message' => $message,
+                'cart' => $this->summary->forHeader(auth()->user()),
+                'item_id' => $item?->id,
+            ], 200, [], JSON_UNESCAPED_UNICODE);
+        }
+
+        return redirect('/order')->with('success', $message);
+    }
+
+    /**
+     * @param  array<string, string>  $errors  поле (sku | qty) → текст
+     */
+    private function quickAddResult(array $errors)
+    {
+        if (request()->expectsJson()) {
+            return response()->json(['ok' => false, 'errors' => $errors], 422, [], JSON_UNESCAPED_UNICODE);
+        }
+
+        return redirect('/order')->withErrors($errors)->withInput();
     }
 
     /**
@@ -175,11 +278,96 @@ class CartController extends Controller
             : back()->with('success', 'Корзина обновлена');
     }
 
+    /**
+     * Галочка «в заказ». Отметить можно только позицию, которую сейчас можно заказать
+     * (кратность, остаток, доступность — CartValidator); иначе выбор не меняется.
+     */
+    public function select($id)
+    {
+        $item = $this->ownItem($id);
+        $selected = request()->boolean('selected');
+
+        if ($selected && ($problem = $this->orderProblem($item))) {
+            return $this->cartResult($problem, ['selected' => false]);
+        }
+
+        $item->update(['selected' => $selected]);
+
+        return $this->cartResult(null, ['selected' => $selected], $selected ? 'Позиция отмечена' : 'Позиция снята с заказа');
+    }
+
+    /**
+     * «Выбрать все»: отмечаются позиции, которые можно заказать; остальные остаются снятыми.
+     */
+    public function selectAll()
+    {
+        $cart = auth()->user()->cart()->with('items.product')->first();
+        $items = $cart?->items ?? collect();
+        $selected = request()->boolean('selected');
+
+        if (! $selected) {
+            CartItem::whereKey($items->modelKeys())->update(['selected' => false]);
+
+            return $this->cartResult(null, [], 'Все позиции сняты с заказа');
+        }
+
+        $ok = $items->reject(fn (CartItem $item) => $this->orderProblem($item));
+        CartItem::whereKey($ok->modelKeys())->update(['selected' => true]);
+
+        $skipped = $items->count() - $ok->count();
+
+        return $this->cartResult(null, [], $skipped
+            ? "Отмечено позиций: {$ok->count()}. Нельзя заказать сейчас: {$skipped}"
+            : 'Все позиции отмечены');
+    }
+
     public function delete($id)
     {
         $this->ownItem($id)->delete();
 
-        return back()->with('success', 'Товар удалён из корзины');
+        return $this->cartResult(null, [], 'Товар удалён из корзины');
+    }
+
+    /**
+     * «Очистить корзину» (с подтверждением).
+     */
+    public function clear()
+    {
+        auth()->user()->cart()->first()?->items()->delete();
+
+        return redirect('/order')->with('success', 'Корзина очищена');
+    }
+
+    /**
+     * Почему позицию нельзя заказать в её количестве (цена не сравнивается — её принимают отдельно), или null.
+     */
+    private function orderProblem(CartItem $item): ?string
+    {
+        $problem = $this->validator->check($item->product, (int) $item->quantity, null, $item->title())[0] ?? null;
+
+        return match (true) {
+            $problem === null => null,
+            $problem->type->isShortage() => "Доступно {$problem->available} шт.",
+            $problem->type->isQuantityRule() => $problem->text(),
+            default => $problem->title(),
+        };
+    }
+
+    /**
+     * Ответ действий на странице корзины: JSON (cart-page.js затем обновляет строки и панель)
+     * или обычная форма — назад с сообщением.
+     */
+    private function cartResult(?string $error, array $extra = [], string $success = 'Корзина обновлена')
+    {
+        if (request()->expectsJson()) {
+            return response()->json([
+                'ok' => $error === null,
+                'message' => $error ?? $success,
+                'cart' => $this->summary->forHeader(auth()->user()),
+            ] + $extra, $error === null ? 200 : 422, [], JSON_UNESCAPED_UNICODE);
+        }
+
+        return $error ? back()->with('error', $error) : back()->with('success', $success);
     }
 
     /**

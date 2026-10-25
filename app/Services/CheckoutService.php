@@ -23,14 +23,13 @@ class CheckoutService
         private readonly CartValidator $validator,
         private readonly OrderStatusService $statuses,
         private readonly VatCalculator $vat,
-    ) {
-    }
+    ) {}
 
     /**
      * Создаёт заказ из корзины пользователя в одной транзакции (BR-123, BR-124, BR-134):
-     * блокирует корзину и товары, повторно проверяет все позиции, при любой проблеме
-     * отменяет оформление с полным перечнем причин (BR-135), иначе создаёт заказ,
-     * списывает остаток и очищает корзину.
+     * блокирует корзину и товары, повторно проверяет отмеченные позиции (selected), при любой
+     * проблеме отменяет оформление с полным перечнем причин (BR-135), иначе создаёт заказ
+     * из отмеченных, списывает остаток и убирает их из корзины; неотмеченные остаются.
      *
      * $token — одноразовый токен формы: повторная отправка той же формы возвращает
      * уже созданный заказ, а не создаёт второй.
@@ -63,10 +62,15 @@ class CheckoutService
                 }
             }
 
-            $items = $cart ? $cart->items()->orderBy('id')->get() : collect();
+            if (! $cart || ! $cart->items()->exists()) {
+                throw CheckoutException::emptyCart();
+            }
+
+            // В заказ — только отмеченные позиции
+            $items = $cart->items()->where('selected', true)->orderBy('id')->get();
 
             if ($items->isEmpty()) {
-                throw CheckoutException::emptyCart();
+                throw CheckoutException::nothingSelected();
             }
 
             if (! $addressId) {
@@ -107,38 +111,38 @@ class CheckoutService
             $totals = $this->vat->total($lines);
 
             $order = Order::create([
-                'number'          => Order::nextNumber($placedAt),
-                'user_id'         => $user->id,
+                'number' => Order::nextNumber($placedAt),
+                'user_id' => $user->id,
                 'organization_id' => $user->organization_id,
                 // Снимок адреса: дальнейшие правки адреса заказ не меняют
-                'delivery_title'         => $address->title,
-                'delivery_address'       => $address->address,
-                'delivery_contact_name'  => $address->contact_name,
+                'delivery_title' => $address->title,
+                'delivery_address' => $address->address,
+                'delivery_contact_name' => $address->contact_name,
                 'delivery_contact_phone' => $address->contact_phone,
-                'comment'         => ($comment = trim((string) $comment)) !== '' ? $comment : null,
-                'status'          => OrderStatus::New,
-                'total'             => $totals->net,
+                'comment' => ($comment = trim((string) $comment)) !== '' ? $comment : null,
+                'status' => OrderStatus::New,
+                'total' => $totals->net,
                 'total_without_vat' => $totals->net,
-                'total_vat'         => $totals->vat,
-                'total_with_vat'    => $totals->gross,
-                'placed_at'       => $placedAt,
-                'checkout_token'  => $token,
+                'total_vat' => $totals->vat,
+                'total_with_vat' => $totals->gross,
+                'placed_at' => $placedAt,
+                'checkout_token' => $token,
             ]);
 
             foreach ($items as $item) {
                 $product = $products->get($item->product_id);
 
                 OrderItem::create([
-                    'order_id'     => $order->id,
-                    'product_id'   => $product->id,
+                    'order_id' => $order->id,
+                    'product_id' => $product->id,
                     'product_name' => $product->display_name ?: $product->name,
-                    'product_sku'  => $product->sku,
-                    'quantity'     => $item->quantity,
-                    'price'        => $item->price_at_add,
-                    'vat_rate'     => $product->vat_rate,
+                    'product_sku' => $product->sku,
+                    'quantity' => $item->quantity,
+                    'price' => $item->price_at_add,
+                    'vat_rate' => $product->vat_rate,
                     'amount_without_vat' => $lines[$item->id]->net,
-                    'vat_amount'         => $lines[$item->id]->vat,
-                    'amount_with_vat'    => $lines[$item->id]->gross,
+                    'vat_amount' => $lines[$item->id]->vat,
+                    'amount_with_vat' => $lines[$item->id]->gross,
                 ]);
 
                 // Остаток прочитан под блокировкой и проверен валидатором — в минус не уйдёт
@@ -146,7 +150,8 @@ class CheckoutService
                 $product->save();
             }
 
-            $cart->items()->delete();
+            // Неотмеченные позиции остаются в корзине
+            $cart->items()->whereKey($items->modelKeys())->delete();
 
             $this->statuses->recordPlaced($order, $user);
 

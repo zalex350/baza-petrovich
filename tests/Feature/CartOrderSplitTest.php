@@ -121,7 +121,8 @@ class CartOrderSplitTest extends TestCase
             ->assertOk()
             ->assertSee('Grohe Start')
             ->assertSee('Смеситель GR-002')
-            ->assertSeeInOrder(['Сумма без НДС:', '250.50 BYN']);
+            // Панель «Ваш заказ»
+            ->assertSeeInOrder(['Позиций / штук', '2 / 3', 'Сумма без НДС', Money::format(250.50)]);
     }
 
     public function test_update_and_delete_work_with_cart_items(): void
@@ -174,7 +175,7 @@ class CartOrderSplitTest extends TestCase
             ->assertSee('Товар отсутствует в каталоге')
             ->assertSee('Grohe Start')
             // недоступная позиция в итог не входит
-            ->assertSeeInOrder(['Сумма без НДС:', '30.00 BYN']);
+            ->assertSeeInOrder(['Позиций / штук', '1 / 1', 'Сумма без НДС', Money::format(30)]);
 
         $item = CartItem::where('product_id', $this->product->id)->sole();
 

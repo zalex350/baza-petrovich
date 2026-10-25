@@ -180,9 +180,9 @@ class HeaderTest extends TestCase
             ->assertSee(Money::format(297.38))
             ->assertSee('title="с НДС, в т.ч. НДС '.Money::format(27.04).'"', false);
 
-        // Та же сумма, что «Сумма с НДС» на странице корзины
+        // Та же сумма, что «Итого с НДС» на странице корзины
         $this->actingAs($client)->get('/order')
-            ->assertSeeInOrder(['Сумма с НДС:', '297.38 BYN']);
+            ->assertSeeInOrder(['Итого с НДС', Money::format(297.38)]);
     }
 
     public function test_empty_cart_for_guest(): void

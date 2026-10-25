@@ -13,7 +13,16 @@ class CartItem extends Model
         'product_id',
         'product_name',
         'quantity',
+        'selected',
         'price_at_add',
+    ];
+
+    protected $attributes = [
+        'selected' => true,
+    ];
+
+    protected $casts = [
+        'selected' => 'boolean',
     ];
 
     public function cart()

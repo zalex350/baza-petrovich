@@ -1,0 +1,73 @@
+// Подсказки артикула в «Добавить по артикулу» (корзина, x-cart-quick-add): тот же /search/suggest,
+// что и в шапке, но выбор не открывает товар, а подставляет артикул и количество по умолчанию.
+// ↑/↓ — выбор, Enter — подставить выбранное (без выбора — отправить форму), Esc — закрыть.
+
+const DEBOUNCE = 250;
+
+export default (url) => ({
+    open: false,
+    items: [],
+    active: -1,
+    timer: null,
+    controller: null,
+
+    search() {
+        clearTimeout(this.timer);
+        const query = this.$refs.sku.value.trim();
+
+        if (query.length < 2) {
+            this.close();
+
+            return;
+        }
+
+        this.timer = setTimeout(async () => {
+            this.controller?.abort();
+            this.controller = new AbortController();
+
+            try {
+                const response = await fetch(`${url}?q=${encodeURIComponent(query)}`, {
+                    headers: { Accept: 'application/json' },
+                    signal: this.controller.signal,
+                });
+                const data = await response.json();
+
+                this.items = (data.products ?? []).map((p) => ({ sku: p.sku, name: p.name, qty: p.default_qty ?? 1 }));
+                this.active = -1;
+                this.open = this.items.length > 0 && document.activeElement === this.$refs.sku;
+            } catch {
+                // Нет подсказок — поле работает и без них
+            }
+        }, DEBOUNCE);
+    },
+
+    move(step) {
+        if (! this.open) {
+            return;
+        }
+
+        this.active = (this.active + step + this.items.length) % this.items.length;
+    },
+
+    enter(event) {
+        if (this.open && this.active >= 0) {
+            event.preventDefault();
+            this.pick(this.items[this.active]);
+        }
+        // Иначе Enter отправляет форму — «Добавить»
+    },
+
+    pick(item) {
+        this.$refs.sku.value = item.sku;
+        this.$refs.qty.value = item.qty;
+        this.close();
+        this.$refs.qty.focus();
+        this.$refs.qty.select();
+    },
+
+    close() {
+        clearTimeout(this.timer);
+        this.open = false;
+        this.active = -1;
+    },
+});
