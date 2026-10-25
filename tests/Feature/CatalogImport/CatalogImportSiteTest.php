@@ -101,6 +101,27 @@ class CatalogImportSiteTest extends TestCase
         $this->assertSame(6.0, (float) $attribute->values()->sole()->value_number);
     }
 
+    public function test_product_without_name_shows_brand_and_article(): void
+    {
+        $noName = Product::create(['name' => 'LEDEME-H35', 'sku' => 'LEDEME-H35', 'brand' => 'LEDEME', 'price' => 5, 'stock' => 1, 'is_active' => true, 'is_published' => true]);
+        $noBrand = Product::create(['name' => '', 'sku' => 'GG-NLDZ', 'price' => 5, 'stock' => 1, 'is_active' => true, 'is_published' => true]);
+
+        $this->assertSame('LEDEME H35', $noName->title());
+        $this->assertFalse($noName->hasRealName());
+        $this->assertSame('GG-NLDZ', $noBrand->title());
+        $this->assertSame('Смеситель', $this->product->title());
+        $this->assertTrue($this->product->hasRealName());
+
+        $this->get("/product/{$noName->id}")->assertOk()->assertSee('<h1', false)->assertSee('LEDEME H35');
+
+        // Админка: «БРЕНД артикул» с пометкой и фильтр «Без названия»
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin)->get('/admin/products')
+            ->assertSee('LEDEME H35')->assertSee('без названия')->assertSee('Без названия (2)');
+        $this->actingAs($admin)->get('/admin/products?name=none')
+            ->assertOk()->assertSee('LEDEME H35')->assertSee('GG-NLDZ')->assertDontSee('LEDEME-A1');
+    }
+
     public function test_hidden_category_breadcrumbs_and_menu(): void
     {
         $hidden = Category::create(['name' => 'Без категории', 'slug' => 'bez-kategorii', 'is_hidden' => true]);

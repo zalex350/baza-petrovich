@@ -30,6 +30,7 @@ class CatalogImportReport
         $md[] = '| — бренд | '.$fmt($count('brand')).' |';
         $md[] = '| — категория | '.$fmt($count('category')).' |';
         $md[] = '| — «Новинка» (is_new) | '.$fmt($count('is_new')).' |';
+        $md[] = '| — снять с публикации (без названия и без категории) | '.$fmt($count('is_published')).' |';
         $md[] = '| — описание заполнено из каталога | '.$fmt($count('description')).' |';
         $md[] = '| — признак «описание сгенерировано» | '.$fmt($count('description_generated')).' (из них ставится: '.$fmt($plan->stats['description_flagged'] ?? 0).') |';
         $md[] = '| — характеристики | '.$fmt($plan->stats['attributes_products'] ?? 0).' товаров, '.$fmt($plan->stats['attributes_values'] ?? 0).' значений |';
@@ -94,12 +95,16 @@ class CatalogImportReport
         }
 
         // Без категории
-        $unc = collect($plan->uncategorized);
-        $hidden = $unc->filter(fn ($r) => $r[3] === 'не распознано')->count();
-        $md[] = '## Товары без категории в каталоге';
+        $md[] = '## Товары без категории и «Новинки»';
         $md[] = '';
-        $md[] = 'Всего '.$unc->count().': распознано по названию / серии — '.($unc->count() - $hidden).', не распознано — '.$hidden
-            .' (служебная категория, скрыта из меню и каталога). Список для проверки — `docs/catalog/uncategorized.csv`.';
+        $md[] = '| Было | Всего | Распознано (по названию / серии) | В «Без категории» (скрыта из меню и каталога) |';
+        $md[] = '|---|---|---|---|';
+        foreach (collect($plan->uncategorized)->groupBy(2) as $from => $rows) {
+            $hidden = $rows->filter(fn ($r) => $r[3] === $this->hiddenName($plan))->count();
+            $md[] = "| {$from} | {$rows->count()} | ".($rows->count() - $hidden)." | {$hidden} |";
+        }
+        $md[] = '';
+        $md[] = 'Список для проверки — `docs/catalog/uncategorized.csv`.';
         $md[] = '';
 
         // Характеристики
@@ -162,6 +167,11 @@ class CatalogImportReport
         return implode("\n", $md);
     }
 
+    private function hiddenName(CatalogImportPlan $plan): string
+    {
+        return (string) collect($plan->categories)->firstWhere('hidden', true)['path'][0] ?? 'Без категории';
+    }
+
     /**
      * CSV для Excel: «;», UTF-8 с BOM.
      */
@@ -169,7 +179,7 @@ class CatalogImportReport
     {
         $out = fopen('php://temp', 'r+');
         fwrite($out, "\u{FEFF}");
-        fputcsv($out, ['sku', 'название', 'предложенная категория', 'правило'], ';');
+        fputcsv($out, ['sku', 'название', 'было', 'предложенная категория', 'правило'], ';');
 
         foreach ($plan->uncategorized as $row) {
             fputcsv($out, $row, ';');

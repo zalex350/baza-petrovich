@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', $product->display_name ?: $product->name)
+@section('title', $product->title())
 
 {{--
     Карточка товара (макет docs/design/Product), без вкладок: слева галерея, справа бейджи, название,
@@ -50,7 +50,7 @@
 @endisset
 
 @php
-    $name = $product->display_name ?: $product->name;
+    $name = $product->title();
 
     // BR-082: ошибка в характеристиках не роняет карточку — блок просто не показывается
     $specRows = rescue(fn () => $product->specRows(), collect());

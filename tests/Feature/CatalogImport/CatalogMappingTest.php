@@ -57,6 +57,16 @@ class CatalogMappingTest extends TestCase
         $this->assertSame(['Мойки и умывальники', 'Аксессуары для моек'], $this->map->ruleFor('Ринзер (ополаскиватель) для стаканов', null)[0]);
         $this->assertNull($this->map->ruleFor(null, 'Серия 035'));
 
+        // Уточнённые правила — раньше общих
+        $this->assertSame(['Смесители', 'Запчасти'], $this->map->ruleFor('Адаптер 220В для сенсорного смесителя Savol S-GY001', null)[0]);
+        $this->assertSame(['Смесители', 'Запчасти'], $this->map->ruleFor('Гайка для смесителя Savol S04', null)[0]);
+        $this->assertSame(['Сантехническая арматура (унитаз, сифоны)', 'Сифоны'], $this->map->ruleFor('Шайба сливной пробки КПП', null)[0]);
+        $this->assertSame(['Аксессуары для ванной', 'Держатели и стойки'], $this->map->ruleFor('Труба для душевой стойки', null)[0]);
+        $this->assertSame(['Аксессуары для ванной', 'Держатели и стойки'], $this->map->ruleFor('Держатель для бумажных полотенец', null)[0]);
+        $this->assertSame(['Аксессуары для ванной', 'Держатели и стойки'], $this->map->ruleFor('Металлическая корзинка', null)[0]);
+        $this->assertSame(['Аксессуары для ванной', 'Держатели и стойки'], $this->map->ruleFor('Поручень для ванной', null)[0]);
+        $this->assertSame(['Гибкая подводка и шланги', 'Гибкая подводка для воды'], $this->map->ruleFor('Подгодка Г1/2-Г1/2 40 см', null)[0]);
+
         $this->assertSame(['Смесители'], $this->map->noveltySeriesPath('Cмесители (Новинки!)'));
         $this->assertSame('Без категории', $this->map->uncategorized());
     }
@@ -95,6 +105,8 @@ class CatalogMappingTest extends TestCase
     {
         $this->assertSame(['LEDEME-L4655-3' => 'L4655-3', 'LEDEME-L4755-2' => 'L4755-2'], $this->map->duplicates());
         $this->assertContains('GR-100', $this->map->testProducts());
-        $this->assertCount(9, $this->map->testProducts());
+        // + строка заголовка каталога (sku «Артикул», название «Остатки»)
+        $this->assertContains('Артикул', $this->map->testProducts());
+        $this->assertCount(10, $this->map->testProducts());
     }
 }

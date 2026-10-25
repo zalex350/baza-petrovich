@@ -44,7 +44,7 @@ class CatalogImportDb extends Command
             ['Товаров изменится', count($plan->products)],
             ['Новых (черновики)', count($plan->newProducts)],
             ['Категорий удалить', count($plan->deleteCategories)],
-            ['Без категории в каталоге', count($plan->uncategorized)],
+            ['Без категории и «Новинки» (на проверку)', count($plan->uncategorized)],
             ['Дубли / тестовые', count($plan->duplicates).' / '.count($plan->deletions)],
         ]);
 

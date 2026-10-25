@@ -123,7 +123,7 @@ class CartController extends Controller
                 CartItem::create([
                     'cart_id' => $cart->id,
                     'product_id' => $product->id,
-                    'product_name' => $product->display_name ?: $product->name,
+                    'product_name' => $product->title(),
                     'quantity' => $qty,
                     'price_at_add' => $product->price,
                 ]);
@@ -177,7 +177,7 @@ class CartController extends Controller
             return $this->quickAddResult([$product->price === null ? 'sku' : 'qty' => $error]);
         }
 
-        $message = 'Добавлено в корзину: '.($product->display_name ?: $product->name);
+        $message = 'Добавлено в корзину: '.($product->title());
         $item = $this->summary->items(auth()->user())->get($product->id);
 
         if (request()->expectsJson()) {

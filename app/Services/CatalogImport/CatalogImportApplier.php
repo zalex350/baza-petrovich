@@ -160,6 +160,9 @@ class CatalogImportApplier
             if (isset($change['is_new'])) {
                 $update['is_new'] = true;
             }
+            if (isset($change['is_published'])) {
+                $update['is_published'] = $change['is_published'][1];
+            }
             if (isset($change['description'])) {
                 $update['description'] = $change['description'][1];
             }

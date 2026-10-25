@@ -135,7 +135,7 @@ class CheckoutService
                 OrderItem::create([
                     'order_id' => $order->id,
                     'product_id' => $product->id,
-                    'product_name' => $product->display_name ?: $product->name,
+                    'product_name' => $product->title(),
                     'product_sku' => $product->sku,
                     'quantity' => $item->quantity,
                     'price' => $item->price_at_add,

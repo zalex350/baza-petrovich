@@ -30,7 +30,7 @@ class CatalogImportPlanner
         $this->categories = Category::all()->keyBy('id');
 
         $ours = Product::withTrashed()
-            ->get(['id', 'sku', 'name', 'display_name', 'brand', 'category_id', 'description', 'description_generated', 'is_new', 'deleted_at'])
+            ->get(['id', 'sku', 'name', 'display_name', 'brand', 'category_id', 'description', 'description_generated', 'is_new', 'is_published', 'deleted_at'])
             ->keyBy(fn (Product $p) => mb_strtoupper(trim($p->sku)));
 
         $currentValues = $this->currentAttributeValues();
@@ -93,6 +93,11 @@ class CatalogImportPlanner
 
             if ($target['path']) {
                 $moves[$our->id] = [$our->category_id, CatalogImportPlan::pathKey($target['path']), $our->sku];
+            }
+
+            // Без названия и без категории — показывать нечего: снять с публикации
+            if (trim((string) $row['name']) === '' && $target['path'] === [$this->map->uncategorized()] && $our->is_published) {
+                $change['is_published'] = [true, false];
             }
 
             if ($target['novelty'] && ! $our->is_new) {
@@ -323,9 +328,9 @@ class CatalogImportPlanner
             $how = $rule[1] ?? ($path ? 'серия «Новинок»: '.$row['series'] : 'не распознано');
             $path ??= [$this->map->uncategorized()];
 
-            if (! $novelty) {
-                $plan->uncategorized[] = [$row['sku'], $row['name'] ?: '(нет названия; серия: '.($row['series'] ?: '—').')', CatalogImportPlan::pathKey($path), $how];
-            }
+            // В список для проверки — и пустые, и «Новинки»: раскладка у обоих по правилам
+            $plan->uncategorized[] = [$row['sku'], $row['name'] ?: '(нет названия; серия: '.($row['series'] ?: '—').')',
+                $novelty ? 'Новинки' : '(пусто)', CatalogImportPlan::pathKey($path), $how];
 
             return ['path' => $path, 'novelty' => $novelty];
         }

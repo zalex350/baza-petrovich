@@ -9,7 +9,7 @@
 @props(['product', 'inCart' => null])
 
 @php
-    $name = $product->display_name ?: $product->name;
+    $name = $product->title();
     $url = route('product.show', $product->id);
     $keyAttributes = $product->relationLoaded('keyAttributes')
         ? $product->getRelation('keyAttributes')->map->displayValue()->join(' · ')

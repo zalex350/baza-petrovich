@@ -50,7 +50,7 @@ class CatalogImportPlan
     /** Тестовые товары: [id, sku, name, action: force|soft|already] @var list<array> */
     public array $deletions = [];
 
-    /** Без категории в каталоге: [sku, name, path, rule] — для uncategorized.csv @var list<array> */
+    /** Без категории в каталоге и «Новинки»: [sku, name, было, path, rule] — для uncategorized.csv @var list<array> */
     public array $uncategorized = [];
 
     /** Счётчики для отчёта @var array<string, mixed> */

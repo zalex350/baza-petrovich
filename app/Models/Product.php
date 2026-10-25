@@ -79,6 +79,49 @@ class Product extends Model
         return $this->vatLine()->gross;
     }
 
+    /**
+     * Есть ли настоящее название: у товаров каталога без названия в name записан sku.
+     */
+    public function hasRealName(): bool
+    {
+        $name = trim((string) $this->name);
+
+        return $name !== '' && mb_strtoupper($name) !== mb_strtoupper(trim((string) $this->sku));
+    }
+
+    /**
+     * Название для сайта и админки: отображаемое → системное → «БРЕНД артикул» (без бренда — артикул).
+     * Артикул — sku без префикса «БРЕНД-» (так sku собран в каталоге).
+     */
+    public function title(): string
+    {
+        if (trim((string) $this->display_name) !== '') {
+            return $this->display_name;
+        }
+
+        if ($this->hasRealName()) {
+            return $this->name;
+        }
+
+        $sku = trim((string) $this->sku);
+        $brand = trim((string) $this->brand);
+        $prefix = mb_strtoupper($brand).'-';
+
+        if ($brand !== '' && str_starts_with(mb_strtoupper($sku), $prefix)) {
+            return $brand.' '.mb_substr($sku, mb_strlen($prefix));
+        }
+
+        return $brand !== '' && mb_strtoupper($sku) !== mb_strtoupper($brand) ? "{$brand} {$sku}" : $sku;
+    }
+
+    /**
+     * Товары без названия: пусто или sku вместо названия (админка, фильтр «Без названия»).
+     */
+    public function scopeWithoutName($query)
+    {
+        return $query->where(fn ($q) => $q->whereNull('name')->orWhere('name', '')->orWhereColumn('name', 'sku'));
+    }
+
     public function getVatRateLabelAttribute(): string
     {
         return VatCalculator::rateLabel($this->vat_rate);

@@ -60,7 +60,7 @@ class OrderController extends Controller
             'cancel_reason' => ['required', 'string', 'max:1000'],
         ], [
             'cancel_reason.required' => 'Укажите причину отмены',
-            'cancel_reason.max'      => 'Причина не длиннее 1000 символов',
+            'cancel_reason.max' => 'Причина не длиннее 1000 символов',
         ]);
 
         try {
@@ -85,9 +85,9 @@ class OrderController extends Controller
 
             $product = $item->product;
 
-            if (!$product || !$product->is_active) {
+            if (! $product || ! $product->is_active) {
 
-                $warnings[] = 'недоступен: ' . ($item->product_name ?? $product?->name ?? 'Товар');
+                $warnings[] = 'недоступен: '.($item->product_name ?? $product?->name ?? 'Товар');
 
                 continue;
 
@@ -95,7 +95,7 @@ class OrderController extends Controller
 
             if ($product->stock <= 0) {
 
-                $warnings[] = 'недоступен: ' . $product->name;
+                $warnings[] = 'недоступен: '.$product->name;
 
                 continue;
 
@@ -115,7 +115,7 @@ class OrderController extends Controller
 
                 if ($available <= 0) {
 
-                    $warnings[] = 'недоступен: ' . $product->name;
+                    $warnings[] = 'недоступен: '.$product->name;
 
                     continue;
 
@@ -134,7 +134,7 @@ class OrderController extends Controller
                 CartItem::create([
                     'cart_id' => $cart->id,
                     'product_id' => $product->id,
-                    'product_name' => $product->display_name ?: $product->name,
+                    'product_name' => $product->title(),
                     'quantity' => $qtyToAdd,
                     'price_at_add' => $product->price,
                 ]);
@@ -143,7 +143,7 @@ class OrderController extends Controller
 
             if ($qtyToAdd < $requestedQty) {
 
-                $warnings[] = 'Не удалось добавить полностью: ' . $product->name . ' (запрошено ' . $requestedQty . ', добавлено ' . $qtyToAdd . ')';
+                $warnings[] = 'Не удалось добавить полностью: '.$product->name.' (запрошено '.$requestedQty.', добавлено '.$qtyToAdd.')';
 
             }
 
@@ -151,7 +151,7 @@ class OrderController extends Controller
 
         $redirect = redirect('/order')->with('success', 'Товары добавлены в корзину');
 
-        if (!empty($warnings)) {
+        if (! empty($warnings)) {
 
             $redirect->with('warning', implode('; ', $warnings));
 

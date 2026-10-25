@@ -35,19 +35,24 @@ class AdminProductController extends Controller
 
     public function index()
     {
-        // «Без категории»: служебная категория (скрыта на сайте) или категория не задана
+        // «Без категории»: служебная категория (скрыта на сайте) или категория не задана;
+        // «Без названия»: пусто или sku вместо названия (на сайте — «БРЕНД артикул»)
         $uncategorized = request('category') === 'none';
+        $unnamed = request('name') === 'none';
         $hiddenIds = Category::where('is_hidden', true)->pluck('id');
+        $noCategory = fn ($q) => $q->where(fn ($q) => $q->whereNull('category_id')->orWhereIn('category_id', $hiddenIds));
 
         $products = Product::with('draft')
-            ->when($uncategorized, fn ($q) => $q->where(fn ($q) => $q->whereNull('category_id')->orWhereIn('category_id', $hiddenIds)))
+            ->when($uncategorized, $noCategory)
+            ->when($unnamed, fn ($q) => $q->withoutName())
             ->latest()
             ->paginate(50)
             ->withQueryString();
 
-        $uncategorizedCount = Product::whereNull('category_id')->orWhereIn('category_id', $hiddenIds)->count();
+        $uncategorizedCount = Product::query()->tap($noCategory)->count();
+        $unnamedCount = Product::withoutName()->count();
 
-        return view('admin.products', compact('products', 'uncategorized', 'uncategorizedCount'));
+        return view('admin.products', compact('products', 'uncategorized', 'uncategorizedCount', 'unnamed', 'unnamedCount'));
     }
 
     public function create()

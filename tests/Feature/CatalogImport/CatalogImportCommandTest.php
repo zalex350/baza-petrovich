@@ -102,6 +102,8 @@ class CatalogImportCommandTest extends TestCase
         $this->product('LEDEME-U1', null, ['brand' => 'LEDEME']);
         // Латиница: SQLite в тестах не приводит кириллицу к нижнему регистру (CLAUDE.md)
         $this->product('LEDEME-U2', null, ['brand' => 'LEDEME', 'name' => 'Mystery item']);
+        // Без названия в каталоге (у нас name = sku) и не распознан — снимается с публикации
+        $this->product('LEDEME-H01', null, ['brand' => 'LEDEME', 'name' => 'LEDEME-H01']);
         $this->product('TIM-C1', $cartridges, ['brand' => 'TIM Thermo']);
         $this->product('LEDEME-D1', $kitchen, ['brand' => 'LEDEME', 'name' => 'LEDEME D1']);
         $this->product('D1', $news, ['name' => 'Смеситель для кухни D1 с выходом для питьевой воды']);
@@ -132,7 +134,8 @@ class CatalogImportCommandTest extends TestCase
             ['LEDEME-B1', 'B1', 'LEDEME', null, 'Смеситель B1', null, 0, 'для умывальника', []],
             ['LEDEME-N1', 'N1', 'LEDEME', null, 'Смеситель для кухни N1', null, 0, 'Новинки', []],
             ['LEDEME-U1', 'U1', 'LEDEME', null, 'Крючок двойной', null, 0, null, []],
-            ['LEDEME-U2', 'U2', 'LEDEME', null, null, null, 0, null, []],
+            ['LEDEME-U2', 'U2', 'LEDEME', null, 'Mystery item', null, 0, null, []],
+            ['LEDEME-H01', 'H01', 'LEDEME', 'Серия 035', null, null, 0, null, []],
             ['TIM-C1', 'C1', 'TIM Thermo', null, 'Картридж', null, 0, 'Картриджи', ['Рабочее давление (Ру)' => '10 бар']],
             ['LEDEME-D1', 'D1', 'LEDEME', null, 'LEDEME D1', null, 0, 'на кухню', ['Цвет' => 'хром']],
             ['D1', 'D1', null, null, 'Смеситель для кухни D1 с выходом для питьевой воды', null, 0, 'Новинки', ['Материал корпуса' => 'латунь']],
@@ -189,7 +192,7 @@ class CatalogImportCommandTest extends TestCase
 
         $csv = File::get($this->dir.'/report/uncategorized.csv');
         $this->assertStringStartsWith("\u{FEFF}sku;", $csv);
-        $this->assertStringContainsString('LEDEME-U1;"Крючок двойной";"Аксессуары для ванной / Крючки"', $csv);
+        $this->assertStringContainsString('LEDEME-U1;"Крючок двойной";(пусто);"Аксессуары для ванной / Крючки"', $csv);
         $this->assertStringContainsString('LEDEME-U2;', $csv);
         $this->assertStringContainsString('"Без категории";"не распознано"', $csv);
     }
@@ -238,6 +241,10 @@ class CatalogImportCommandTest extends TestCase
         $hidden = $this->find('LEDEME-U2')->category;
         $this->assertSame('Без категории', $hidden->name);
         $this->assertTrue($hidden->is_hidden);
+        // С названием — остаётся опубликованным; без названия и без категории — снят с публикации
+        $this->assertTrue((bool) $this->find('LEDEME-U2')->is_published);
+        $this->assertFalse((bool) $this->find('LEDEME-H01')->is_published);
+        $this->assertSame('LEDEME H01', $this->find('LEDEME-H01')->title());
 
         // «Электротехнические компоненты» убраны, картридж — в «Смесители / Запчасти»
         $this->assertNull(Category::where('name', 'Электротехнические компоненты')->first());
