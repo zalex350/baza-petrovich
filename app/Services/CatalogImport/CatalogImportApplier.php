@@ -160,6 +160,9 @@ class CatalogImportApplier
             if (isset($change['is_new'])) {
                 $update['is_new'] = true;
             }
+            if (isset($change['video_url'])) {
+                $update['video_url'] = $change['video_url'][1];
+            }
             if (isset($change['is_published'])) {
                 $update['is_published'] = $change['is_published'][1];
             }
@@ -224,6 +227,7 @@ class CatalogImportApplier
                 'category_id' => $new['category'] ? $this->categoryIds[$new['category']] : null,
                 'description' => $new['description'],
                 'description_generated' => $new['description_generated'],
+                'video_url' => $new['video_url'],
                 'is_new' => $new['is_new'],
                 'is_active' => true,
                 'is_published' => false,

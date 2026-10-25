@@ -2,6 +2,8 @@
 
 namespace App\Services\CatalogImport;
 
+use App\Models\Category;
+
 /**
  * Отчёт dry-run (docs/catalog/import-report.md) и список для проверки (docs/catalog/uncategorized.csv).
  */
@@ -32,6 +34,7 @@ class CatalogImportReport
         $md[] = '| — «Новинка» (is_new) | '.$fmt($count('is_new')).' |';
         $md[] = '| — снять с публикации (без названия и без категории) | '.$fmt($count('is_published')).' |';
         $md[] = '| — описание заполнено из каталога | '.$fmt($count('description')).' |';
+        $md[] = '| — видео (`video_url`, на сайте пока не выводится) | '.$fmt($count('video_url')).' |';
         $md[] = '| — признак «описание сгенерировано» | '.$fmt($count('description_generated')).' (из них ставится: '.$fmt($plan->stats['description_flagged'] ?? 0).') |';
         $md[] = '| — характеристики | '.$fmt($plan->stats['attributes_products'] ?? 0).' товаров, '.$fmt($plan->stats['attributes_values'] ?? 0).' значений |';
         $md[] = '| Категорий: существующих / переименовать / создать / удалить | '
@@ -94,7 +97,12 @@ class CatalogImportReport
             $md[] = '';
         }
 
+        // Капс в названиях категорий после импорта (аббревиатуры и серии — ПВХ, PEX, MINI, «STANDARD» — допустимы)
+        $md[] = '**Названия капсом после импорта:** '.(($caps = $this->capsNames($plan)) ? implode(', ', array_map(fn ($n) => '`'.$n.'`', $caps)) : 'нет').'.';
+        $md[] = '';
+
         // Без категории
+
         $md[] = '## Товары без категории и «Новинки»';
         $md[] = '';
         $md[] = '| Было | Всего | Распознано (по названию / серии) | В «Без категории» (скрыта из меню и каталога) |';
@@ -165,6 +173,23 @@ class CatalogImportReport
         $md[] = '';
 
         return implode("\n", $md);
+    }
+
+    /**
+     * Категории, чьи названия после импорта по-прежнему в основном капсом.
+     *
+     * @return list<string>
+     */
+    private function capsNames(CatalogImportPlan $plan): array
+    {
+        $renamed = collect($plan->categories)->whereIn('action', ['rename', 'existing'])->mapWithKeys(fn ($c) => [$c['id'] => end($c['path'])]);
+        $deleted = array_keys($plan->deleteCategories);
+
+        return Category::whereNotIn('id', $deleted)->get()
+            ->map(fn ($c) => $renamed[$c->id] ?? $c->name)
+            ->merge(collect($plan->categories)->where('action', 'create')->map(fn ($c) => end($c['path'])))
+            ->filter(fn ($name) => CatalogImportPlanner::isCaps($name))
+            ->unique()->values()->all();
     }
 
     private function hiddenName(CatalogImportPlan $plan): string

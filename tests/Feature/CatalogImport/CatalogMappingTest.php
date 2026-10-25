@@ -87,6 +87,30 @@ class CatalogMappingTest extends TestCase
         $this->assertSame(['type' => 'number', 'unit' => 'мм'], array_intersect_key($this->map->attributeDef('Размер картриджа'), ['type' => 1, 'unit' => 1]));
     }
 
+    public function test_length_is_split_by_unit_and_video_url_is_a_field(): void
+    {
+        // «Длина» без уточнения: см и мм — разные характеристики, без пересчёта; метры — не загружаются
+        $this->assertSame('Длина, см', $this->map->attributeByUnit('Длина', '150 см'));
+        $this->assertSame('Длина, мм', $this->map->attributeByUnit('Длина', '172 мм'));
+        $this->assertSame('Длина, мм', $this->map->attributeByUnit('Длина', '100-195 mm'));
+        $this->assertFalse($this->map->attributeByUnit('Длина', '3,35 м'));
+        $this->assertNull($this->map->attributeByUnit('Цвет', 'хром'));
+        $this->assertSame('Длина, мм', $this->map->attributeFor('Длина,мм'));
+        $this->assertSame('Длина, см', $this->map->attributeFor('Длина (см)'));
+
+        $this->assertSame('Резьба', $this->map->attributeFor('Резьбы'));
+        $this->assertSame('Наружный диаметр', $this->map->attributeFor('Наружный диаметр (мм)'));
+        foreach (['Межосевое расстояние', 'Покрытие', 'Гидрозатвор', 'Переключатель'] as $key) {
+            $this->assertSame($key, $this->map->attributeFor($key));
+        }
+
+        $this->assertSame('video_url', $this->map->fieldFor('Ссылка на видео'));
+        $this->assertSame('https://vkvideo.ru/video_ext.php?oid=-1&id=2&hd=2',
+            CatalogMapping::videoUrl('<iframe src="https://vkvideo.ru/video_ext.php?oid=-1&id=2&hd=2" width="853"></iframe>'));
+        $this->assertSame('https://youtu.be/I2HlNPBcaBQ', CatalogMapping::videoUrl('https://youtu.be/I2HlNPBcaBQ'));
+        $this->assertNull(CatalogMapping::videoUrl('<ifr ame width="853">'));
+    }
+
     public function test_values_are_normalized(): void
     {
         $this->assertSame(['35', 35.0], $this->map->normalizeValue('Размер картриджа', '35 мм'));

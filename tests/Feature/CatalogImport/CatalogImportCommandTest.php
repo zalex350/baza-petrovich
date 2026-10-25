@@ -91,6 +91,9 @@ class CatalogImportCommandTest extends TestCase
         $basin = $this->category('для умывальника', $sinks);
         $misc = $this->category('Разное');
         $news = $this->category('Новинки', $misc);
+        $tools = $this->category('Крепёж и инструмент');
+        $press = $this->category('ПРЕСС-ИНСТРУМЕНТ ЭЛЕКТРИЧЕСКИЙ', $tools);
+        $this->product('TIM-P1', $press, ['brand' => 'TIM']);
         $electro = $this->category('Электротехнические компоненты');
         $cartridges = $this->category('Картриджи', $electro);
 
@@ -127,7 +130,8 @@ class CatalogImportCommandTest extends TestCase
         $rows = [
             ['LEDEME-A1', 'A1', 'Ledeme', 'H32', 'Смеситель A1', 'Сгенерированный текст', 1, 'на кухню', [
                 'Цвет' => 'Хром', 'Производитель' => 'Ledeme', 'Вес,кг' => '2.6', 'Код ТН ВЭД ЕАЭС товара' => '8481',
-                'Размер картриджа смесителя' => '35 мм', 'Ссылка на видео' => 'http://x',
+                'Размер картриджа смесителя' => '35 мм', 'Длина' => '150 см',
+                'Ссылка на видео' => '<iframe src="https://vkvideo.ru/video_ext.php?oid=-1&id=2" width="853"></iframe>',
             ]],
             ['LEDEME-A2', 'A2', 'LEDEME', null, 'Смеситель A2', null, 0, 'кухонные', ['Цвет покрытия' => 'хром']],
             ['LEDEME-A3', 'A3', 'LEDEME', null, 'Смеситель A3', null, 0, 'кухонные', ['Цвет' => 'хром']],
@@ -136,7 +140,8 @@ class CatalogImportCommandTest extends TestCase
             ['LEDEME-U1', 'U1', 'LEDEME', null, 'Крючок двойной', null, 0, null, []],
             ['LEDEME-U2', 'U2', 'LEDEME', null, 'Mystery item', null, 0, null, []],
             ['LEDEME-H01', 'H01', 'LEDEME', 'Серия 035', null, null, 0, null, []],
-            ['TIM-C1', 'C1', 'TIM Thermo', null, 'Картридж', null, 0, 'Картриджи', ['Рабочее давление (Ру)' => '10 бар']],
+            ['TIM-C1', 'C1', 'TIM Thermo', null, 'Картридж', null, 0, 'Картриджи', ['Рабочее давление (Ру)' => '10 бар', 'Длина' => '3,35 м']],
+            ['TIM-P1', 'P1', 'TIM', null, 'Пресс-инструмент', null, 0, 'ПРЕСС-ИНСТРУМЕНТ ЭЛЕКТРИЧЕСКИЙ', []],
             ['LEDEME-D1', 'D1', 'LEDEME', null, 'LEDEME D1', null, 0, 'на кухню', ['Цвет' => 'хром']],
             ['D1', 'D1', null, null, 'Смеситель для кухни D1 с выходом для питьевой воды', null, 0, 'Новинки', ['Материал корпуса' => 'латунь']],
         ];
@@ -186,7 +191,8 @@ class CatalogImportCommandTest extends TestCase
         $this->assertStringContainsString('Ledeme → LEDEME', $report);
         $this->assertStringContainsString('TIM Thermo → TIM', $report);
         $this->assertStringContainsString('Смесители / на кухню | Смесители / Для кухни', $report);   // переименование
-        $this->assertStringContainsString('Ссылка на видео | 1', $report);                          // не загружается
+        $this->assertStringContainsString('Длина (единица не см / мм) | 1', $report);               // метры не загружаются
+        $this->assertStringContainsString('**Названия капсом после импорта:** нет.', $report);
         $this->assertStringContainsString('| Код ТН ВЭД | text |  | только админка |', $report);
         $this->assertStringContainsString('| Вес | number | кг | упаковка и логистика |', $report);
 
@@ -262,6 +268,14 @@ class CatalogImportCommandTest extends TestCase
         $this->assertSame(['H32', null], $a1['Серия']);
         $this->assertArrayNotHasKey('Производитель', $a1);
         $this->assertArrayNotHasKey('Ссылка на видео', $a1);
+        $this->assertSame(['150', 150.0], $a1['Длина, см']);
+        $this->assertArrayNotHasKey('Длина, мм', $values('TIM-C1'));
+        $this->assertSame('https://vkvideo.ru/video_ext.php?oid=-1&id=2', $this->find('LEDEME-A1')->video_url);
+
+        // Капс → обычный регистр: та же категория, адрес сохранён
+        $press = $this->find('TIM-P1')->category;
+        $this->assertSame('Пресс-инструмент электрический', $press->name);
+        $this->assertSame($this->cat['Крепёж и инструмент / ПРЕСС-ИНСТРУМЕНТ ЭЛЕКТРИЧЕСКИЙ']->id, $press->id);
         $this->assertSame(['хром', null], $values('LEDEME-A2')['Цвет']);  // «Цвет покрытия» → «Цвет»
         $this->assertSame(['Thermo', null], $values('TIM-C1')['Серия']);
         $this->assertSame(['10', 10.0], $values('TIM-C1')['Рабочее давление']);

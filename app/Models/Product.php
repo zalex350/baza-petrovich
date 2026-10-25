@@ -37,6 +37,7 @@ class Product extends Model
         'is_hit',
         'is_new',
         'package_contents',
+        'video_url',
     ];
 
     protected $attributes = [

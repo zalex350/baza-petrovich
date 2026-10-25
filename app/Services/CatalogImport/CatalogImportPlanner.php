@@ -30,7 +30,7 @@ class CatalogImportPlanner
         $this->categories = Category::all()->keyBy('id');
 
         $ours = Product::withTrashed()
-            ->get(['id', 'sku', 'name', 'display_name', 'brand', 'category_id', 'description', 'description_generated', 'is_new', 'is_published', 'deleted_at'])
+            ->get(['id', 'sku', 'name', 'display_name', 'brand', 'category_id', 'description', 'description_generated', 'is_new', 'is_published', 'video_url', 'deleted_at'])
             ->keyBy(fn (Product $p) => mb_strtoupper(trim($p->sku)));
 
         $currentValues = $this->currentAttributeValues();
@@ -72,6 +72,7 @@ class CatalogImportPlanner
                     'brand' => $this->map->brand($row['brand']), 'category' => $target['path'] ? CatalogImportPlan::pathKey($target['path']) : null,
                     'is_new' => $target['novelty'], 'description' => $row['description'],
                     'description_generated' => (bool) $row['description_generated'], 'attributes' => $set,
+                    'video_url' => $this->videoUrl($row),
                 ];
 
                 continue;
@@ -93,6 +94,11 @@ class CatalogImportPlanner
 
             if ($target['path']) {
                 $moves[$our->id] = [$our->category_id, CatalogImportPlan::pathKey($target['path']), $our->sku];
+            }
+
+            $video = $this->videoUrl($row);
+            if ($video !== null && $video !== $our->video_url) {
+                $change['video_url'] = [$our->video_url, $video];
             }
 
             // Без названия и без категории — показывать нечего: снять с публикации
@@ -241,11 +247,22 @@ class CatalogImportPlanner
         foreach (is_array($json) ? $json : [] as $key => $value) {
             $value = is_scalar($value) ? trim((string) $value) : '';
 
-            if ($value === '' || $this->map->isSkippedKey((string) $key)) {
+            if ($value === '' || $this->map->isSkippedKey((string) $key) || $this->map->fieldFor((string) $key)) {
                 continue;
             }
 
-            $name = $this->map->attributeFor((string) $key);
+            $byUnit = $this->map->attributeByUnit((string) $key, $value);
+
+            if ($byUnit === false) {
+                if ($plan) {
+                    $label = $key.' (единица не см / мм)';
+                    $plan->droppedKeys[$label] = ($plan->droppedKeys[$label] ?? 0) + 1;
+                }
+
+                continue;
+            }
+
+            $name = $byUnit ?? $this->map->attributeFor((string) $key);
 
             if ($name === null) {
                 if ($plan) {
@@ -293,6 +310,22 @@ class CatalogImportPlanner
         }
 
         return $set;
+    }
+
+    /**
+     * Адрес видео из ключа-поля («Ссылка на видео» → video_url) или null.
+     */
+    private function videoUrl(array $row): ?string
+    {
+        $json = json_decode((string) $row['attributes'], true);
+
+        foreach (is_array($json) ? $json : [] as $key => $value) {
+            if ($this->map->fieldFor((string) $key) === 'video_url') {
+                return CatalogMapping::videoUrl(is_scalar($value) ? (string) $value : null);
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -402,7 +435,11 @@ class CatalogImportPlanner
             $existing = $this->findCategory($path);
 
             if ($existing) {
-                $plan->categories[$key] = ['action' => 'existing', 'id' => $existing->id, 'path' => $path, 'hidden' => $key === $uncategorized];
+                // Та же категория, но названа капсом — переименовать (другие расхождения регистра не трогаем)
+                $plan->categories[$key] = $existing->name === end($path) || ! self::isCaps($existing->name)
+                    ? ['action' => 'existing', 'id' => $existing->id, 'path' => $path, 'hidden' => $key === $uncategorized]
+                    : ['action' => 'rename', 'id' => $existing->id, 'from' => $this->categoryLabel($existing->id), 'path' => $path, 'hidden' => $key === $uncategorized];
+                $renamed[$existing->id] = true;
 
                 continue;
             }
@@ -468,6 +505,17 @@ class CatalogImportPlanner
                 $plan->deleteCategories[$root->id] = $root->name;
             }
         }
+    }
+
+    /**
+     * Название в основном капсом (больше половины букв — заглавные): «НАСОС ЦИРКУЛЯЦИОННЫЙ …».
+     */
+    public static function isCaps(string $name): bool
+    {
+        preg_match_all('/\p{L}/u', $name, $letters);
+        $upper = count(array_filter($letters[0], fn ($ch) => mb_strtoupper($ch) === $ch && mb_strtolower($ch) !== $ch));
+
+        return $letters[0] && $upper / count($letters[0]) > 0.5;
     }
 
     // --- Справочник характеристик ---
@@ -576,6 +624,11 @@ class CatalogImportPlanner
                 $inOrders => 'soft',
                 default => 'force',
             };
+
+            // Уже мягко удалён и есть в заказах — делать нечего (повторный прогон)
+            if ($action === 'already') {
+                continue;
+            }
 
             $plan->deletions[] = ['id' => $product->id, 'sku' => $product->sku, 'name' => $product->name, 'action' => $action];
         }

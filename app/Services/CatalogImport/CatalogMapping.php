@@ -162,6 +162,57 @@ class CatalogMapping
 
     // --- Характеристики ---
 
+    /**
+     * Ключ с разными единицами в значениях (by_unit): характеристика по единице значения;
+     * ключ не из by_unit — null; единица не распознана — false (значение не загружается).
+     */
+    public function attributeByUnit(string $key, string $value): string|false|null
+    {
+        foreach ($this->attributes['by_unit'] ?? [] as $byKey => $routes) {
+            if (self::key($byKey) !== self::key($key)) {
+                continue;
+            }
+
+            foreach ($routes as $unit => $name) {
+                if (preg_match('/\d\s*'.preg_quote($unit, '/').'(?![\p{L}])/u', $value)) {
+                    return $name;
+                }
+            }
+
+            return false;
+        }
+
+        return null;
+    }
+
+    /**
+     * Ключ → поле товара (fields: «Ссылка на видео» → video_url) или null.
+     */
+    public function fieldFor(string $key): ?string
+    {
+        foreach ($this->attributes['fields'] ?? [] as $fieldKey => $field) {
+            if (self::key($fieldKey) === self::key($key)) {
+                return $field;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Адрес видео: src из iframe или сама ссылка; не адрес — null.
+     */
+    public static function videoUrl(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        if (preg_match('/src="([^"]+)"/u', $value, $m)) {
+            $value = $m[1];
+        }
+
+        return preg_match('#^https?://\S+$#u', $value) ? html_entity_decode($value) : null;
+    }
+
     public function isSkippedKey(string $key): bool
     {
         return isset($this->skipIndex[self::key($key)]);
