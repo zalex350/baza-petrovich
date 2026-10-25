@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 
+/**
+ * guid — GUID номенклатуры 1С: заполняется только обменом с 1С, поэтому не в $fillable.
+ */
 class Product extends Model
 {
     use SoftDeletes;
