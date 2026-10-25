@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -117,7 +118,7 @@ class SearchTest extends TestCase
         $this->assertStringContainsString('Mixer 24', $first);
         $this->assertStringNotContainsString('Mixer 25', $first);
         $this->assertStringContainsString('Найдено товаров: 30', $first);
-        $this->assertStringContainsString(e('/search?' . http_build_query(['q' => 'mixer', 'page' => 2])), $first);
+        $this->assertStringContainsString(e('/search?'.http_build_query(['q' => 'mixer', 'page' => 2])), $first);
 
         $second = $this->get('/search?q=mixer&page=2')->assertOk()->getContent();
 
@@ -125,6 +126,22 @@ class SearchTest extends TestCase
         $this->assertStringContainsString('Mixer 25', $second);
         $this->assertStringContainsString('Mixer 30', $second);
         $this->assertStringNotContainsString('Mixer 24', $second);
+    }
+
+    public function test_suggest_hides_price_from_guest(): void
+    {
+        $this->createProduct(['is_published' => true]);
+
+        // Гость: цены нет — как в каталоге и карточке
+        $this->getJson('/search/suggest?q=Grohe')
+            ->assertOk()
+            ->assertJsonPath('guest', true)
+            ->assertJsonPath('products.0.price', null);
+
+        $this->actingAs(User::factory()->create())
+            ->getJson('/search/suggest?q=Grohe')
+            ->assertJsonPath('guest', false)
+            ->assertJsonPath('products.0.price', '150.00');
     }
 
     public function test_empty_query_has_no_pagination_error(): void

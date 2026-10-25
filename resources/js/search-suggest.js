@@ -32,9 +32,12 @@ function render(data, query) {
             html += `<img src="${escapeHtml(prod.image)}" alt="${escapeHtml(prod.name)}" width="48" height="48" loading="lazy" class="w-12 h-12 object-contain rounded border border-slate-200 bg-white" onerror="this.onerror=null;this.src='${escapeHtml(prod.placeholder)}'">`;
             html += '<div class="flex-1 min-w-0">';
             html += `<div class="text-sm text-slate-800 truncate">${escapeHtml(prod.name)}</div>`;
-            html += prod.price
-                ? `<div class="text-xs text-slate-500">${escapeHtml(prod.price)} BYN</div>`
-                : '<div class="text-xs text-slate-400">Цена уточняется</div>';
+            // Гостю цена не приходит — как в каталоге, «после входа»
+            if (prod.price) {
+                html += `<div class="text-xs text-slate-500">${escapeHtml(prod.price)} BYN</div>`;
+            } else {
+                html += `<div class="text-xs text-slate-400">${data.guest ? 'Цена доступна после входа' : 'Цена уточняется'}</div>`;
+            }
             html += '</div></a>';
         });
         html += '</div></div>';
