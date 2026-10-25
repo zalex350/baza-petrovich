@@ -67,6 +67,16 @@ docker-compose exec php php artisan migrate
 
 > **Правило:** после мержа любой ветки, содержащей новую миграцию, обязательно выполнить `docker-compose exec php php artisan migrate` на контейнере — до того, как считать задачу завершённой. Тесты используют SQLite in-memory и не проверяют состояние боевой MySQL; без этого шага новые колонки отсутствуют в БД и INSERT падает с `Column not found`.
 
+> **Правило «мержи»:** слово пользователя «мержи» означает весь цикл без дополнительного вопроса:
+> 1. `git merge --no-ff <ветка>` в `master`;
+> 2. `docker-compose exec php php artisan migrate` (см. правило выше);
+> 3. полный прогон `docker-compose exec php php artisan test --parallel`;
+> 4. сборка `docker-compose exec node npm run build`;
+> 5. `git push origin master`;
+> 6. удаление локальной ветки `git branch -d <ветка>`.
+>
+> Если прогон или сборка упали — остановиться, не пушить и сообщить. Без слова «мержи» ветки не мержить.
+
 ## Architecture
 
 ### Routing
