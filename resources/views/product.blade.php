@@ -55,10 +55,13 @@
     // BR-082: ошибка в характеристиках не роняет карточку — блок просто не показывается
     $specRows = rescue(fn () => $product->specRows(), collect());
     $specText = trim((string) $product->specifications);
-    $description = trim((string) $product->description);
+    // Сгенерированное описание на сайте не показывается, пока его не одобрят в админке
+    $description = $product->description_generated ? '' : trim((string) $product->description);
+    // «Упаковка и логистика» — свёрнутым блоком; служебные (ТН ВЭД) — только в админке
+    $logisticsRows = rescue(fn () => $product->specRows('logistics'), collect());
     $package = trim((string) $product->package_contents);
     $hasSpecs = $specRows->isNotEmpty() || $specText !== '';
-    $hasDetails = $hasSpecs || $description !== '' || $package !== '';
+    $hasDetails = $hasSpecs || $description !== '' || $package !== '' || $logisticsRows->isNotEmpty();
 @endphp
 
 <div class="flex flex-col gap-6">
@@ -189,6 +192,21 @@
                     @if($package !== '')
                         <h2 @class(['mb-2 text-xl font-bold', 'mt-6' => $hasSpecs || $description !== ''])>Комплектация</h2>
                         <p class="max-w-prose text-ink" data-package>{!! nl2br(e($package)) !!}</p>
+                    @endif
+
+                    @if($logisticsRows->isNotEmpty())
+                        <details @class(['group', 'mt-6' => $hasSpecs || $description !== '' || $package !== '']) data-logistics>
+                            <summary class="flex cursor-pointer list-none items-center gap-2 text-xl font-bold">
+                                Упаковка и логистика
+                                @svg('heroicon-o-chevron-down', 'h-5 w-5 text-ink-muted transition group-open:rotate-180')
+                            </summary>
+                            <dl class="mt-3 grid grid-cols-2">
+                                @foreach($logisticsRows as $row)
+                                    <dt class="border-t border-line-soft py-2.5 pr-4 text-ink-muted">{{ $row['name'] }}</dt>
+                                    <dd class="border-t border-line-soft py-2.5">{{ $row['value'] }}</dd>
+                                @endforeach
+                            </dl>
+                        </details>
                     @endif
 
                 </section>

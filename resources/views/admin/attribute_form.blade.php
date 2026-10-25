@@ -63,6 +63,10 @@
         Используется в фильтрах каталога
     </label>
 
+    <x-checkbox name="is_logistics" label="Упаковка и логистика" hint="В карточке товара — в свёрнутом блоке «Упаковка и логистика», а не в характеристиках" :checked="$attribute->is_logistics" />
+
+    <x-checkbox name="is_admin_only" label="Только в админке" hint="На сайте не показывается (например, код ТН ВЭД)" :checked="$attribute->is_admin_only" />
+
     <button type="submit" class="bg-slate-800 hover:bg-slate-700 text-white px-6 py-2.5 rounded">
         Сохранить
     </button>

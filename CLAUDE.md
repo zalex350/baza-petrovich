@@ -54,6 +54,13 @@ SQLite `:memory:`, `BCRYPT_ROUNDS=4`, скомпилированные шабл�
 docker-compose exec php ./vendor/bin/pint
 ```
 
+**Импорт каталога** (`docs/CATALOG_ANALYSIS.md`): маппинги — `database/data/catalog/*.php`.
+```bash
+docker-compose exec php php artisan catalog:import-db /path/catalog.db --dry-run   # отчёт docs/catalog/import-report.md, база не меняется
+docker-compose exec php php artisan catalog:import-db /path/catalog.db --backup=../backup_….sql   # боевой — только после бэкапа
+```
+Из Git Bash путь контейнера передавать с `MSYS_NO_PATHCONV=1`, иначе `/tmp/…` превратится в путь Windows.
+
 **Migrations:**
 ```bash
 docker-compose exec php php artisan migrate

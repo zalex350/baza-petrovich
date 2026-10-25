@@ -20,6 +20,7 @@ class CatalogController extends Controller
     public function index()
     {
         $parents = Category::whereNull('parent_id')
+            ->visible()
             ->with(['children' => function ($q) {
                 $q->withCount(['products' => fn ($q2) => $q2->where('is_active', 1)])
                     ->orderBy('name');
@@ -47,7 +48,8 @@ class CatalogController extends Controller
      */
     public function show($slug, CatalogMenu $menu, CatalogFilters $filters, KeyAttributes $keyAttributes, CartSummary $cart)
     {
-        $category = Category::where('slug', $slug)->firstOrFail();
+        // Служебная категория («Без категории») — не страница каталога: товары находятся поиском
+        $category = Category::where('slug', $slug)->visible()->firstOrFail();
 
         $listing = new CatalogListing(
             $category,

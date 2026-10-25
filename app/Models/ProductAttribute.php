@@ -19,10 +19,16 @@ class ProductAttribute extends Model
 
     protected $table = 'attributes';
 
-    protected $fillable = ['name', 'unit', 'type', 'is_filterable'];
+    protected $fillable = ['name', 'unit', 'type', 'is_filterable', 'is_logistics', 'is_admin_only'];
 
+    /**
+     * is_logistics — «Упаковка и логистика» (вес, упаковка, габариты, страна): в карточке — свёрнутым блоком;
+     * is_admin_only — только в админке (код ТН ВЭД).
+     */
     protected $casts = [
         'is_filterable' => 'boolean',
+        'is_logistics' => 'boolean',
+        'is_admin_only' => 'boolean',
     ];
 
     protected static function booted(): void

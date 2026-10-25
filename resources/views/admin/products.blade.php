@@ -23,6 +23,16 @@
 
 </div>
 
+{{-- Фильтр: товары без категории (служебная «Без категории» скрыта на сайте) --}}
+<div class="mb-4 flex flex-wrap items-center gap-2 text-sm" data-admin-product-filter>
+    @if($uncategorized)
+        <x-badge tone="warning" size="md">Без категории: {{ $products->total() }}</x-badge>
+        <x-button variant="link" size="sm" href="/admin/products">Показать все</x-button>
+    @elseif($uncategorizedCount)
+        <x-button variant="secondary" size="sm" href="/admin/products?category=none">Без категории ({{ $uncategorizedCount }})</x-button>
+    @endif
+</div>
+
 <div class="bg-white border rounded overflow-hidden">
 
     <table class="w-full border-collapse">

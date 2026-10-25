@@ -129,7 +129,8 @@ class CatalogMenu
 
     public function build(): array
     {
-        $categories = Category::query()->orderBy('name')->get();
+        // Служебные категории («Без категории») в меню не показываются
+        $categories = Category::query()->visible()->orderBy('name')->get();
 
         $counts = Product::query()
             ->where('is_active', true)
