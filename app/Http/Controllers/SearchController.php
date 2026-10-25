@@ -101,12 +101,16 @@ class SearchController extends Controller
             ->limit(5)
             ->get(['name', 'slug']);
 
+        // Цена — только после входа, как в каталоге и карточке товара
+        $withPrices = auth()->check();
+
         return response()->json([
+            'guest' => ! $withPrices,
             'products' => $products->map(fn ($p) => [
                 'id' => $p->id,
                 'name' => $p->display_name ?: $p->name,
                 'sku' => $p->sku,
-                'price' => $p->price ? number_format($p->price, 2) : null,
+                'price' => $withPrices && $p->price ? number_format($p->price, 2) : null,
                 'image' => $p->mainImage?->url('thumb') ?? ProductImage::placeholderUrl(),
                 'placeholder' => ProductImage::placeholderUrl(),
                 'url' => route('product.show', $p->id),
