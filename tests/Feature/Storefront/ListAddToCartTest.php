@@ -107,16 +107,20 @@ class ListAddToCartTest extends TestCase
     {
         $admin = User::factory()->admin()->create();
 
-        foreach ($this->listUrls() as $url) {
+        // Вместо покупки — «Редактировать» (товар в админке)
+        foreach ([...$this->listUrls(), "/product/{$this->product->id}"] as $url) {
             $this->actingAs($admin)->get($url)
                 ->assertOk()
                 ->assertDontSee("action=\"/order/add/{$this->product->id}\"", false)
-                ->assertDontSee('Войдите, чтобы заказать');
+                ->assertDontSee('Войдите, чтобы заказать')
+                ->assertSee('href="/admin/product/'.$this->product->id.'"', false)
+                ->assertSee('Редактировать');
         }
 
-        $this->actingAs($admin)->get("/product/{$this->product->id}")
-            ->assertOk()
-            ->assertDontSee("action=\"/order/add/{$this->product->id}\"", false);
+        // Клиенту ссылки на админку нет
+        $this->actingAs($this->client)->get('/catalog/smesiteli')
+            ->assertDontSee('data-admin-edit', false)
+            ->assertDontSee('href="/admin/product/', false);
 
         $this->actingAs($admin)->from('/catalog/smesiteli')
             ->post("/order/add/{$this->product->id}", ['qty' => 1])

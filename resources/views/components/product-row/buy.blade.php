@@ -4,7 +4,8 @@
     после «В корзину» без перезагрузки; вид блока — из поля layout формы.
     <x-product-row.buy :product="$product" :in-cart="$item" />
     <x-product-row.buy :product="$product" :in-cart="$item" layout="card" />   — крупно, на всю ширину (48px)
-    Гость — «Войдите, чтобы заказать» (возврат на эту страницу); не клиент (BR-121) — ничего;
+    Гость — «Войдите, чтобы заказать» (возврат на эту страницу); администратор — «Редактировать»
+    (товар в админке; заказывать он не может, BR-121); иной не клиент — ничего;
     нет цены / нет остатка — неактивная кнопка; товар в корзине — x-qty (POST /order/update/{item}) и
     «В корзине · перейти»; иначе — x-qty с кратностью товара и «В корзину» (POST /order/add/{id}).
     Без JS — обычные формы. Сообщение об ошибке — в [data-cart-message].
@@ -29,6 +30,10 @@
     @guest
         <x-button variant="secondary" :size="$size" :href="route('login', ['return' => request()->getRequestUri()])" :class="$wide">
             Войдите, чтобы заказать
+        </x-button>
+    @elseif($user->isAdmin())
+        <x-button variant="secondary" :size="$size" :href="'/admin/product/'.$product->id" :class="$wide" data-admin-edit>
+            Редактировать
         </x-button>
     @elseif($user->isClient())
         @if($product->price === null)

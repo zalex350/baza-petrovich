@@ -206,7 +206,7 @@
 </div>
 
 <div class="mt-8">
-    {{ $users->links() }}
+    <x-pagination :paginator="$users" />
 </div>
 
 @endsection
