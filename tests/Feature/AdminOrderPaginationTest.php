@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /**
@@ -24,7 +25,7 @@ class AdminOrderPaginationTest extends TestCase
         $this->admin = User::factory()->admin()->create();
     }
 
-    private function page(string $query = ''): \Illuminate\Testing\TestResponse
+    private function page(string $query = ''): TestResponse
     {
         return $this->actingAs($this->admin)->get('/admin/orders'.$query)->assertOk();
     }

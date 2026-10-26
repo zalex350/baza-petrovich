@@ -24,15 +24,15 @@ class OrderFactory extends Factory
         $n++;
 
         return [
-            'number'            => sprintf('SM-2026-%06d', $n),
-            'user_id'           => User::factory(['organization_id' => Organization::factory()]),
-            'organization_id'   => fn (array $attributes) => User::find($attributes['user_id'])?->organization_id,
-            'status'            => OrderStatus::New,
-            'total'             => 100,
+            'number' => sprintf('SM-2026-%06d', $n),
+            'user_id' => User::factory(['organization_id' => Organization::factory()]),
+            'organization_id' => fn (array $attributes) => User::find($attributes['user_id'])?->organization_id,
+            'status' => OrderStatus::New,
+            'total' => 100,
             'total_without_vat' => 100,
-            'total_vat'         => 20,
-            'total_with_vat'    => 120,
-            'placed_at'         => now()->subMinutes($n),
+            'total_vat' => 20,
+            'total_with_vat' => 120,
+            'placed_at' => now()->subMinutes($n),
         ];
     }
 }
