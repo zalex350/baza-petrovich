@@ -178,6 +178,17 @@ class CatalogImportCommandTest extends TestCase
         ];
     }
 
+    public function test_import_keeps_new_badge_removed_in_admin(): void
+    {
+        // A-6: «Новинку» сняли в админке — товар в «Новинках» catalog.db бейдж не получает
+        $this->find('LEDEME-N1')->update(['is_new' => false, 'is_new_locked' => true]);
+
+        $this->import(['--backup' => $this->backup])->assertSuccessful();
+
+        // Без отметки админа товар из «Новинок» получает бейдж — test_real_run_applies_plan
+        $this->assertFalse($this->find('LEDEME-N1')->is_new);
+    }
+
     private function find(string $sku): Product
     {
         return Product::withTrashed()->where('sku', $sku)->firstOrFail();

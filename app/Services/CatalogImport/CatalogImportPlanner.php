@@ -34,7 +34,7 @@ class CatalogImportPlanner
         $this->categories = Category::all()->keyBy('id');
 
         $ours = Product::withTrashed()
-            ->get(['id', 'sku', 'name', 'display_name', 'brand', 'category_id', 'description', 'description_generated', 'is_new', 'is_published', 'video_url', 'deleted_at'])
+            ->get(['id', 'sku', 'name', 'display_name', 'brand', 'category_id', 'description', 'description_generated', 'is_new', 'is_new_locked', 'is_published', 'video_url', 'deleted_at'])
             ->keyBy(fn (Product $p) => mb_strtoupper(trim($p->sku)));
 
         $currentValues = $this->currentAttributeValues();
@@ -110,7 +110,8 @@ class CatalogImportPlanner
                 $change['is_published'] = [true, false];
             }
 
-            if ($target['novelty'] && ! $our->is_new) {
+            // «Новинку», снятую в админке, импорт не возвращает
+            if ($target['novelty'] && ! $our->is_new && ! $our->is_new_locked) {
                 $change['is_new'] = [false, true];
                 $stats['is_new']++;
             }
@@ -691,7 +692,7 @@ class CatalogImportPlanner
             $plan->duplicates[] = [
                 'keep_id' => $keep->id, 'keep_sku' => $keep->sku, 'remove_id' => $remove->id, 'remove_sku' => $remove->sku,
                 'fill' => $fill, 'attributes' => $extra, 'keep_attributes' => $keepSet,
-                'is_new' => $removeRow && $this->map->isNovelty($removeRow['category']) && ! $keep->is_new,
+                'is_new' => $removeRow && $this->map->isNovelty($removeRow['category']) && ! $keep->is_new && ! $keep->is_new_locked,
                 'soft' => isset($ordered[$remove->id]),
             ];
         }

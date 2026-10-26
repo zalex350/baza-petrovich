@@ -165,6 +165,11 @@ class AdminProductController extends Controller
             }
         }
 
+        // «Новинку» изменили вручную — импорт каталога её больше не трогает (A-6)
+        if (array_key_exists('is_new', $direct) && (bool) $direct['is_new'] !== $product->is_new) {
+            $direct['is_new_locked'] = true;
+        }
+
         $product->update($direct);
 
         $this->saveDraftFields($product, $data);
