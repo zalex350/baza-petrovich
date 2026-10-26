@@ -147,8 +147,8 @@ cd /home/deploy/smesitel_by
    Пароль на сайт: `sudo htpasswd -c /etc/nginx/.htpasswd <логин>` (пакет `apache2-utils`).
    HTTPS: `sudo certbot --nginx -d test.smesitel.by` — certbot сам допишет `listen 443`
    и редирект с http. `sudo nginx -t && sudo systemctl reload nginx`.
-7. **Данные:** демо-учётки и заказы — см. «Демо-данные»; каталог из JSON —
-   «Импорт каталога».
+7. **Данные:** демо-учётки и заказы — см. «Демо-данные»; каталог — «Импорт каталога на стенде»
+   (прежний импорт из JSON — «Полезные команды → Импорт каталога из JSON»).
 
 ## Демо-данные
 
@@ -241,6 +241,110 @@ sudo tail -f /var/log/nginx/access.log /var/log/nginx/error.log   # nginx сер
 затем `SKIP_PULL=1 ./deploy.sh` (или `docker compose up -d --force-recreate php queue` — кэш
 конфигурации пересобирается при старте, воркер перечитывает `.env`).
 
+## Импорт каталога на стенде
+
+Команда `catalog:import-db` переносит каталог из `catalog.db` (SQLite): категории, бренды,
+характеристики, фильтры, дубли (подробно — `docs/CATALOG_ANALYSIS.md`, маппинги —
+`database/data/catalog/*.php`, они в образе). Цены, остатки, артикулы и названия не меняет.
+Повторный прогон ничего не меняет (идемпотентен).
+
+**Перед импортом** стенд должен быть обновлён `./deploy.sh` (нужны миграции импорта,
+в т. ч. `video_url` и `value` до 1000 символов):
+
+```bash
+cd /home/deploy/smesitel_by
+docker compose exec php php artisan migrate:status | grep -E "video_url|widen_product_attribute"   # обе — Ran
+```
+
+Всё ниже — от deploy в `/home/deploy/smesitel_by`. Код на стенде — в образе, без bind-mount:
+файлы попадают в контейнер `php` только через `docker compose cp`, а `/tmp` контейнера
+очищается при его пересоздании (`./deploy.sh`) — копировать перед каждым прогоном.
+
+**1. Положить `catalog.db` на сервер** (вне папки проекта, чтобы не мешал `git pull`) —
+с компьютера:
+
+```bash
+ssh deploy@<сервер> mkdir -p imports
+scp D:\smesitel_by\data\catalog.db deploy@<сервер>:imports/catalog.db
+```
+
+**2. Скопировать в контейнер** (только чтение):
+
+```bash
+docker compose cp ~/imports/catalog.db php:/tmp/catalog.db
+docker compose exec php chmod 0444 /tmp/catalog.db
+```
+
+**3. Бэкап БД** — свежий, прямо перед боевым прогоном:
+
+```bash
+./deploy.sh backup
+B=$(ls -t ~/backups/smesitel-*.sql.gz | head -1); echo "$B"
+gunzip -c "$B" | tail -1                     # -- Dump completed on …
+gunzip -c "$B" | grep -c 'CREATE TABLE'      # = числу таблиц:
+docker compose exec mysql sh -c 'exec mysql -N -uroot -p"$MYSQL_ROOT_PASSWORD" -e "select count(*) from information_schema.tables where table_schema=\"$MYSQL_DATABASE\""'
+```
+
+**Проверка «без полного дампа не запускается».** Боевой прогон требует `--backup=<файл>`
+**внутри контейнера** и читает его конец: нет файла, он пустой или последняя строка не
+`-- Dump completed` — прогон не начинается. Файл должен быть **несжатым**: в `.sql.gz`
+команда строку не найдёт. Поэтому распакованная копия бэкапа — в контейнер (сжатый
+оригинал остаётся в `~/backups`, из него и восстанавливать):
+
+```bash
+gunzip -c "$B" | docker compose exec -T php sh -c 'cat > /tmp/backup_catalog_import.sql'
+docker compose exec php tail -1 /tmp/backup_catalog_import.sql      # -- Dump completed on …
+```
+
+Команда проверяет только, что дамп полный, но не его дату: свежесть бэкапа — на том,
+кто запускает (шаг 3 — непосредственно перед шагом 5).
+
+**4. Dry-run** — база не меняется; отчёт — в `/tmp` контейнера, затем на сервер:
+
+```bash
+docker compose exec php php artisan catalog:import-db /tmp/catalog.db --dry-run --report-dir=/tmp/catalog-import
+docker compose cp php:/tmp/catalog-import ~/imports/report-before
+less ~/imports/report-before/import-report.md      # и uncategorized.csv (на проверку)
+```
+
+В отчёте раздел **«Проверка по схеме БД — ошибок нет»**. Если вместо него
+«Ошибки — боевой прогон не стартует» (значение длиннее колонки) — боевой прогон
+откажется запускаться; сначала исправить. Данные стенда отличаются от локальных, поэтому
+цифры могут не совпасть с `docs/catalog/import-report.md` из репозитория — просмотреть
+«Итого», категории к удалению и «Без категории».
+
+**5. Боевой прогон** (локально — ~30 с, пачками в транзакциях):
+
+```bash
+docker compose exec php php artisan catalog:import-db /tmp/catalog.db --backup=/tmp/backup_catalog_import.sql --report-dir=/tmp/catalog-import
+```
+
+Последняя строка — «Импорт выполнен». Меню каталога сбрасывается командой; на всякий
+случай — `docker compose exec php php artisan cache:clear`.
+
+Если прогон упал — вернуть БД из бэкапа шага 3 (не продолжать с частично применённым):
+
+```bash
+gunzip -c "$B" | docker compose exec -T mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"'
+docker compose exec php php artisan cache:clear
+```
+
+**6. Повторный dry-run** — должно быть «Товаров изменится: 0»:
+
+```bash
+docker compose exec php php artisan catalog:import-db /tmp/catalog.db --dry-run --report-dir=/tmp/catalog-import
+docker compose cp php:/tmp/catalog-import ~/imports/report-after
+grep -E "^\| (Товаров изменится|Категорий:)" ~/imports/report-after/import-report.md
+```
+
+**7. Удалить файлы из контейнера** (каталог и дамп с данными клиентов):
+
+```bash
+docker compose exec php rm -rf /tmp/catalog.db /tmp/backup_catalog_import.sql /tmp/catalog-import
+```
+
+`~/imports/catalog.db` и отчёты на сервере — удалить, когда не нужны: `rm -rf ~/imports`.
+
 ## Полезные команды
 
 ```bash
@@ -255,7 +359,7 @@ docker compose restart php nginx                    # перезапуск бе�
 Изменения в `.env` применяются после перезапуска `php` (кэш конфигурации собирается
 при старте контейнера).
 
-### Импорт каталога
+### Импорт каталога из JSON (прежний)
 
 Файл `catalog_import.json` (формат — `app/Console/Commands/ImportCatalog.php`):
 
