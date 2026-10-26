@@ -5,6 +5,7 @@ namespace App\Services\CatalogImport;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductAttribute;
+use App\Support\CategoryName;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use PDO;
@@ -355,6 +356,21 @@ class CatalogImportPlanner
      * @return array{path: ?array, novelty: bool}
      */
     private function targetFor(array $row, CatalogImportPlan $plan): array
+    {
+        $target = $this->rawTargetFor($row, $plan);
+
+        // Названия категорий — с заглавной первой буквы (остальное как есть)
+        if ($target['path']) {
+            $target['path'] = array_map(CategoryName::capitalize(...), $target['path']);
+        }
+
+        return $target;
+    }
+
+    /**
+     * @return array{path: ?array, novelty: bool}
+     */
+    private function rawTargetFor(array $row, CatalogImportPlan $plan): array
     {
         $value = trim((string) $row['category']);
 
