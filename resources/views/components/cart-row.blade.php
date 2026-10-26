@@ -166,6 +166,7 @@
                     :value="$item->quantity"
                     :min="$aligned ? $min : 1"
                     :step="$aligned ? $step : 1"
+                    :max="$product->stock"
                     :size="$card ? 'md' : 'sm'"
                     label="Количество"
                 />

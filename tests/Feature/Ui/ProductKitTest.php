@@ -166,6 +166,22 @@ class ProductKitTest extends TestCase
         $this->assertSame(0, preg_match_all('/<button[^>]*\sdisabled[\s>=]/', $html));
     }
 
+    public function test_qty_keeps_value_above_max_and_has_hint(): void
+    {
+        // Остаток уменьшился на сервере: в корзине 8 при остатке 5 — показывается 8, не урезается
+        $html = (string) $this->blade('<x-qty :value="8" :min="2" :step="3" :max="5" />');
+        $this->assertStringContainsString('value="8"', $html);
+        $this->assertStringContainsString('max="5"', $html);
+        // «+» отключён, «−» — нет
+        $this->assertSame(1, preg_match_all('/<button[^>]*\sdisabled[\s>=]/', $html));
+
+        // Подсказка (округление, «Доступно N шт.»), ручной ввод — по Enter и уходу из поля
+        $this->assertStringContainsString('data-qty-hint', $html);
+        $this->assertStringContainsString('@keydown.enter="apply($event)"', $html);
+        $this->assertStringContainsString("'Округлено до '", $html);
+        $this->assertStringContainsString("'Доступно '", $html);
+    }
+
     // --- x-product-badge ---
 
     public function test_product_badges(): void

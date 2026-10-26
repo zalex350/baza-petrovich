@@ -1,6 +1,7 @@
 // Подсказки артикула в «Добавить по артикулу» (корзина, x-cart-quick-add): тот же /search/suggest,
 // что и в шапке, но выбор не открывает товар, а подставляет артикул и количество по умолчанию.
-// ↑/↓ — выбор, Enter — подставить выбранное (без выбора — отправить форму), Esc — закрыть.
+// ↑/↓ — выбор, Enter — подставить выбранное и сразу добавить (без выбора — отправить форму),
+// щелчок — подставить и перейти в количество, Esc — закрыть.
 
 const DEBOUNCE = 250;
 
@@ -52,17 +53,22 @@ export default (url) => ({
     enter(event) {
         if (this.open && this.active >= 0) {
             event.preventDefault();
-            this.pick(this.items[this.active]);
+            this.fill(this.items[this.active]);
+            this.$refs.sku.form.requestSubmit();
         }
         // Иначе Enter отправляет форму — «Добавить»
     },
 
     pick(item) {
+        this.fill(item);
+        this.$refs.qty.focus();
+        this.$refs.qty.select();
+    },
+
+    fill(item) {
         this.$refs.sku.value = item.sku;
         this.$refs.qty.value = item.qty;
         this.close();
-        this.$refs.qty.focus();
-        this.$refs.qty.select();
     },
 
     close() {

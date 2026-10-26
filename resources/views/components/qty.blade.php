@@ -2,8 +2,13 @@
     Количество: «−» поле «+» с кратностью заказа (Alpine).
     <x-qty :product="$product" />                               — min_qty, qty_step, default_qty из товара
     <x-qty name="items[3][qty]" :value="$item->qty" :min="2" :step="2" :max="100" size="sm" />
-    Допустимые значения: min, min + step, …; введённое вручную округляется вверх до допустимого,
-    больше max — вниз. Кнопки на границе отключаются. После изменения кнопками поле шлёт change.
+    Допустимые значения: min, min + step, …; кнопки на границе отключаются.
+    Ручной ввод применяется по Enter и уходу из поля: округляется вверх до допустимого с подсказкой
+    на 3 с («Округлено до 5 — мин. 2, кратно 3»); больше max (остаток) — не применяется, подсказка
+    «Доступно N шт.» до следующего изменения. Значение больше max с сервера (остаток уменьшился)
+    показывается как есть — не урезается.
+    События change на поле: ручной ввод — обычное; кнопки — detail.source = 'button' (формы
+    корзины отправляют их после паузы); не применённый ввод дальше поля не всплывает.
     label — подпись для экранного диктора (визуально скрыта); size: sm (таблицы, 40px) | md (44px) | lg (карточка товара, 48px).
     class — на обёртку, остальные атрибуты (form, data-*…) — на <input>.
 --}}
@@ -29,9 +34,6 @@
     // Начальное значение — тоже допустимое
     $value = (int) old($key, $value ?? $product?->default_qty ?? $min);
     $value = $value <= $min ? $min : $min + (int) ceil(($value - $min) / $step) * $step;
-    if ($max !== null && $max >= $min && $value > $max) {
-        $value = $min + intdiv($max - $min, $step) * $step;
-    }
 
     $button = [
         'flex shrink-0 items-center justify-center bg-field text-primary transition hover:bg-canvas',
@@ -47,27 +49,68 @@
 
 <div
     x-data="{
-        value: @js($value), min: @js($min), step: @js($step), max: @js($max),
-        normalize(v) {
+        value: @js($value), min: @js($min), step: @js($step), max: @js($max), hint: '', timer: null,
+        // Вверх до допустимого (min, min + step, …); не число — null
+        round(v) {
             v = parseInt(v, 10);
-            if (isNaN(v) || v <= this.min) return this.min;
-            v = this.min + Math.ceil((v - this.min) / this.step) * this.step;
-            if (this.max !== null && this.max >= this.min && v > this.max) {
-                v = this.min + Math.floor((this.max - this.min) / this.step) * this.step;
-            }
-            return v;
+            if (isNaN(v)) return null;
+            return v <= this.min ? this.min : this.min + Math.ceil((v - this.min) / this.step) * this.step;
         },
+        rule() {
+            const parts = [];
+            if (this.min > 1 || this.step === 1) parts.push('мин. ' + this.min);
+            if (this.step > 1) parts.push('кратно ' + this.step);
+            return parts.join(', ');
+        },
+        say(text, ms = 0) {
+            clearTimeout(this.timer);
+            this.hint = text;
+            if (ms) this.timer = setTimeout(() => this.hint = '', ms);
+        },
+        // Кнопки «−/+»
         set(v) {
-            const next = this.normalize(v);
-            const changed = next !== this.value;
+            if (v < this.min || (this.max !== null && v > this.max && v > this.value)) return;
+            this.say('');
+            this.value = v;
+            this.$refs.input.value = v;
+            this.$nextTick(() => this.$refs.input.dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { source: 'button' } })));
+        },
+        // Ручной ввод (Enter, уход из поля); false — значение не применено
+        apply(event) {
+            const input = this.$refs.input;
+            const typed = parseInt(input.value, 10);
+            const next = this.round(input.value);
+            const blocked = next === null || (this.max !== null && next > this.max && next !== this.value);
+
+            if (blocked) {
+                input.value = this.value;
+                if (next !== null) this.say('Доступно ' + this.max + ' шт.');
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                return false;
+            }
+
+            input.value = next;
+            // change после Enter приходит с тем же значением — подсказку не трогать
+            if (next !== typed) this.say('Округлено до ' + next + ' — ' + this.rule(), 3000);
+            else if (next !== this.value) this.say('');
             this.value = next;
-            this.$refs.input.value = next;
-            if (changed) this.$nextTick(() => this.$refs.input.dispatchEvent(new Event('change', { bubbles: true })));
+            return true;
+        },
+        // change: от кнопок и с сервера — только синхронизация, от ручного ввода — проверка
+        changed(event) {
+            if (event.detail?.source || event.detail?.fromServer) {
+                this.value = parseInt(this.$refs.input.value, 10) || this.value;
+                if (event.detail.fromServer) this.say('');
+                return;
+            }
+            this.apply(event);
         },
     }"
-    {{ $attributes->only('class')->class(['inline-flex items-stretch overflow-hidden border border-line-strong bg-surface', $size === 'lg' ? 'rounded-panel' : 'rounded-control']) }}
+    {{ $attributes->only('class')->class(['inline-flex flex-col gap-1']) }}
     data-qty
 >
+<div @class(['inline-flex items-stretch self-start overflow-hidden border border-line-strong bg-surface', $size === 'lg' ? 'rounded-panel' : 'rounded-control'])>
     <button
         type="button"
         @class($button)
@@ -89,7 +132,8 @@
         step="{{ $step }}"
         @if($max !== null) max="{{ $max }}" @endif
         inputmode="numeric"
-        @change="value = normalize($event.target.value); $event.target.value = value"
+        @change="changed($event)"
+        @keydown.enter="apply($event)"
         {{ $attributes->except('class')->class([
             'border-0 border-x border-line bg-transparent px-1 text-center font-semibold text-ink tabular-nums',
             'focus:border-line focus:ring-2 focus:ring-inset focus:ring-primary',
@@ -111,4 +155,7 @@
         aria-label="Увеличить количество"
         aria-controls="{{ $id }}"
     >@svg('heroicon-o-plus', 'h-4 w-4')</button>
+</div>
+    {{-- Подсказка: округление (3 с) или «Доступно N шт.» --}}
+    <p class="max-w-56 text-meta text-tone-warning-text" x-show="hint" x-text="hint" x-cloak role="status" data-qty-hint></p>
 </div>

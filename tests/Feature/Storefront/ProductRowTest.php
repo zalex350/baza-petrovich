@@ -120,11 +120,11 @@ class ProductRowTest extends TestCase
             ->assertJson(['ok' => true, 'quantity' => 4])
             ->assertJsonPath('cart.total_text', Money::format(480));
 
-        // Больше остатка — отказ, прежнее количество
+        // Больше остатка — значение не применяется (не урезается до остатка), «Доступно N шт.» (SRS §7.11)
         $this->actingAs($this->client)
             ->postJson("/order/update/{$item->id}", ['quantity' => 99])
             ->assertStatus(422)
-            ->assertJson(['ok' => false, 'quantity' => 4]);
+            ->assertJson(['ok' => false, 'quantity' => 4, 'message' => 'Доступно '.$this->product->stock.' шт.']);
 
         $this->assertSame(4, $item->refresh()->quantity);
 
