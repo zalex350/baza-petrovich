@@ -12,6 +12,7 @@ class HomeController extends Controller
     public function index(KeyAttributes $keyAttributes, CartSummary $cart)
     {
         $categories = Category::whereNull('parent_id')
+            ->visible()
             ->with('children')
             ->get();
 

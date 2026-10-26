@@ -14,16 +14,14 @@ use Illuminate\Validation\Rule;
  */
 class AdminAttributeController extends Controller
 {
-    public function __construct(private readonly ProductAttributes $attributes)
-    {
-    }
+    public function __construct(private readonly ProductAttributes $attributes) {}
 
     public function index()
     {
         $search = trim((string) request('q', ''));
 
         $list = ProductAttribute::withCount('values')
-            ->when($search !== '', fn ($q) => $q->where('name_key', 'like', '%' . ProductAttribute::key($search) . '%'))
+            ->when($search !== '', fn ($q) => $q->where('name_key', 'like', '%'.ProductAttribute::key($search).'%'))
             ->orderBy('name')
             ->paginate(100)
             ->withQueryString();
@@ -55,23 +53,30 @@ class AdminAttributeController extends Controller
         $attribute = ProductAttribute::findOrFail($id);
         $data = $this->validated($attribute);
 
-        // В число — только если все значения числа; value_number пересчитывается
-        if ($data['type'] === ProductAttribute::NUMBER) {
+        // В число — только если все значения числа; value_number пересчитывается.
+        // Уже числовая (например, из импорта, где бывает «6 бар (10 для испытания)») — значения не трогаем
+        $becomesNumber = $data['type'] === ProductAttribute::NUMBER && $attribute->type !== ProductAttribute::NUMBER;
+
+        if ($becomesNumber) {
             $bad = $attribute->values()->pluck('value')
                 ->filter(fn ($v) => ProductAttribute::parseNumber($v) === null);
 
             if ($bad->isNotEmpty()) {
                 return back()->withInput()->withErrors([
-                    'type' => 'Нельзя сделать числовой: не числа у ' . $bad->count() . ' товаров (например, «' . $bad->first() . '»)',
+                    'type' => 'Нельзя сделать числовой: не числа у '.$bad->count().' товаров (например, «'.$bad->first().'»)',
                 ]);
             }
         }
 
+        $typeChanged = $data['type'] !== $attribute->type;
+
         $attribute->update($data);
 
-        $attribute->values()->each(fn (ProductAttributeValue $v) => $v->update([
-            'value_number' => ProductAttribute::parseNumber($v->value),
-        ]));
+        if ($typeChanged) {
+            $attribute->values()->each(fn (ProductAttributeValue $v) => $v->update([
+                'value_number' => ProductAttribute::parseNumber($v->value),
+            ]));
+        }
 
         return redirect('/admin/attributes')->with('success', "Характеристика «{$attribute->name}» сохранена");
     }
@@ -82,11 +87,11 @@ class AdminAttributeController extends Controller
     public function merge()
     {
         $data = request()->validate([
-            'target_id'   => ['required', 'integer', 'exists:attributes,id'],
-            'source_ids'  => ['required', 'array', 'min:1'],
+            'target_id' => ['required', 'integer', 'exists:attributes,id'],
+            'source_ids' => ['required', 'array', 'min:1'],
             'source_ids.*' => ['integer', 'exists:attributes,id'],
         ], [
-            'target_id.required'  => 'Выберите характеристику, в которую объединять',
+            'target_id.required' => 'Выберите характеристику, в которую объединять',
             'source_ids.required' => 'Отметьте характеристики для объединения',
         ]);
 
@@ -109,9 +114,9 @@ class AdminAttributeController extends Controller
         $result = $this->attributes->merge($target, $sources);
 
         return redirect('/admin/attributes')->with('success',
-            'Объединено в «' . $target->name . '»: ' . $sources->pluck('name')->map(fn ($n) => "«{$n}»")->implode(', ')
-            . ". Перенесено значений: {$result['moved']}"
-            . ($result['dropped'] ? ", отброшено (у товара уже было значение «{$target->name}»): {$result['dropped']}" : '')
+            'Объединено в «'.$target->name.'»: '.$sources->pluck('name')->map(fn ($n) => "«{$n}»")->implode(', ')
+            .". Перенесено значений: {$result['moved']}"
+            .($result['dropped'] ? ", отброшено (у товара уже было значение «{$target->name}»): {$result['dropped']}" : '')
         );
     }
 
@@ -133,11 +138,13 @@ class AdminAttributeController extends Controller
         request()->merge(['name_key' => ProductAttribute::key(request('name'))]);
 
         $data = request()->validate([
-            'name'          => ['required', 'string', 'max:255'],
-            'name_key'      => [Rule::unique('attributes', 'name_key')->ignore($attribute?->id)],
-            'unit'          => ['nullable', 'string', 'max:50'],
-            'type'          => ['required', Rule::in(array_keys(ProductAttribute::TYPES))],
+            'name' => ['required', 'string', 'max:255'],
+            'name_key' => [Rule::unique('attributes', 'name_key')->ignore($attribute?->id)],
+            'unit' => ['nullable', 'string', 'max:50'],
+            'type' => ['required', Rule::in(array_keys(ProductAttribute::TYPES))],
             'is_filterable' => ['boolean'],
+            'is_logistics' => ['boolean'],
+            'is_admin_only' => ['boolean'],
         ], [
             'name_key.unique' => 'Такая характеристика уже есть (без учёта регистра). Чтобы свести дубли, используйте объединение',
         ], [
@@ -148,6 +155,8 @@ class AdminAttributeController extends Controller
 
         unset($data['name_key']);
         $data['is_filterable'] = request()->boolean('is_filterable');
+        $data['is_logistics'] = request()->boolean('is_logistics');
+        $data['is_admin_only'] = request()->boolean('is_admin_only');
 
         return $data;
     }

@@ -23,6 +23,21 @@
 
 </div>
 
+{{-- Фильтры: без категории (служебная «Без категории» скрыта на сайте), без названия --}}
+<div class="mb-4 flex flex-wrap items-center gap-2 text-sm" data-admin-product-filter>
+    @if($uncategorized || $unnamed)
+        <x-badge tone="warning" size="md">{{ $uncategorized ? 'Без категории' : 'Без названия' }}: {{ $products->total() }}</x-badge>
+        <x-button variant="link" size="sm" href="/admin/products">Показать все</x-button>
+    @else
+        @if($uncategorizedCount)
+            <x-button variant="secondary" size="sm" href="/admin/products?category=none">Без категории ({{ $uncategorizedCount }})</x-button>
+        @endif
+        @if($unnamedCount)
+            <x-button variant="secondary" size="sm" href="/admin/products?name=none">Без названия ({{ $unnamedCount }})</x-button>
+        @endif
+    @endif
+</div>
+
 <div class="bg-white border rounded overflow-hidden">
 
     <table class="w-full border-collapse">
@@ -74,7 +89,10 @@
                     </td>
 
                     <td class="border p-3">
-                        {{ $product->name }}
+                        {{ $product->title() }}
+                        @unless($product->hasRealName())
+                            <x-badge tone="warning">без названия</x-badge>
+                        @endunless
                     </td>
 
                     <td class="border p-3">
@@ -160,7 +178,7 @@
                                 <button
                                     type="submit"
                                     class="text-red-600 hover:text-red-700 text-sm underline"
-                                    onclick="return confirm('Удалить товар «{{ addslashes($product->name) }}»?')"
+                                    onclick="return confirm('Удалить товар «{{ addslashes($product->title()) }}»?')"
                                 >
                                     Удалить
                                 </button>

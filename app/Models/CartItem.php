@@ -46,7 +46,7 @@ class CartItem extends Model
     public function title(): string
     {
         if ($this->product) {
-            return $this->product->display_name ?: $this->product->name;
+            return $this->product->title();
         }
 
         return $this->product_name ?? 'Товар';

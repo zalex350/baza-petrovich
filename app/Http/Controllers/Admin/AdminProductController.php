@@ -35,12 +35,24 @@ class AdminProductController extends Controller
 
     public function index()
     {
-        $products = Product::with('draft')->latest()->paginate(50);
+        // «Без категории»: служебная категория (скрыта на сайте) или категория не задана;
+        // «Без названия»: пусто или sku вместо названия (на сайте — «БРЕНД артикул»)
+        $uncategorized = request('category') === 'none';
+        $unnamed = request('name') === 'none';
+        $hiddenIds = Category::where('is_hidden', true)->pluck('id');
+        $noCategory = fn ($q) => $q->where(fn ($q) => $q->whereNull('category_id')->orWhereIn('category_id', $hiddenIds));
 
-        return view(
-            'admin.products',
-            compact('products')
-        );
+        $products = Product::with('draft')
+            ->when($uncategorized, $noCategory)
+            ->when($unnamed, fn ($q) => $q->withoutName())
+            ->latest()
+            ->paginate(50)
+            ->withQueryString();
+
+        $uncategorizedCount = Product::query()->tap($noCategory)->count();
+        $unnamedCount = Product::withoutName()->count();
+
+        return view('admin.products', compact('products', 'uncategorized', 'uncategorizedCount', 'unnamed', 'unnamedCount'));
     }
 
     public function create()
@@ -89,6 +101,16 @@ class AdminProductController extends Controller
             'success',
             $product->is_active ? 'Товар показан на сайте' : 'Товар скрыт с сайта'
         );
+    }
+
+    /**
+     * Сгенерированное описание проверено — показывать на сайте.
+     */
+    public function approveDescription($id)
+    {
+        Product::findOrFail($id)->update(['description_generated' => false]);
+
+        return back()->with('success', 'Описание одобрено и показывается на сайте');
     }
 
     public function destroy($id)
@@ -346,9 +368,13 @@ class AdminProductController extends Controller
         if ($draft) {
             $data = $draft->data;
 
+            $description = $data['description'] ?? $product->description;
+
             $product->update([
                 'display_name' => $data['display_name'] ?? null,
-                'description' => $data['description'] ?? $product->description,
+                'description' => $description,
+                // Описание переписали вручную — оно уже не сгенерированное
+                'description_generated' => $product->description_generated && trim((string) $description) === trim((string) $product->description),
                 'specifications' => $data['specifications'] ?? $product->specifications,
                 'package_contents' => $data['package_contents'] ?? $product->package_contents,
                 'is_published' => true,

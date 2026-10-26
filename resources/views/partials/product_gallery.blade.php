@@ -7,7 +7,7 @@
 @php
     $gallery = $product->gallery();
     $galleryData = $gallery->map->toGalleryItem()->all();
-    $alt = $product->display_name ?: $product->name;
+    $alt = $product->title();
     $placeholder = \App\Models\ProductImage::placeholderUrl();
     $first = $gallery->first();
 @endphp

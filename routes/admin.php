@@ -1,15 +1,14 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\Admin\AdminAttributeController;
+use App\Http\Controllers\Admin\AdminCatalogFilterController;
+use App\Http\Controllers\Admin\AdminDeliveryAddressController;
+use App\Http\Controllers\Admin\AdminOrderController;
+use App\Http\Controllers\Admin\AdminOrganizationController;
 use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminProductImageController;
 use App\Http\Controllers\Admin\AdminUserController;
-use App\Http\Controllers\Admin\AdminOrderController;
-use App\Http\Controllers\Admin\AdminOrganizationController;
-use App\Http\Controllers\Admin\AdminDeliveryAddressController;
-use App\Http\Controllers\Admin\AdminAttributeController;
-use App\Http\Controllers\Admin\AdminCatalogFilterController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -138,6 +137,12 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post(
         '/admin/product/{id}',
         [AdminProductController::class, 'update']
+    );
+
+    // Сгенерированное описание (импорт каталога) — показать на сайте
+    Route::post(
+        '/admin/product/{id}/approve-description',
+        [AdminProductController::class, 'approveDescription']
     );
 
     Route::post(

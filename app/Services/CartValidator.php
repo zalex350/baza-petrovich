@@ -53,7 +53,7 @@ class CartValidator
      */
     public function check(?Product $product, int $quantity, $priceAtAdd = null, ?string $name = null): array
     {
-        $name ??= $product ? ($product->display_name ?: $product->name) : 'Товар';
+        $name ??= $product ? $product->title() : 'Товар';
 
         $unavailable = match (true) {
             ! $product || $product->trashed() => CartProblemType::Missing,

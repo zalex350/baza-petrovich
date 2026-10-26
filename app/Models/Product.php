@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 
+/**
+ * guid — GUID номенклатуры 1С: заполняется только обменом с 1С, поэтому не в $fillable.
+ */
 class Product extends Model
 {
     use SoftDeletes;
@@ -24,6 +27,7 @@ class Product extends Model
         'qty_step',
         'default_qty',
         'description',
+        'description_generated',
         'category_id',
         'specifications',
         'brand',
@@ -33,6 +37,7 @@ class Product extends Model
         'is_hit',
         'is_new',
         'package_contents',
+        'video_url',
     ];
 
     protected $attributes = [
@@ -52,6 +57,8 @@ class Product extends Model
         'default_qty' => 'integer',
         'is_hit' => 'boolean',
         'is_new' => 'boolean',
+        // Описание сгенерировано: на сайте не показывается, пока его не одобрят в админке
+        'description_generated' => 'boolean',
     ];
 
     /**
@@ -71,6 +78,49 @@ class Product extends Model
     public function getPriceWithVatAttribute(): float
     {
         return $this->vatLine()->gross;
+    }
+
+    /**
+     * Есть ли настоящее название: у товаров каталога без названия в name записан sku.
+     */
+    public function hasRealName(): bool
+    {
+        $name = trim((string) $this->name);
+
+        return $name !== '' && mb_strtoupper($name) !== mb_strtoupper(trim((string) $this->sku));
+    }
+
+    /**
+     * Название для сайта и админки: отображаемое → системное → «БРЕНД артикул» (без бренда — артикул).
+     * Артикул — sku без префикса «БРЕНД-» (так sku собран в каталоге).
+     */
+    public function title(): string
+    {
+        if (trim((string) $this->display_name) !== '') {
+            return $this->display_name;
+        }
+
+        if ($this->hasRealName()) {
+            return $this->name;
+        }
+
+        $sku = trim((string) $this->sku);
+        $brand = trim((string) $this->brand);
+        $prefix = mb_strtoupper($brand).'-';
+
+        if ($brand !== '' && str_starts_with(mb_strtoupper($sku), $prefix)) {
+            return $brand.' '.mb_substr($sku, mb_strlen($prefix));
+        }
+
+        return $brand !== '' && mb_strtoupper($sku) !== mb_strtoupper($brand) ? "{$brand} {$sku}" : $sku;
+    }
+
+    /**
+     * Товары без названия: пусто или sku вместо названия (админка, фильтр «Без названия»).
+     */
+    public function scopeWithoutName($query)
+    {
+        return $query->where(fn ($q) => $q->whereNull('name')->orWhere('name', '')->orWhereColumn('name', 'sku'));
     }
 
     public function getVatRateLabelAttribute(): string
@@ -127,10 +177,17 @@ class Product extends Model
      *
      * @return Collection<int, array{name: string, value: string}>
      */
-    public function specRows()
+    public function specRows(string $group = 'main')
     {
         return $this->attributeValues
             ->filter(fn (ProductAttributeValue $v) => $v->attribute && trim((string) $v->value) !== '')
+            ->filter(fn (ProductAttributeValue $v) => match ($group) {
+                // «Характеристики»: без логистики и служебных (только для админки)
+                'main' => ! $v->attribute->is_logistics && ! $v->attribute->is_admin_only,
+                // «Упаковка и логистика» — свёрнутый блок карточки
+                'logistics' => $v->attribute->is_logistics && ! $v->attribute->is_admin_only,
+                default => true,
+            })
             ->map(fn (ProductAttributeValue $v) => ['name' => $v->attribute->name, 'value' => $v->displayValue()])
             ->values();
     }

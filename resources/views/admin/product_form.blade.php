@@ -185,6 +185,18 @@
 
         <div>
             <label for="f-description" class="block mb-2 font-semibold">Описание</label>
+
+            {{-- Сгенерированное (импорт каталога): на сайте не показывается, пока не одобрено --}}
+            @if($product->description_generated)
+                <div class="mb-2 flex flex-wrap items-center gap-3" data-description-generated>
+                    <x-badge tone="warning">Описание сгенерировано — на сайте не показывается</x-badge>
+                    <form method="POST" action="/admin/product/{{ $product->id }}/approve-description">
+                        @csrf
+                        <x-button variant="secondary" size="sm">Одобрить описание</x-button>
+                    </form>
+                </div>
+            @endif
+
             <textarea id="f-description" name="description" form="{{ $form }}" rows="5" class="{{ $input }}">{{ $site('description') }}</textarea>
         </div>
 

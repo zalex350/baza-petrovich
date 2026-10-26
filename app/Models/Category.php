@@ -4,13 +4,29 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * is_hidden — служебная категория («Без категории»): нет в меню и каталоге, товары находятся поиском.
+ */
 class Category extends Model
 {
+    /** Служебная категория для товаров, которые не удалось разложить (импорт каталога) */
+    public const UNCATEGORIZED = 'Без категории';
+
     protected $fillable = [
         'name',
         'slug',
         'parent_id',
+        'is_hidden',
     ];
+
+    protected $casts = [
+        'is_hidden' => 'boolean',
+    ];
+
+    public function scopeVisible($query)
+    {
+        return $query->where('is_hidden', false);
+    }
 
     public function children()
     {
@@ -24,6 +40,6 @@ class Category extends Model
 
     public function products()
     {
-        return $this->hasMany(\App\Models\Product::class);
+        return $this->hasMany(Product::class);
     }
 }
