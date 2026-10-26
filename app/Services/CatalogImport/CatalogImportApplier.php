@@ -258,8 +258,10 @@ class CatalogImportApplier
             }
 
             // Позиции корзин дубля — на оставляемый товар (если его там ещё нет)
+            // id корзин — отдельным запросом: MySQL не обновляет таблицу с подзапросом к ней же (1093)
+            $taken = DB::table('cart_items')->where('product_id', $keep->id)->pluck('cart_id');
             DB::table('cart_items')->where('product_id', $remove->id)
-                ->whereNotIn('cart_id', DB::table('cart_items')->where('product_id', $keep->id)->select('cart_id'))
+                ->whereNotIn('cart_id', $taken)
                 ->update(['product_id' => $keep->id]);
 
             $dup['soft'] ? $remove->delete() : $remove->forceDelete();
