@@ -182,6 +182,17 @@ class ProductKitTest extends TestCase
         $this->assertStringContainsString("'Доступно '", $html);
     }
 
+    // --- x-copy ---
+
+    public function test_copy_renders_text_and_button(): void
+    {
+        $this->blade('<x-copy text="LEDEME-L1402" label="Скопировать артикул" />')
+            ->assertSee('x-data="copyText(\'LEDEME-L1402\')"', false)
+            ->assertSee('<span x-ref="text" class="font-medium text-ink">LEDEME-L1402</span>', false)
+            ->assertSee('aria-label="Скопировать артикул"', false)
+            ->assertSee('копировать');
+    }
+
     // --- x-product-badge ---
 
     public function test_product_badges(): void

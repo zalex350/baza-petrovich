@@ -83,15 +83,8 @@
                 <h1 class="text-2xl font-bold leading-tight tracking-tight sm:text-3xl">{{ $name }}</h1>
 
                 <div class="mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-ink-muted">
-                    <span x-data="{ copied: false }" data-sku>
-                        Артикул: <span class="font-medium text-ink">{{ $product->sku }}</span>
-                        <button
-                            type="button"
-                            class="px-1 text-link hover:underline"
-                            @click="navigator.clipboard?.writeText(@js((string) $product->sku)).then(() => { copied = true; setTimeout(() => copied = false, 1500) })"
-                            x-text="copied ? 'скопировано' : 'копировать'"
-                            aria-label="Скопировать артикул"
-                        >копировать</button>
+                    <span data-sku>
+                        Артикул: <x-copy :text="$product->sku" label="Скопировать артикул" />
                     </span>
 
                     @if($product->brand)

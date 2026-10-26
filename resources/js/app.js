@@ -13,6 +13,7 @@ import attributeRows from './attribute-rows';
 import catalogFilters from './catalog-filters';
 import productGallery from './product-gallery';
 import skuSuggest from './sku-suggest';
+import copyText from './copy-text';
 
 window.Alpine = Alpine;
 
@@ -27,5 +28,6 @@ Alpine.data('attributeRows', attributeRows);
 Alpine.data('catalogFilters', catalogFilters);
 Alpine.data('productGallery', productGallery);
 Alpine.data('skuSuggest', skuSuggest);
+Alpine.data('copyText', copyText);
 
 Alpine.start();
