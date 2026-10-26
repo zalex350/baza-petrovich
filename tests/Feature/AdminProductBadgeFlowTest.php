@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -51,7 +52,7 @@ class AdminProductBadgeFlowTest extends TestCase
         return ['товары из 1С' => [false], 'товары вручную' => [true]];
     }
 
-    /** @dataProvider modes */
+    #[DataProvider('modes')]
     public function test_unchecked_new_badge_disappears_from_product_page(bool $manual): void
     {
         config(['shop.catalog.manual_products' => $manual]);
