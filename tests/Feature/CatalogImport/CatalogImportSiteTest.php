@@ -81,6 +81,22 @@ class CatalogImportSiteTest extends TestCase
         $this->assertTrue($this->product->refresh()->description_generated);
     }
 
+    public function test_admin_filter_unapproved_description(): void
+    {
+        $this->product->update(['description_generated' => true]);
+        Product::create(['name' => 'Approved', 'sku' => 'LEDEME-A2', 'price' => 10, 'stock' => 5, 'description' => 'Текст']);
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)->get('/admin/products')
+            ->assertSee('href="/admin/products?description=unapproved"', false)->assertSee('Описание не одобрено (1)');
+        $this->actingAs($admin)->get('/admin/products?description=unapproved')
+            ->assertOk()->assertSee('Описание не одобрено: 1')->assertSee('LEDEME-A1')->assertDontSee('LEDEME-A2');
+
+        // Одобрили — из фильтра ушёл, кнопки нет
+        $this->actingAs($admin)->post("/admin/product/{$this->product->id}/approve-description");
+        $this->actingAs($admin)->get('/admin/products')->assertDontSee('description=unapproved');
+    }
+
     public function test_attribute_form_flags_and_number_with_text_values(): void
     {
         $admin = User::factory()->admin()->create();

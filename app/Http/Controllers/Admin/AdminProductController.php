@@ -36,23 +36,27 @@ class AdminProductController extends Controller
     public function index()
     {
         // «Без категории»: служебная категория (скрыта на сайте) или категория не задана;
-        // «Без названия»: пусто или sku вместо названия (на сайте — «БРЕНД артикул»)
+        // «Без названия»: пусто или sku вместо названия (на сайте — «БРЕНД артикул»);
+        // «Описание не одобрено»: сгенерированное импортом, на сайте не показывается
         $uncategorized = request('category') === 'none';
         $unnamed = request('name') === 'none';
+        $unapproved = request('description') === 'unapproved';
         $hiddenIds = Category::where('is_hidden', true)->pluck('id');
         $noCategory = fn ($q) => $q->where(fn ($q) => $q->whereNull('category_id')->orWhereIn('category_id', $hiddenIds));
 
         $products = Product::with('draft')
             ->when($uncategorized, $noCategory)
             ->when($unnamed, fn ($q) => $q->withoutName())
+            ->when($unapproved, fn ($q) => $q->where('description_generated', true))
             ->latest()
             ->paginate(50)
             ->withQueryString();
 
         $uncategorizedCount = Product::query()->tap($noCategory)->count();
         $unnamedCount = Product::withoutName()->count();
+        $unapprovedCount = Product::where('description_generated', true)->count();
 
-        return view('admin.products', compact('products', 'uncategorized', 'uncategorizedCount', 'unnamed', 'unnamedCount'));
+        return view('admin.products', compact('products', 'uncategorized', 'uncategorizedCount', 'unnamed', 'unnamedCount', 'unapproved', 'unapprovedCount'));
     }
 
     public function create()
