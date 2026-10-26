@@ -21,6 +21,20 @@ class CatalogImportReport
         $md[] = '> Сформировано командой `php artisan catalog:import-db '.$source.' --dry-run` '.now()->format('Y-m-d H:i').'.';
         $md[] = '> База **не менялась**. Маппинги — `database/data/catalog/*.php`; решения — `docs/CATALOG_ANALYSIS.md`, «Решения».';
         $md[] = '';
+        if ($plan->errors) {
+            $md[] = '## Ошибки — боевой прогон не стартует';
+            $md[] = '';
+            $md[] = '| Колонка | Предел | Превышений | Максимум | Пример |';
+            $md[] = '|---|---|---|---|---|';
+            foreach ($plan->errors as $e) {
+                $md[] = "| `{$e['column']}` | {$e['limit']} | {$e['count']} | {$e['max']} | ".str_replace('|', '\\|', $e['example']).' |';
+            }
+        } else {
+            $md[] = '## Проверка по схеме БД';
+            $md[] = '';
+            $md[] = 'Длины всех записываемых значений — в пределах колонок (по `information_schema`). Ошибок нет.';
+        }
+        $md[] = '';
         $md[] = '## Итого';
         $md[] = '';
         $md[] = '| | |';

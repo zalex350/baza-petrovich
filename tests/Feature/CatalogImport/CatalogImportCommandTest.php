@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\Catalog\CatalogFilters;
 use App\Services\CatalogImport\CatalogImportPlanner;
 use App\Services\CatalogImport\CatalogMapping;
+use App\Services\CatalogImport\ColumnLimits;
 use App\Services\CatalogMenu;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
@@ -91,6 +92,9 @@ class CatalogImportCommandTest extends TestCase
         $basin = $this->category('для умывальника', $sinks);
         $misc = $this->category('Разное');
         $news = $this->category('Новинки', $misc);
+        // Строчная буква в названии: «диверторы» → «Диверторы» (та же категория)
+        $diverters = $this->category('диверторы', $mixers);
+        $this->product('LEDEME-V1', $diverters, ['brand' => 'LEDEME']);
         $tools = $this->category('Крепёж и инструмент');
         $press = $this->category('ПРЕСС-ИНСТРУМЕНТ ЭЛЕКТРИЧЕСКИЙ', $tools);
         $this->product('TIM-P1', $press, ['brand' => 'TIM']);
@@ -142,6 +146,7 @@ class CatalogImportCommandTest extends TestCase
             ['LEDEME-H01', 'H01', 'LEDEME', 'Серия 035', null, null, 0, null, []],
             ['TIM-C1', 'C1', 'TIM Thermo', null, 'Картридж', null, 0, 'Картриджи', ['Рабочее давление (Ру)' => '10 бар', 'Длина' => '3,35 м']],
             ['TIM-P1', 'P1', 'TIM', null, 'Пресс-инструмент', null, 0, 'ПРЕСС-ИНСТРУМЕНТ ЭЛЕКТРИЧЕСКИЙ', []],
+            ['LEDEME-V1', 'V1', 'LEDEME', null, 'Дивертор', null, 0, 'диверторы', []],
             ['LEDEME-D1', 'D1', 'LEDEME', null, 'LEDEME D1', null, 0, 'на кухню', ['Цвет' => 'хром']],
             ['D1', 'D1', null, null, 'Смеситель для кухни D1 с выходом для питьевой воды', null, 0, 'Новинки', ['Материал корпуса' => 'латунь']],
         ];
@@ -193,7 +198,7 @@ class CatalogImportCommandTest extends TestCase
         $this->assertStringContainsString('Смесители / на кухню | Смесители / Для кухни', $report);   // переименование
         $this->assertStringContainsString('Длина (единица не см / мм) | 1', $report);               // метры не загружаются
         $this->assertStringContainsString('**Названия капсом после импорта:** нет.', $report);
-        $this->assertStringContainsString('Комплектация (длиннее 255 символов) | 1', $report);
+        $this->assertStringContainsString('## Проверка по схеме БД', $report);
         $this->assertStringContainsString('| Код ТН ВЭД | text |  | только админка |', $report);
         $this->assertStringContainsString('| Вес | number | кг | упаковка и логистика |', $report);
 
@@ -277,9 +282,14 @@ class CatalogImportCommandTest extends TestCase
         $press = $this->find('TIM-P1')->category;
         $this->assertSame('Пресс-инструмент электрический', $press->name);
         $this->assertSame($this->cat['Крепёж и инструмент / ПРЕСС-ИНСТРУМЕНТ ЭЛЕКТРИЧЕСКИЙ']->id, $press->id);
+
+        // Строчная буква → заглавная: та же категория, адрес сохранён
+        $diverters = $this->find('LEDEME-V1')->category;
+        $this->assertSame('Диверторы', $diverters->name);
+        $this->assertSame($this->cat['Смесители / диверторы']->slug, $diverters->slug);
         $this->assertSame(['хром', null], $values('LEDEME-A2')['Цвет']);  // «Цвет покрытия» → «Цвет»
-        // Длиннее 255 символов — не загружается (не обрезается)
-        $this->assertArrayNotHasKey('Комплектация', $values('LEDEME-A2'));
+        // Длинное значение (279 символов после обрезки пробела) — загружается целиком: колонка value — 1000
+        $this->assertSame(279, mb_strlen($values('LEDEME-A2')['Комплектация'][0]));
         $this->assertSame(['Thermo', null], $values('TIM-C1')['Серия']);
         $this->assertSame(['10', 10.0], $values('TIM-C1')['Рабочее давление']);
 
@@ -327,6 +337,24 @@ class CatalogImportCommandTest extends TestCase
 
         $this->import(['--backup' => $this->backup])->assertSuccessful();
         $this->assertSame($after, $this->snapshot());
+    }
+
+    public function test_column_limits_are_errors_and_block_real_run(): void
+    {
+        // Схема в тестах (SQLite) длин не хранит — пределы как в MySQL, но value — 100 символов
+        $this->app->bind(CatalogImportPlanner::class, fn ($app, $params) => new CatalogImportPlanner(
+            $params['map'],
+            new ColumnLimits(['product_attribute_values.value' => ['chars', 100], 'products.video_url' => ['chars', 500]]),
+        ));
+        $before = $this->snapshot();
+
+        $this->import(['--dry-run' => true])->assertSuccessful();
+        $report = File::get($this->dir.'/report/import-report.md');
+        $this->assertStringContainsString('## Ошибки — боевой прогон не стартует', $report);
+        $this->assertStringContainsString('| `product_attribute_values.value` | 100 символов | 1 | 279 | LEDEME-A2: Комплектация |', $report);
+
+        $this->import(['--backup' => $this->backup])->assertFailed();
+        $this->assertSame($before, $this->snapshot());
     }
 
     public function test_hidden_category_is_not_in_catalog_but_products_are_searchable(): void

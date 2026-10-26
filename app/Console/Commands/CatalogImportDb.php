@@ -37,7 +37,7 @@ class CatalogImportDb extends Command
         $mapping = CatalogMapping::load($this->option('data') ?: database_path('data/catalog'));
 
         $this->info('Строю план…');
-        $plan = (new CatalogImportPlanner($mapping))->plan($path);
+        $plan = app()->makeWith(CatalogImportPlanner::class, ['map' => $mapping])->plan($path);
 
         $this->table(['', ''], [
             ['Строк в catalog.db', $plan->catalogRows],
@@ -48,6 +48,10 @@ class CatalogImportDb extends Command
             ['Дубли / тестовые', count($plan->duplicates).' / '.count($plan->deletions)],
         ]);
 
+        foreach ($plan->errors as $error) {
+            $this->error("Ошибка: {$error['column']} — предел {$error['limit']}, превышений {$error['count']}, максимум {$error['max']} (например, {$error['example']})");
+        }
+
         if ($dryRun) {
             $dir = $this->option('report-dir') ?: base_path('docs/catalog');
             File::ensureDirectoryExists($dir);
@@ -57,6 +61,12 @@ class CatalogImportDb extends Command
             $this->info("Dry-run: база не менялась. Отчёт — {$dir}/import-report.md, список — {$dir}/uncategorized.csv");
 
             return self::SUCCESS;
+        }
+
+        if ($plan->errors) {
+            $this->error('Боевой прогон не начат: есть нарушения ограничений колонок (см. выше, dry-run покажет их в отчёте).');
+
+            return self::FAILURE;
         }
 
         $applier->apply($plan, fn (string $step) => $this->line("— {$step}"));

@@ -16,13 +16,13 @@ use PDO;
  */
 class CatalogImportPlanner
 {
-    /** Длина колонки product_attribute_values.value */
-    public const MAX_VALUE = 255;
-
     /** @var Collection<int, Category> */
     private Collection $categories;
 
-    public function __construct(private readonly CatalogMapping $map) {}
+    public function __construct(
+        private readonly CatalogMapping $map,
+        private readonly ?ColumnLimits $limits = null,
+    ) {}
 
     public function plan(string $path): CatalogImportPlan
     {
@@ -157,6 +157,7 @@ class CatalogImportPlanner
         $this->planFilters($plan);
 
         $plan->unchanged = $processed - count($plan->products);
+        $this->checkLimits($plan);
         arsort($stats['brand']);
         arsort($stats['category_moves']);
         arsort($plan->droppedKeys);
@@ -302,16 +303,6 @@ class CatalogImportPlanner
                 $value = $spellings[$name][CatalogMapping::key($value)] ?? $value;
             }
 
-            // Колонка value — 255 символов: длинные значения не обрезаются, а не загружаются (в отчёте)
-            if (mb_strlen($value) > self::MAX_VALUE) {
-                if ($plan) {
-                    $label = "{$name} (длиннее ".self::MAX_VALUE.' символов)';
-                    $plan->droppedKeys[$label] = ($plan->droppedKeys[$label] ?? 0) + 1;
-                }
-
-                continue;
-            }
-
             if ($value !== '') {
                 $set[$name] = $value;
             }
@@ -448,8 +439,8 @@ class CatalogImportPlanner
             $existing = $this->findCategory($path);
 
             if ($existing) {
-                // Та же категория, но названа капсом — переименовать (другие расхождения регистра не трогаем)
-                $plan->categories[$key] = $existing->name === end($path) || ! self::isCaps($existing->name)
+                // Та же категория, но написание другое (капс, строчная буква, «е» вместо «ё») — переименовать
+                $plan->categories[$key] = $existing->name === end($path)
                     ? ['action' => 'existing', 'id' => $existing->id, 'path' => $path, 'hidden' => $key === $uncategorized]
                     : ['action' => 'rename', 'id' => $existing->id, 'from' => $this->categoryLabel($existing->id), 'path' => $path, 'hidden' => $key === $uncategorized];
                 $renamed[$existing->id] = true;
@@ -518,6 +509,67 @@ class CatalogImportPlanner
                 $plan->deleteCategories[$root->id] = $root->name;
             }
         }
+    }
+
+    /**
+     * Длины по схеме БД (ColumnLimits): всё, что будет записано, — в пределах колонок.
+     * Нарушения — в $plan->errors; боевой прогон при них не стартует.
+     */
+    private function checkLimits(CatalogImportPlan $plan): void
+    {
+        $limits = $this->limits ?? new ColumnLimits;
+        $found = [];
+
+        $check = function (string $column, ?string $value, string $where) use ($limits, &$found) {
+            if ($over = $limits->exceeds($column, $value)) {
+                [$limit, $unit, $length] = $over;
+                $found[$column] ??= ['column' => $column, 'limit' => "{$limit} {$unit}", 'count' => 0, 'max' => 0, 'example' => $where];
+                $found[$column]['count']++;
+                if ($length > $found[$column]['max']) {
+                    $found[$column]['max'] = $length;
+                    $found[$column]['example'] = $where;
+                }
+            }
+        };
+
+        foreach ($plan->products as $change) {
+            $sku = (string) ($change['sku'] ?? '');
+            $check('products.brand', $change['brand'][1] ?? null, $sku);
+            $check('products.description', $change['description'][1] ?? null, $sku);
+            $check('products.video_url', $change['video_url'][1] ?? null, $sku);
+            foreach ($change['attributes'] ?? [] as $name => $value) {
+                $check('product_attribute_values.value', (string) $value, "{$sku}: {$name}");
+            }
+        }
+
+        foreach ($plan->newProducts as $new) {
+            foreach (['sku', 'name', 'brand', 'description', 'video_url'] as $field) {
+                $check("products.{$field}", $new[$field] ?? null, $new['sku']);
+            }
+            foreach ($new['attributes'] as $name => $value) {
+                $check('product_attribute_values.value', (string) $value, "{$new['sku']}: {$name}");
+            }
+        }
+
+        foreach ($plan->duplicates as $dup) {
+            foreach ($dup['fill'] as $field => $value) {
+                $check("products.{$field}", is_string($value) ? $value : null, $dup['keep_sku']);
+            }
+            foreach ($dup['attributes'] as $name => $value) {
+                $check('product_attribute_values.value', (string) $value, "{$dup['keep_sku']}: {$name}");
+            }
+        }
+
+        foreach ($plan->attributes as $name => $def) {
+            $check('attributes.name', $name, $name);
+            $check('attributes.unit', $def['unit'], $name);
+        }
+
+        foreach ($plan->categories as $key => $target) {
+            $check('categories.name', end($target['path']), $key);
+        }
+
+        $plan->errors = array_values($found);
     }
 
     /**

@@ -53,6 +53,14 @@ class CatalogImportPlan
     /** Без категории в каталоге и «Новинки»: [sku, name, было, path, rule] — для uncategorized.csv @var list<array> */
     public array $uncategorized = [];
 
+    /**
+     * Нарушения ограничений колонок (ColumnLimits): [column, limit, count, max, example].
+     * Есть — боевой прогон не стартует.
+     *
+     * @var list<array>
+     */
+    public array $errors = [];
+
     /** Счётчики для отчёта @var array<string, mixed> */
     public array $stats = [];
 
