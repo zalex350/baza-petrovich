@@ -397,6 +397,38 @@ class CatalogFiltersTest extends TestCase
             ->assertSee('<a href="'.e($url).'"', false);
     }
 
+    public function test_product_breadcrumbs_put_list_filters_on_matching_category(): void
+    {
+        $product = $this->product('Хромовый', [], [$this->color->id => 'Хром']);
+        $url = '/catalog/dlya-kuhni?brand%5B0%5D=Grohe';
+
+        $this->actingAs($this->client)->get($url)->assertOk();
+
+        $html = $this->actingAs($this->client)->get("/product/{$product->id}")->getContent();
+        $crumbs = substr($html, strpos($html, 'data-breadcrumbs'), 2000);
+
+        // Список своей категории — с фильтрами, раздел-родитель — обычной ссылкой
+        $this->assertStringContainsString('<a href="'.e($url).'"', $crumbs);
+        $this->assertStringContainsString('<a href="/catalog/smesiteli"', $crumbs);
+    }
+
+    public function test_product_breadcrumbs_ignore_list_of_other_category(): void
+    {
+        Category::create(['name' => 'Насосы', 'slug' => 'nasosy']);
+        $product = $this->product('Хромовый');
+
+        $this->actingAs($this->client)->get('/catalog/nasosy?sort=name_asc')->assertOk();
+
+        $html = $this->actingAs($this->client)->get("/product/{$product->id}")->getContent();
+        $crumbs = substr($html, strpos($html, 'data-breadcrumbs'), 2000);
+
+        // Всегда цепочка категории товара; чужой список в крошки не попадает
+        $this->assertStringNotContainsString('nasosy', $crumbs);
+        $this->assertStringNotContainsString('Насосы', $crumbs);
+        $this->assertStringContainsString('<a href="/catalog/smesiteli"', $crumbs);
+        $this->assertStringContainsString('<a href="/catalog/dlya-kuhni"', $crumbs);
+    }
+
     public function test_product_back_link_without_list_goes_to_category(): void
     {
         $product = $this->product('Хромовый');

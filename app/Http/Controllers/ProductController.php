@@ -60,8 +60,10 @@ class ProductController extends Controller
     }
 
     /**
-     * Главная / Каталог / разделы / категория товара. Категория ведёт на последний открытый
-     * список с фильтрами, сортировкой и страницей (BR-084), прокрутка восстановится.
+     * Главная / Каталог / разделы / категория товара — всегда цепочка категории самого товара.
+     * Если последний открытый список — эта категория или её предок, его крошка ведёт на список
+     * с фильтрами, сортировкой и страницей (BR-084), прокрутка восстановится. Список другой
+     * категории (товар открыт из поиска, по ссылке, из корзины) в крошки не попадает.
      *
      * @return list<array{label: string, url: string}>
      */
@@ -70,8 +72,13 @@ class ProductController extends Controller
         // Служебной категории («Без категории») в крошках нет
         $chain = $product->category && ! $product->category->is_hidden ? $menu->chain($product->category) : [];
 
-        if ($chain) {
-            $chain[count($chain) - 1]['url'] = CatalogController::backUrl($product->category);
+        $back = CatalogController::backUrl();
+        $backPath = $back ? parse_url($back, PHP_URL_PATH) : null;
+
+        foreach ($chain as $i => $crumb) {
+            if ($backPath === $crumb['url']) {
+                $chain[$i]['url'] = $back;
+            }
         }
 
         return [
