@@ -374,6 +374,11 @@ class CatalogImportPlanner
     {
         $value = trim((string) $row['category']);
 
+        // Решение по товару — раньше значения категории и правил («Новинки» остаются новинками)
+        if ($path = $this->map->productPath($row['sku'])) {
+            return ['path' => $path, 'novelty' => $this->map->isNovelty($value)];
+        }
+
         if ($value === '' || $this->map->isNovelty($value)) {
             $novelty = $value !== '';
             $rule = $this->map->ruleFor($row['name'], $row['series']);
