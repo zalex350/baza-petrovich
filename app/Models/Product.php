@@ -165,6 +165,52 @@ class Product extends Model
     }
 
     /**
+     * Коды товара у организаций-клиентов. Для списков — только коды одной организации:
+     * Product::query()->withClientCodeFor($organization) или Product::loadClientCodesFor($products, $organization).
+     */
+    public function clientCodes()
+    {
+        return $this->hasMany(ProductClientCode::class);
+    }
+
+    /**
+     * Код товара у организации или null. Если коды подгружены (withClientCodeFor /
+     * loadClientCodesFor) — без запроса, иначе — один запрос.
+     */
+    public function codeFor(?Organization $organization): ?string
+    {
+        if (! $organization) {
+            return null;
+        }
+
+        if ($this->relationLoaded('clientCodes')) {
+            return $this->clientCodes->firstWhere('organization_id', $organization->id)?->code;
+        }
+
+        return $this->clientCodes()->where('organization_id', $organization->id)->value('code');
+    }
+
+    /**
+     * Подгрузить коды одной организации для запроса списка (без N+1).
+     */
+    public function scopeWithClientCodeFor($query, ?Organization $organization)
+    {
+        return $query->with(['clientCodes' => fn ($q) => $q->where('organization_id', $organization?->id ?? 0)]);
+    }
+
+    /**
+     * То же для уже загруженных товаров (страница пагинатора, коллекция): один запрос на все.
+     *
+     * @param  iterable<Product>  $products
+     */
+    public static function loadClientCodesFor(iterable $products, ?Organization $organization): void
+    {
+        // iterator_to_array: пагинатор — Arrayable, make() взял бы его служебный массив
+        (new \Illuminate\Database\Eloquent\Collection(iterator_to_array($products, false)))
+            ->load(['clientCodes' => fn ($q) => $q->where('organization_id', $organization?->id ?? 0)]);
+    }
+
+    /**
      * Характеристики в порядке из админки (BR-061).
      */
     public function attributeValues()
