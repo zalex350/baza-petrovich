@@ -104,7 +104,7 @@
                     </td>
 
                     <td class="border p-3">
-                        {{ $product->price }} BYN
+                        <x-price :amount="$product->price" vat="net" placeholder="—" />
                     </td>
 
                     <td class="border p-3">

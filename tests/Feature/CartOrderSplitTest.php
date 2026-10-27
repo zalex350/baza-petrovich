@@ -386,7 +386,8 @@ class CartOrderSplitTest extends TestCase
         $response = $this->actingAs($admin)->get('/admin/orders')
             ->assertOk()
             ->assertSee('SM-2026-000001')
-            ->assertSee('01.10.2026 12:30');
+            ->assertSee('01.10.2026')
+            ->assertDontSee('01.10.2026 12:30'); // список — без времени (date_ru)
 
         $this->assertSame(1, substr_count($response->getContent(), '/admin/order/'));
         $this->assertSame([$order->id], $response->viewData('orders')->pluck('id')->all());
@@ -404,14 +405,15 @@ class CartOrderSplitTest extends TestCase
         $response = $this->actingAs($this->client)->get('/orders')
             ->assertOk()
             ->assertSee('SM-2026-000001')
-            ->assertSee('01.10.2026');
+            ->assertSee('01.10.2026')
+            ->assertDontSee('01.10.2026 12:30'); // список — без времени (date_ru)
 
         $this->assertSame([$order->id], $response->viewData('activeOrders')->pluck('id')->all());
 
         $this->actingAs($this->client)->get("/order/{$order->id}")
             ->assertOk()
             ->assertSee('Заказ SM-2026-000001')
-            ->assertSee('01.10.2026 12:30');
+            ->assertSee('01.10.2026 12:30'); // карточка — со временем (date_ru)
     }
 
     // --- Повторный заказ ---

@@ -149,15 +149,10 @@
 
 ### Цена
 
-| Формат | Результат для 1234.5 | Где |
-|---|---|---|
-| `number_format($x, 2, '.', '')` | `1234.50 BYN` | корзина, заказы, `order_items`, `vat_totals`, `admin/orders` (19 мест) |
-| `number_format($x, 2)` | `1,234.50 BYN` (запятая — разделитель тысяч) | `product`, `catalog_product_card`, `search`, `home` (8) |
-| `number_format($x, 2, '.', ' ')` | `1 234.50 BYN` | шапка (сумма корзины) |
-| `{{ $product->price }} BYN` без форматирования | `1234.5 BYN`; при `null` — « BYN» | `admin/products` |
-| Фильтр цены | `rtrim` нулей: `1234.5` | `catalog_filters` |
-
-`null`-цена: «Цена уточняется» в `home`, `product`, `catalog_product_card`, `search`; в `admin/products` не обработано.
+Все суммы — `<x-price>` (элемент со стилем и подписью `vat="net"` / `vat="gross"`) или `money($x)` в тексте
+(`App\Support\Money`): `1 234,50 BYN`, неразрывные пробелы. Пустая цена — витрина «Цена уточняется»
+(по умолчанию у `x-price` и `money()`), админка — «—» (`placeholder="—"`, `money($x, empty: '—')`).
+Исключение — фильтр цены `catalog_filters`: значение поля ввода (`1234.5`), не вывод суммы.
 
 ### НДС
 
@@ -171,10 +166,8 @@
 
 ### Дата
 
-| Формат | Где |
-|---|---|
-| `d.m.Y H:i` | `admin/order`, `admin/orders`, `admin/user`, `order_placed`, `order_show`, `order_history` |
-| `d.m.Y` | `orders_table` (кабинет) |
+Все даты — `date_ru($d)`: списки (`orders_table`, `admin/orders`) — `d.m.Y`; карточки заказа, клиента,
+история (`order_show`, `order_placed`, `admin/order`, `admin/user`, `order_history`) — `date_ru($d, time: true)`, `d.m.Y H:i`.
 
 ### Бейджи
 

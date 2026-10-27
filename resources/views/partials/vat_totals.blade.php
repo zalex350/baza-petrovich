@@ -5,12 +5,12 @@
 <dl class="mb-4 grid grid-cols-[auto_auto] justify-start gap-x-6 gap-y-1" data-vat-totals>
 
     <dt class="text-slate-600">Сумма без НДС:</dt>
-    <dd class="text-right text-slate-800">{{ number_format($totals->net, 2, '.', '') }} BYN</dd>
+    <dd class="text-right text-slate-800"><x-price :amount="$totals->net" /></dd>
 
     <dt class="text-slate-600">НДС:</dt>
-    <dd class="text-right text-slate-800">{{ number_format($totals->vat, 2, '.', '') }} BYN</dd>
+    <dd class="text-right text-slate-800"><x-price :amount="$totals->vat" /></dd>
 
     <dt class="text-2xl font-bold">Сумма с НДС:</dt>
-    <dd class="text-2xl font-bold text-right">{{ number_format($totals->gross, 2, '.', '') }} BYN</dd>
+    <dd class="text-2xl font-bold text-right"><x-price :amount="$totals->gross" /></dd>
 
 </dl>

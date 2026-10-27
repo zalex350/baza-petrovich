@@ -32,7 +32,7 @@
 
     <p>
         Дата оформления:
-        {{ $order->placed_at?->format('d.m.Y H:i') }}
+        {{ date_ru($order->placed_at, true) }}
     </p>
 
 </div>
@@ -51,7 +51,7 @@
         </h2>
 
         <p class="text-slate-700">
-            {{ $order->cancel_requested_at?->format('d.m.Y H:i') }}
+            {{ date_ru($order->cancel_requested_at, true) }}
             @if($order->cancelRequester)
                 — {{ $order->cancelRequester->name }}
             @endif

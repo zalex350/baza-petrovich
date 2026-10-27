@@ -54,7 +54,7 @@
                 @else
                     <x-price :amount="$product->price" class="text-lg font-bold text-ink" />
                     <div class="text-meta text-ink-muted tabular-nums">
-                        без НДС · {{ $product->vat_rate === null ? 'НДС не облагается' : 'с НДС '.\App\Support\Money::format($product->price_with_vat, false) }}
+                        без НДС · {{ $product->vat_rate === null ? 'НДС не облагается' : 'с НДС '.money($product->price_with_vat, false) }}
                     </div>
                 @endif
             @else

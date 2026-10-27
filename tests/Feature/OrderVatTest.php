@@ -165,7 +165,7 @@ class OrderVatTest extends TestCase
 
         $this->actingAs($this->client)->get("/order/{$order->id}")
             ->assertOk()
-            ->assertSeeInOrder(['20%', '40.00 BYN', '240.00 BYN']);
+            ->assertSeeInOrder(['20%', "40,00\u{00A0}BYN", "240,00\u{00A0}BYN"]);
     }
 
     // --- Экраны ---
@@ -197,12 +197,12 @@ class OrderVatTest extends TestCase
             $this->actingAs($user)->get($url)
                 ->assertOk()
                 ->assertSeeInOrder(['Цена без НДС', 'Сумма без НДС', 'Ставка НДС', 'Сумма НДС', 'Сумма с НДС'])
-                ->assertSeeInOrder(['10.05 BYN', '7', '70.35 BYN', '10%', '7.04 BYN', '77.39 BYN'])
-                ->assertSeeInOrder(['50.00 BYN', '2', '100.00 BYN', 'Без НДС', '0.00 BYN', '100.00 BYN'])
+                ->assertSeeInOrder(["10,05\u{00A0}BYN", '7', "70,35\u{00A0}BYN", '10%', "7,04\u{00A0}BYN", "77,39\u{00A0}BYN"])
+                ->assertSeeInOrder(["50,00\u{00A0}BYN", '2', "100,00\u{00A0}BYN", 'Без НДС', "0,00\u{00A0}BYN", "100,00\u{00A0}BYN"])
                 ->assertSeeInOrder([
-                    'Сумма без НДС:', '270.34 BYN',
-                    'НДС:', '27.04 BYN',
-                    'Сумма с НДС:', '297.38 BYN',
+                    'Сумма без НДС:', "270,34\u{00A0}BYN",
+                    'НДС:', "27,04\u{00A0}BYN",
+                    'Сумма с НДС:', "297,38\u{00A0}BYN",
                 ]);
         }
     }
@@ -211,9 +211,9 @@ class OrderVatTest extends TestCase
     {
         $order = $this->placeMixedOrder();
 
-        // Админ-список — на x-price (1 234,50 BYN, неразрывные пробелы), кабинет — пока прежний формат
+        // Кабинет и админка — x-price (1 234,50 BYN, неразрывные пробелы)
         $sums = [
-            '/orders' => ['270.34 BYN', '27.04 BYN', '297.38 BYN'],
+            '/orders' => ["270,34\u{00A0}BYN", "27,04\u{00A0}BYN", "297,38\u{00A0}BYN"],
             '/admin/orders' => ["270,34\u{00A0}BYN", "27,04\u{00A0}BYN", "297,38\u{00A0}BYN"],
         ];
 
@@ -239,9 +239,9 @@ class OrderVatTest extends TestCase
             ->assertOk()
             ->assertSee("Заказ {$order->number} оформлен")
             ->assertSeeInOrder([
-                'Сумма без НДС:', '99.99 BYN',
-                'НДС:', '20.00 BYN',
-                'Сумма с НДС:', '119.99 BYN',
+                'Сумма без НДС:', "99,99\u{00A0}BYN",
+                'НДС:', "20,00\u{00A0}BYN",
+                'Сумма с НДС:', "119,99\u{00A0}BYN",
             ]);
 
         // Чужой заказ — 404
