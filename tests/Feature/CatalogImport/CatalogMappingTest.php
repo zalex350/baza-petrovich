@@ -92,9 +92,10 @@ class CatalogMappingTest extends TestCase
         $this->assertSame(['Аксессуары для ванной', 'Шторы для ванной'], $this->map->mappedPath('кольца'));
         $this->assertSame(['Мойки и умывальники', 'Аксессуары для моек'], $this->map->mappedPath('Омыватель бокалов'));
         $this->assertSame(['Смесители', 'Запчасти'], $this->map->mappedPath('шпильки'));
+        $this->assertSame(['Мойки и умывальники', 'Аксессуары для моек'], $this->map->mappedPath('аксессуары'));
 
         $this->assertSame(['Смесители', 'Для ванны и душа'], $this->map->productPath('LOFFREY-LFB2270'));
-        $this->assertSame(['Мойки и умывальники', 'Аксессуары для моек'], $this->map->productPath(' SAVOL-S-ZY001H '));
+        $this->assertSame(['Душевые системы и трапы', 'Душевые стойки'], $this->map->productPath(' SAVOL-SK-H3145H '));
         $this->assertNull($this->map->productPath('SAVOL-S-YLK001'));
     }
 

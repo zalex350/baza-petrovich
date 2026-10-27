@@ -1,6 +1,6 @@
 # Импорт каталога — пробный прогон (dry-run)
 
-> Сформировано командой `php artisan catalog:import-db /tmp/catalog.db --dry-run` 2026-10-26 13:51.
+> Сформировано командой `php artisan catalog:import-db /tmp/catalog.db --dry-run` 2026-10-27 11:01.
 > База **не менялась**. Маппинги — `database/data/catalog/*.php`; решения — `docs/CATALOG_ANALYSIS.md`, «Решения».
 
 ## Проверка по схеме БД

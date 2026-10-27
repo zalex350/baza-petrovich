@@ -8,16 +8,17 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Перенос товаров не в своей категории по артикулам
- * (2026_10_26_120000_move_misplaced_catalog_products, docs/catalog/fix-client-test-1.md, п. 6).
+ * Перенос товаров не в своей категории (docs/catalog/fix-client-test-1.md, п. 6):
+ * по артикулам (2026_10_26_120000_move_misplaced_catalog_products) и вся «Аксессуары»
+ * (2026_10_27_100000_move_bath_accessories_to_sink_accessories).
  */
 class MisplacedProductsMigrationTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function migrate(): void
+    private function migrate(string $file = '2026_10_26_120000_move_misplaced_catalog_products'): void
     {
-        (require database_path('migrations/2026_10_26_120000_move_misplaced_catalog_products.php'))->up();
+        (require database_path("migrations/{$file}.php"))->up();
     }
 
     private function category(string $name, ?Category $parent = null): Category
@@ -69,5 +70,38 @@ class MisplacedProductsMigrationTest extends TestCase
         // «Смесители / Запчасти» нет — товар и категория остаются
         $this->assertSame($studs->id, $stud->fresh()->category_id);
         $this->assertModelExists($studs);
+    }
+
+    public function test_all_bath_accessories_move_to_sink_accessories(): void
+    {
+        $bath = $this->category('Аксессуары для ванной');
+        $accessories = $this->category('Аксессуары', $bath);
+        $holders = $this->category('Держатели и стойки', $bath);
+        $sinkAccessories = $this->category('Аксессуары для моек', $this->category('Мойки и умывальники'));
+
+        $colander = $this->product('GERHANS-K30300', $accessories);
+        $trashed = $this->product('SAVOL-S-ZY001H', $accessories);
+        $trashed->delete();
+        $holder = $this->product('LEDEME-L926', $holders);
+
+        $this->migrate('2026_10_27_100000_move_bath_accessories_to_sink_accessories');
+        $this->migrate('2026_10_27_100000_move_bath_accessories_to_sink_accessories');
+
+        $this->assertSame($sinkAccessories->id, $colander->fresh()->category_id);
+        $this->assertSame($sinkAccessories->id, Product::withTrashed()->find($trashed->id)->category_id);
+        $this->assertSame($holders->id, $holder->fresh()->category_id);
+        $this->assertModelMissing($accessories);
+        $this->assertModelExists($bath);
+    }
+
+    public function test_bath_accessories_stay_without_target(): void
+    {
+        $accessories = $this->category('Аксессуары', $this->category('Аксессуары для ванной'));
+        $colander = $this->product('GERHANS-K30300', $accessories);
+
+        $this->migrate('2026_10_27_100000_move_bath_accessories_to_sink_accessories');
+
+        $this->assertSame($accessories->id, $colander->fresh()->category_id);
+        $this->assertModelExists($accessories);
     }
 }
