@@ -380,6 +380,11 @@ class CatalogImportPlanner
             return ['path' => $path, 'novelty' => $this->map->isNovelty($value)];
         }
 
+        // Общая категория каталога — по правилам split; не подошло ни одно — остаётся на месте
+        if ($split = $this->map->splitPath($value, $row)) {
+            return ['path' => $split[0], 'novelty' => false];
+        }
+
         if ($value === '' || $this->map->isNovelty($value)) {
             $novelty = $value !== '';
             $rule = $this->map->ruleFor($row['name'], $row['series']);

@@ -9,8 +9,9 @@ use Tests\TestCase;
 
 /**
  * Перенос товаров не в своей категории (docs/catalog/fix-client-test-1.md, п. 6):
- * по артикулам (2026_10_26_120000_move_misplaced_catalog_products) и вся «Аксессуары»
- * (2026_10_27_100000_move_bath_accessories_to_sink_accessories).
+ * по артикулам (2026_10_26_120000_move_misplaced_catalog_products), вся «Аксессуары»
+ * (2026_10_27_100000_move_bath_accessories_to_sink_accessories) и «Для душевых»
+ * (2026_10_27_120000_split_shower_category, docs/catalog/shower.csv).
  */
 class MisplacedProductsMigrationTest extends TestCase
 {
@@ -103,5 +104,72 @@ class MisplacedProductsMigrationTest extends TestCase
 
         $this->assertSame($accessories->id, $colander->fresh()->category_id);
         $this->assertModelExists($accessories);
+    }
+
+    private const SHOWER = '2026_10_27_120000_split_shower_category';
+
+    public function test_shower_category_is_split_renamed_and_dropped(): void
+    {
+        $root = $this->category('Душевые системы и трапы');
+        $mixed = $this->category('Для душевых', $root);
+        $stands = $this->category('Душевые стойки', $root);
+        $heads = $this->category('Лейки для душа', $root);
+        $builtIn = $this->category('Душевая система (встраиваемая)', $root);
+        $single = $this->category('Душевая система', $root);
+        $bathMixers = $this->category('Для ванны и душа', $this->category('Смесители'));
+
+        $mixer = $this->product('GERHANS-K19129', $mixed);
+        $stand = $this->product('LEDEME-L2425B-1', $mixed);
+        $trashed = $this->product('WISENT-W3501', $mixed);
+        $trashed->delete();
+        $head = $this->product('LEDEME-L2417', $mixed);
+        $wall = $this->product('WISENT-WP8577', $mixed);
+        $oldBuiltIn = $this->product('L24101-2', $builtIn);
+        $loffrey = $this->product('LOFFREY-LF82427', $single);
+
+        $this->migrate(self::SHOWER);
+        $this->migrate(self::SHOWER);
+
+        $this->assertSame($bathMixers->id, $mixer->fresh()->category_id);
+        $this->assertSame($stands->id, $stand->fresh()->category_id);
+        $this->assertSame($stands->id, Product::withTrashed()->find($trashed->id)->category_id);
+        $this->assertSame($heads->id, $head->fresh()->category_id);
+        $this->assertSame($stands->id, $loffrey->fresh()->category_id);
+
+        // Переименована — та же запись и адрес; туда же встраиваемая из «Для душевых»
+        $this->assertSame('Встраиваемые душевые системы', $builtIn->fresh()->name);
+        $this->assertSame($builtIn->slug, $builtIn->fresh()->slug);
+        $this->assertSame($builtIn->id, $wall->fresh()->category_id);
+        $this->assertSame($builtIn->id, $oldBuiltIn->fresh()->category_id);
+
+        $this->assertModelMissing($mixed);
+        $this->assertModelMissing($single);
+    }
+
+    public function test_shower_built_in_merges_into_existing_new_name(): void
+    {
+        $root = $this->category('Душевые системы и трапы');
+        $old = $this->category('Душевая система (встраиваемая)', $root);
+        $new = $this->category('Встраиваемые душевые системы', $root);
+        $product = $this->product('L24101-2', $old);
+
+        $this->migrate(self::SHOWER);
+
+        $this->assertSame($new->id, $product->fresh()->category_id);
+        $this->assertModelMissing($old);
+    }
+
+    public function test_shower_category_stays_when_not_emptied(): void
+    {
+        $mixed = $this->category('Для душевых', $this->category('Душевые системы и трапы'));
+        $unknown = $this->product('NEW-SKU-1', $mixed);
+        // Цели нет — товар из списка тоже остаётся
+        $listed = $this->product('LEDEME-L2425B-1', $mixed);
+
+        $this->migrate(self::SHOWER);
+
+        $this->assertSame($mixed->id, $unknown->fresh()->category_id);
+        $this->assertSame($mixed->id, $listed->fresh()->category_id);
+        $this->assertModelExists($mixed);
     }
 }

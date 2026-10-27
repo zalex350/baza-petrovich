@@ -189,6 +189,52 @@ class CatalogImportCommandTest extends TestCase
         $this->assertFalse($this->find('LEDEME-N1')->is_new);
     }
 
+    public function test_import_splits_shower_category_by_rules(): void
+    {
+        // fix/shower-category: «для душевых» — по split (название, серия, характеристика, описание)
+        $root = $this->category('Душевые системы и трапы');
+        $mixed = $this->category('Для душевых', $root);
+        $stands = $this->category('Душевые стойки', $root);
+        $builtInOld = $this->category('Душевая система (встраиваемая)', $root);
+        $single = $this->category('Душевая система', $root);
+        $bathMixers = $this->category('Для ванны и душа', $this->cat['Смесители']);
+        foreach (['S1', 'S2', 'S3', 'S4', 'S5'] as $sku) {
+            $this->product("LEDEME-{$sku}", $mixed, ['brand' => 'LEDEME']);
+        }
+        $this->product('LEDEME-B2', $builtInOld, ['brand' => 'LEDEME']);
+        $this->product('LOFFREY-F1', $single, ['brand' => 'LOFFREY']);
+
+        $pdo = new PDO('sqlite:'.$this->catalog);
+        $stmt = $pdo->prepare('INSERT INTO products (sku, brand, series, name, description, category, attributes) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        foreach ([
+            ['LEDEME-S1', 'LEDEME', null, 'LEDEME S1', null, 'для душевых', ['Конструкция' => 'смеситель']],
+            ['LEDEME-S2', 'LEDEME', null, 'Душевая система со смесителем', null, 'для душевых', []],
+            ['LEDEME-S3', 'LEDEME', 'Душевые системы', 'LEDEME S3', null, 'для душевых', []],
+            ['LEDEME-S4', 'LEDEME', null, 'LEDEME S4', 'Смеситель для душа
+LEDEME S4', 'для душевых', []],
+            ['LEDEME-S5', 'LEDEME', null, 'LEDEME S5', null, 'для душевых', []],  // ни одно правило — на месте
+            ['LEDEME-B2', 'LEDEME', null, 'LEDEME B2', null, 'Душевая система (встраиваемая)', []],
+            ['LOFFREY-F1', 'LOFFREY', null, 'LOFFREY F1', null, 'Душевая система', []],
+        ] as [$sku, $brand, $series, $name, $desc, $category, $attrs]) {
+            $stmt->execute([$sku, $brand, $series, $name, $desc, $category, json_encode($attrs, JSON_UNESCAPED_UNICODE)]);
+        }
+
+        $this->import(['--backup' => $this->backup])->assertSuccessful();
+
+        $this->assertSame($bathMixers->id, $this->find('LEDEME-S1')->category_id);
+        $this->assertSame($stands->id, $this->find('LEDEME-S2')->category_id);
+        $this->assertSame($stands->id, $this->find('LEDEME-S3')->category_id);
+        $this->assertSame($bathMixers->id, $this->find('LEDEME-S4')->category_id);
+        $this->assertSame($mixed->id, $this->find('LEDEME-S5')->category_id);
+        $this->assertSame($stands->id, $this->find('LOFFREY-F1')->category_id);
+        $this->assertModelMissing($single);
+
+        // «Душевая система (встраиваемая)» переименована, адрес тот же
+        $this->assertSame($builtInOld->id, $this->find('LEDEME-B2')->category_id);
+        $this->assertSame('Встраиваемые душевые системы', $builtInOld->fresh()->name);
+        $this->assertSame($builtInOld->slug, $builtInOld->fresh()->slug);
+    }
+
     private function find(string $sku): Product
     {
         return Product::withTrashed()->where('sku', $sku)->firstOrFail();

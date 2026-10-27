@@ -99,6 +99,33 @@ class CatalogMappingTest extends TestCase
         $this->assertNull($this->map->productPath('SAVOL-S-YLK001'));
     }
 
+    public function test_shower_category_is_split_by_rules(): void
+    {
+        $split = fn (array $row, string $value = 'Для душевых') => $this->map->splitPath($value, $row)[0] ?? null;
+        $stands = ['Душевые системы и трапы', 'Душевые стойки'];
+        $builtIn = ['Душевые системы и трапы', 'Встраиваемые душевые системы'];
+        $mixers = ['Смесители', 'Для ванны и душа'];
+
+        $this->assertSame($builtIn, $split(['name' => 'Душевая система (встраиваемая) со смесителем']));
+        $this->assertSame($builtIn, $split(['name' => 'LEDEME LL2478B-2', 'attributes' => '{"Конструкция": "душевая система", "Способ монтажа": "встройка в стену"}']));
+        $this->assertSame($builtIn, $split(['name' => 'Gerhans K19507', 'description' => 'Душевая система Gerhans K19507;
+Тип крепления: встраиваемая, скрытый монтаж']));
+        $this->assertSame(['Душевые системы и трапы', 'Лейки для душа'], $split(['name' => 'Верхний душ с креплением и шлангом', 'attributes' => '{"Конструкция": "душевая система"}']));
+        $this->assertSame($stands, $split(['name' => 'Душевая стойка Savol SK-H3245A']));
+        $this->assertSame($mixers, $split(['name' => 'Смеситель для душа, кабины', 'series' => 'Душевые системы с термостатом']));
+        $this->assertSame($stands, $split(['name' => 'WISENT W3501', 'attributes' => '{"Конструкция": "душевая система"}']));
+        $this->assertSame($mixers, $split(['name' => 'GERHANS K12009', 'attributes' => '{"Конструкция": "смеситель"}']));
+        $this->assertSame($stands, $split(['name' => 'Ledeme L2425B-1', 'series' => 'Душевые системы', 'description' => 'Современная встраиваемая душевая система. Тип крепления: настенный монтаж']));
+        $this->assertSame($mixers, $split(['name' => 'Wisent WP20444', 'description' => 'Смеситель для душа Wisent WP20444']));
+
+        // Ни одно правило не подошло, значение не из split — null (товар остаётся на месте)
+        $this->assertNull($split(['name' => 'Wisent X1']));
+        $this->assertNull($split(['name' => 'Душевая система'], 'на кухню'));
+        $this->assertSame($mixers, $this->map->productPath('GERHANS-K19129'));
+        $this->assertSame($builtIn, $this->map->mappedPath('Душевая система (встраиваемая)'));
+        $this->assertSame($stands, $this->map->mappedPath('душевая система'));
+    }
+
     public function test_attribute_keys_are_merged_and_skipped(): void
     {
         $this->assertSame('Цвет', $this->map->attributeFor('Цвет покрытия'));
