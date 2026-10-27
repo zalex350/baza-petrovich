@@ -84,6 +84,45 @@
 
 </div>
 
+{{-- Приглашение: пока не принято (App\Services\UserInvitations) --}}
+@if($invitation)
+
+    <div class="bg-white rounded-card border border-slate-200 p-card mb-6 space-y-4" data-invitation>
+
+        <div>
+            <h2 class="text-lg font-semibold">Приглашение</h2>
+            <p class="text-sm text-slate-500">
+                Пароль ещё не установлен. Письмо со ссылкой отправлено на {{ $user->email }};
+                ссылку можно передать и самому — по ней пользователь установит пароль.
+            </p>
+        </div>
+
+        @if($invitation['expired'])
+            <x-alert type="warning">Срок ссылки истёк {{ date_ru($invitation['expires_at'], true) }}. Выпустите новую.</x-alert>
+        @elseif($invitation['url'])
+            <x-field id="invite-url" label="Ссылка приглашения" hint="Действует до {{ date_ru($invitation['expires_at'], true) }}">
+                <x-copy field id="invite-url" :text="$invitation['url']" label="Скопировать ссылку" data-invite-url />
+            </x-field>
+        @else
+            <x-alert type="info">Ссылка выпущена до того, как её стали показывать здесь (действует до {{ date_ru($invitation['expires_at'], true) }}). Чтобы увидеть ссылку, выпустите новую.</x-alert>
+        @endif
+
+        <x-confirm
+            action="/admin/user/{{ $user->id }}/invitation"
+            label="Выпустить новую ссылку"
+            title="Выпустить новую ссылку?"
+            confirm-label="Выпустить"
+            variant="primary"
+            trigger-variant="secondary"
+        >
+            Прежняя ссылка перестанет действовать. Новая будет отправлена на {{ $user->email }}
+            и появится здесь; срок — {{ \App\Notifications\UserInvitation::expireText() }}.
+        </x-confirm>
+
+    </div>
+
+@endif
+
 {{-- Уведомления на почту: только у администратора --}}
 @if($user->isAdmin())
 

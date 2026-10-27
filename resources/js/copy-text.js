@@ -22,6 +22,13 @@ export default (text) => ({
     },
 
     copyBySelection() {
+        // Поле (x-copy field) — выделить значение поля
+        if (this.$refs.text instanceof HTMLInputElement) {
+            this.$refs.text.select();
+
+            return this.execCopy();
+        }
+
         const selection = window.getSelection();
         const range = document.createRange();
 
@@ -29,13 +36,7 @@ export default (text) => ({
         selection.removeAllRanges();
         selection.addRange(range);
 
-        let ok = false;
-
-        try {
-            ok = document.execCommand('copy');
-        } catch {
-            ok = false;
-        }
+        const ok = this.execCopy();
 
         // Скопировано — снять выделение; нет — оставить, чтобы скопировать вручную
         if (ok) {
@@ -43,6 +44,14 @@ export default (text) => ({
         }
 
         return ok;
+    },
+
+    execCopy() {
+        try {
+            return document.execCommand('copy');
+        } catch {
+            return false;
+        }
     },
 
     show(label) {
