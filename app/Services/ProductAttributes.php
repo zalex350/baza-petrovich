@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Product;
 use App\Models\ProductAttribute;
 use App\Models\ProductAttributeValue;
+use App\Models\ProductDraft;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -18,14 +19,22 @@ use Illuminate\Validation\ValidationException;
  */
 class ProductAttributes
 {
+    /** Длина значения — как колонка product_attribute_values.value */
+    public const VALUE_MAX = 1000;
+
     /**
      * Строки из формы → набор. Пустые строки пропускаются, новые названия добавляются
      * в справочник. Ошибки — ValidationException по полю attributes.
      *
+     * $known — набор, который уже был у товара (или в черновике): такое значение
+     * числовой характеристики сохраняется как есть, даже если это не число
+     * (импорт загружает «6 бар (10 для испытания)»). Новое или изменённое — только число.
+     *
      * @param  array<int, array{name?: ?string, value?: ?string}>  $rows
+     * @param  list<array{attribute_id: int, value: string}>  $known
      * @return list<array{attribute_id: int, value: string}>
      */
-    public function fromRows(array $rows): array
+    public function fromRows(array $rows, array $known = []): array
     {
         $errors = [];
         $clean = [];
@@ -53,8 +62,8 @@ class ProductAttributes
                 continue;
             }
 
-            if (mb_strlen($name) > 255 || mb_strlen($value) > 255) {
-                $errors[] = "Строка {$n}: название и значение — не длиннее 255 символов";
+            if (mb_strlen($name) > 255 || mb_strlen($value) > self::VALUE_MAX) {
+                $errors[] = "Строка {$n}: название — не длиннее 255 символов, значение — не длиннее ".self::VALUE_MAX;
 
                 continue;
             }
@@ -73,11 +82,13 @@ class ProductAttributes
         }
 
         $existing = ProductAttribute::whereIn('name_key', array_column($clean, 'key'))->get()->keyBy('name_key');
+        $unchanged = collect($known)->map(fn ($item) => $item['attribute_id'].'|'.$item['value'])->flip();
 
         foreach ($clean as $row) {
             $attribute = $existing[$row['key']] ?? null;
 
-            if ($attribute?->isNumber() && ProductAttribute::parseNumber($row['value']) === null) {
+            if ($attribute?->isNumber() && ProductAttribute::parseNumber($row['value']) === null
+                && ! isset($unchanged[$attribute->id.'|'.$row['value']])) {
                 $errors[] = "«{$attribute->name}» — числовая характеристика, значение «{$row['value']}» не число";
             }
         }
@@ -88,7 +99,7 @@ class ProductAttributes
 
         return array_map(fn ($row) => [
             'attribute_id' => ($existing[$row['key']] ?? ProductAttribute::findOrCreateByName($row['name']))->id,
-            'value'        => $row['value'],
+            'value' => $row['value'],
         ], $clean);
     }
 
@@ -112,18 +123,29 @@ class ProductAttributes
         // Характеристику могли удалить или объединить, пока набор лежал в черновике
         $set = array_values(array_filter($set, fn ($item) => isset($attributes[$item['attribute_id']])));
 
-        DB::transaction(function () use ($product, $set, $attributes) {
+        DB::transaction(function () use ($product, $set) {
             ProductAttributeValue::where('product_id', $product->id)
                 ->whereNotIn('attribute_id', array_column($set, 'attribute_id') ?: [0])
                 ->delete();
 
+            $current = ProductAttributeValue::where('product_id', $product->id)->get()->keyBy('attribute_id');
+
             foreach ($set as $order => $item) {
+                $value = $current[$item['attribute_id']] ?? null;
+
+                // Значение не меняли — value_number из импорта («6 бар (10 для испытания)» → 6) остаётся
+                if ($value?->value === $item['value']) {
+                    $value->update(['sort_order' => $order]);
+
+                    continue;
+                }
+
                 ProductAttributeValue::updateOrCreate(
                     ['product_id' => $product->id, 'attribute_id' => $item['attribute_id']],
                     [
-                        'value'        => $item['value'],
+                        'value' => $item['value'],
                         'value_number' => ProductAttribute::parseNumber($item['value']),
-                        'sort_order'   => $order,
+                        'sort_order' => $order,
                     ]
                 );
             }
@@ -147,8 +169,8 @@ class ProductAttributes
             ->map(function ($item, $order) use ($attributes) {
                 $value = new ProductAttributeValue([
                     'attribute_id' => $item['attribute_id'],
-                    'value'        => $item['value'],
-                    'sort_order'   => $order,
+                    'value' => $item['value'],
+                    'sort_order' => $order,
                 ]);
 
                 return $value->setRelation('attribute', $attributes[$item['attribute_id']]);
@@ -207,7 +229,7 @@ class ProductAttributes
      */
     private function remapDrafts(array $sourceIds, int $targetId): void
     {
-        foreach (\App\Models\ProductDraft::all() as $draft) {
+        foreach (ProductDraft::all() as $draft) {
             $data = $draft->data;
 
             if (empty($data['attributes'])) {

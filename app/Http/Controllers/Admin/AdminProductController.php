@@ -158,7 +158,9 @@ class AdminProductController extends Controller
 
         // Характеристики — до записи: ошибка в них не сохраняет ничего
         if (request()->has('attributes_sent')) {
-            $data['attributes'] = $this->attributes->fromRows((array) request('attributes', []));
+            // Не менявшиеся значения (товара и черновика) — как есть, даже нечисловые
+            $known = [...$this->attributes->current($product), ...($product->draft?->data['attributes'] ?? [])];
+            $data['attributes'] = $this->attributes->fromRows((array) request('attributes', []), $known);
         }
 
         $direct = $manual ? $this->normalizeVat(array_intersect_key($data, array_flip(self::ERP_FIELDS))) : [];
@@ -350,14 +352,20 @@ class AdminProductController extends Controller
     private function attributeRows($values): array
     {
         if (is_array(old('attributes'))) {
-            $units = ProductAttribute::pluck('unit', 'name_key');
+            $dictionary = ProductAttribute::all()->keyBy('name_key');
 
             return collect(old('attributes'))
-                ->map(fn ($row) => [
-                    'name' => (string) ($row['name'] ?? ''),
-                    'value' => (string) ($row['value'] ?? ''),
-                    'unit' => $units[ProductAttribute::key($row['name'] ?? '')] ?? null,
-                ])
+                ->map(function ($row) use ($dictionary) {
+                    $attribute = $dictionary[ProductAttribute::key($row['name'] ?? '')] ?? null;
+                    $value = (string) ($row['value'] ?? '');
+
+                    return [
+                        'name' => (string) ($row['name'] ?? ''),
+                        'value' => $value,
+                        'unit' => $attribute?->unit,
+                        'warning' => $this->notNumberWarning($attribute, $value),
+                    ];
+                })
                 ->filter(fn ($row) => $row['name'] !== '' || $row['value'] !== '')
                 ->values()->all();
         }
@@ -366,7 +374,19 @@ class AdminProductController extends Controller
             'name' => $v->attribute->name,
             'value' => $v->value,
             'unit' => $v->attribute->unit,
+            'warning' => $this->notNumberWarning($v->attribute, $v->value),
         ])->values()->all();
+    }
+
+    /**
+     * Нечисловое значение числовой характеристики (из импорта) сохраняется как есть —
+     * предупреждение у поля; изменить его можно только на число.
+     */
+    private function notNumberWarning(?ProductAttribute $attribute, string $value): ?string
+    {
+        return $attribute?->isNumber() && $value !== '' && ProductAttribute::parseNumber($value) === null
+            ? 'Числовая характеристика, значение не число — сохраняется как есть; новое значение — только число'
+            : null;
     }
 
     private function publishProduct(Product $product): void
