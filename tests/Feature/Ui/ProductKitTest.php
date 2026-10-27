@@ -193,6 +193,18 @@ class ProductKitTest extends TestCase
             ->assertSee('копировать');
     }
 
+    public function test_copy_field_renders_readonly_input(): void
+    {
+        $this->blade('<x-copy field id="invite-url" text="https://x.by/reset?a=1&b=2" label="Скопировать ссылку" />')
+            ->assertSee('<input', false)
+            ->assertSee('x-ref="text"', false)
+            ->assertSee('readonly', false)
+            ->assertSee('id="invite-url"', false)
+            ->assertSee('value="https://x.by/reset?a=1&amp;b=2"', false)
+            ->assertSee('aria-label="Скопировать ссылку"', false)
+            ->assertDontSee('font-medium text-ink', false);
+    }
+
     // --- x-product-badge ---
 
     public function test_product_badges(): void

@@ -269,4 +269,9 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         '/admin/user/{id}/notifications',
         [AdminUserController::class, 'updateNotifications']
     );
+
+    Route::post(
+        '/admin/user/{id}/invitation',
+        [AdminUserController::class, 'reissueInvitation']
+    );
 });

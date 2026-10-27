@@ -58,6 +58,7 @@ class AdminUserTest extends TestCase
             'блокировка'      => ['post', '/admin/user/{id}/block'],
             'разблокировка'   => ['post', '/admin/user/{id}/unblock'],
             'сброс пароля'    => ['post', '/admin/user/{id}/reset-password'],
+            'новая ссылка приглашения' => ['post', '/admin/user/{id}/invitation'],
         ];
     }
 

@@ -16,9 +16,17 @@ class UserInvitation extends ResetPassword
 
     protected function resetUrl($notifiable)
     {
+        return self::urlFor($this->token, $notifiable);
+    }
+
+    /**
+     * Ссылка приглашения — одна и та же в письме и в карточке пользователя (App\Services\UserInvitations).
+     */
+    public static function urlFor(string $token, $notifiable): string
+    {
         return url(route('password.reset', [
-            'token'  => $this->token,
-            'email'  => $notifiable->getEmailForPasswordReset(),
+            'token' => $token,
+            'email' => $notifiable->getEmailForPasswordReset(),
             'invite' => 1,
         ], false));
     }
@@ -31,7 +39,7 @@ class UserInvitation extends ResetPassword
             ->line('Для вас создана учётная запись на smesitel.by.')
             ->line('Чтобы войти, установите пароль по ссылке ниже.')
             ->action('Установить пароль', $url)
-            ->line('Ссылка действительна ' . self::expireText() . '. Если срок истёк, попросите менеджера отправить приглашение ещё раз или воспользуйтесь восстановлением пароля на странице входа.')
+            ->line('Ссылка действительна '.self::expireText().'. Если срок истёк, попросите менеджера отправить приглашение ещё раз или воспользуйтесь восстановлением пароля на странице входа.')
             ->salutation('Команда smesitel.by');
     }
 
@@ -40,8 +48,8 @@ class UserInvitation extends ResetPassword
      */
     public static function expireText(): string
     {
-        $minutes = (int) config('auth.passwords.' . self::BROKER . '.expire');
+        $minutes = (int) config('auth.passwords.'.self::BROKER.'.expire');
 
-        return $minutes % 60 === 0 ? intdiv($minutes, 60) . ' ч' : "{$minutes} мин";
+        return $minutes % 60 === 0 ? intdiv($minutes, 60).' ч' : "{$minutes} мин";
     }
 }

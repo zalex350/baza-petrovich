@@ -6,7 +6,7 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\Organization;
 use App\Models\User;
-use App\Notifications\UserInvitation;
+use App\Services\UserInvitations;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -20,12 +20,15 @@ use Illuminate\Validation\Rules\Password as PasswordRule;
 class AdminUserController extends Controller
 {
     public const PASSWORD_MANUAL = 'manual';
+
     public const PASSWORD_INVITE = 'invite';
+
+    public function __construct(private readonly UserInvitations $invitations) {}
 
     public function index()
     {
         $search = trim((string) request('q', ''));
-        $role   = UserRole::tryFrom((string) request('role'));
+        $role = UserRole::tryFrom((string) request('role'));
         $status = in_array(request('status'), ['active', 'blocked'], true) ? request('status') : null;
 
         $users = User::with('organization')
@@ -46,9 +49,9 @@ class AdminUserController extends Controller
             ->withQueryString();
 
         return view('admin.users', [
-            'users'  => $users,
+            'users' => $users,
             'search' => $search,
-            'role'   => $role,
+            'role' => $role,
             'status' => $status,
         ]);
     }
@@ -56,7 +59,7 @@ class AdminUserController extends Controller
     public function create()
     {
         return view('admin.user_form', [
-            'user'          => new User(),
+            'user' => new User,
             'organizations' => $this->organizations(),
         ]);
     }
@@ -66,7 +69,7 @@ class AdminUserController extends Controller
         $data = request()->validate(
             $this->rules() + [
                 'password_mode' => ['required', Rule::in([self::PASSWORD_MANUAL, self::PASSWORD_INVITE])],
-                'password'      => [
+                'password' => [
                     Rule::requiredIf(request('password_mode') === self::PASSWORD_MANUAL),
                     'nullable',
                     PasswordRule::defaults(),
@@ -78,14 +81,14 @@ class AdminUserController extends Controller
         $invite = $data['password_mode'] === self::PASSWORD_INVITE;
 
         $user = new User([
-            'name'            => $data['name'],
-            'email'           => $data['email'],
-            'phone'           => $data['phone'] ?? null,
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'phone' => $data['phone'] ?? null,
             'organization_id' => $data['organization_id'] ?? null,
             // При приглашении — случайный пароль, пользователь задаст свой по ссылке
-            'password'        => $invite ? Str::password(32) : $data['password'],
+            'password' => $invite ? Str::password(32) : $data['password'],
         ]);
-        $user->role              = UserRole::from($data['role']);
+        $user->role = UserRole::from($data['role']);
         $user->email_verified_at = now();
         $this->fillNotifications($user, $data);
         $user->save();
@@ -94,29 +97,43 @@ class AdminUserController extends Controller
             return redirect("/admin/user/{$user->id}")->with('success', 'Пользователь создан');
         }
 
-        $status = Password::broker(UserInvitation::BROKER)->sendResetLink(
-            ['email' => $user->email],
-            fn (User $user, string $token) => $user->notify(new UserInvitation($token))
-        );
+        $this->invitations->issue($user);
 
-        return $status === Password::RESET_LINK_SENT
-            ? redirect("/admin/user/{$user->id}")
-                ->with('success', "Пользователь создан, ссылка для установки пароля отправлена на {$user->email}")
-            : redirect("/admin/user/{$user->id}")
-                ->with('error', 'Пользователь создан, но ссылку отправить не удалось: '.__($status));
+        return redirect("/admin/user/{$user->id}")
+            ->with('success', "Пользователь создан, ссылка для установки пароля отправлена на {$user->email}");
     }
 
     public function show($id)
     {
         $user = User::with('organization')->withCount('orders')->findOrFail($id);
 
-        return view('admin.user', compact('user'));
+        return view('admin.user', [
+            'user' => $user,
+            'invitation' => $this->invitations->pending($user),
+        ]);
+    }
+
+    /**
+     * «Выпустить новую ссылку»: прежняя перестаёт действовать, новая уходит письмом
+     * и видна в карточке. Только пока приглашение не принято.
+     */
+    public function reissueInvitation($id): RedirectResponse
+    {
+        $user = User::findOrFail($id);
+
+        if (! $this->invitations->pending($user)) {
+            return back()->with('error', 'Приглашения нет: пароль уже установлен');
+        }
+
+        $this->invitations->issue($user);
+
+        return back()->with('success', "Выпущена новая ссылка приглашения и отправлена на {$user->email}. Прежняя больше не действует");
     }
 
     public function edit($id)
     {
         return view('admin.user_form', [
-            'user'          => User::findOrFail($id),
+            'user' => User::findOrFail($id),
             'organizations' => $this->organizations(),
         ]);
     }
@@ -135,9 +152,9 @@ class AdminUserController extends Controller
         }
 
         $user->fill([
-            'name'            => $data['name'],
-            'email'           => $data['email'],
-            'phone'           => $data['phone'] ?? null,
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'phone' => $data['phone'] ?? null,
             'organization_id' => $data['organization_id'] ?? null,
         ]);
         $user->role = UserRole::from($data['role']);
@@ -192,7 +209,7 @@ class AdminUserController extends Controller
         }
 
         $data = request()->validate([
-            'notify_new_order'      => ['required', 'boolean'],
+            'notify_new_order' => ['required', 'boolean'],
             'notify_cancel_request' => ['required', 'boolean'],
         ]);
 
@@ -205,12 +222,12 @@ class AdminUserController extends Controller
     private function rules(?User $user = null): array
     {
         return [
-            'name'            => ['required', 'string', 'max:255'],
-            'email'           => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($user?->id)],
-            'phone'           => ['nullable', 'string', 'max:50'],
-            'role'            => ['required', Rule::enum(UserRole::class)],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($user?->id)],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'role' => ['required', Rule::enum(UserRole::class)],
             'organization_id' => User::organizationRules((string) request('role')),
-            'notify_new_order'      => ['sometimes', 'boolean'],
+            'notify_new_order' => ['sometimes', 'boolean'],
             'notify_cancel_request' => ['sometimes', 'boolean'],
         ];
     }
@@ -236,7 +253,7 @@ class AdminUserController extends Controller
     {
         return [
             'organization_id.required' => 'Для клиента необходимо выбрать организацию.',
-            'organization_id.exists'   => 'Выбранная организация не найдена.',
+            'organization_id.exists' => 'Выбранная организация не найдена.',
         ];
     }
 
