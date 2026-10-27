@@ -243,7 +243,8 @@ class CartController extends Controller
 
         if ($problem) {
             $error = match (true) {
-                $problem->type === CartProblemType::InsufficientStock => $problem->title().": доступно {$problem->available}",
+                // Остаток (SRS §7.11): значение не применяется, в строке — «Доступно N шт.»
+                $problem->type->isShortage() => "Доступно {$problem->available} шт.",
                 // Кратность: «Количество должно быть не меньше N и кратно M»
                 $problem->type->isQuantityRule() => $problem->text(),
                 default => $problem->fullMessage(),

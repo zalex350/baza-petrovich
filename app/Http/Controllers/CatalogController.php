@@ -118,17 +118,12 @@ class CatalogController extends Controller
     }
 
     /**
-     * Куда ведёт «← Вернуться к списку» из карточки: последний открытый список каталога,
-     * иначе — категория товара.
+     * Последний открытый список каталога с фильтрами — для возврата из карточки по крошкам, или null.
      */
-    public static function backUrl(?Category $category): string
+    public static function backUrl(): ?string
     {
         $url = session(self::BACK_URL);
 
-        if (is_string($url) && str_starts_with($url, '/catalog/')) {
-            return $url;
-        }
-
-        return $category ? '/catalog/'.$category->slug : route('catalog.index');
+        return is_string($url) && str_starts_with($url, '/catalog/') ? $url : null;
     }
 }

@@ -4,15 +4,16 @@
 //   отвечает {ok, message, cart, html, toast}: блок покупки строки заменяется на html
 //   (x-qty + «В корзине · перейти»), шапка — по cart, сообщение — поверх страницы (toast);
 // - количество товара в корзине (form[data-cart-update], x-qty) — fetch на /order/update/{id}
-//   после паузы в DEBOUNCE мс; ошибка — прежнее количество и текст в [data-cart-message];
+//   через qty-sync.js (ручной ввод — сразу, «−/+» — после паузы, без гонок);
+//   ошибка — прежнее количество и текст в [data-cart-message];
 // - не получилось (сеть, не JSON) — обычная отправка формы: сервер вернёт на ту же страницу,
 //   позиция прокрутки и flash-сообщение поверх страницы восстанавливаются, как раньше.
 
+import { queueQuantity } from './qty-sync';
+
 const KEY = 'cart-add-scroll';
-const DEBOUNCE = 400;
 const TOAST_MS = 4000;
 
-const timers = new WeakMap();
 let toastTimer = null;
 
 const read = () => {
@@ -131,21 +132,17 @@ async function add(form) {
 }
 
 async function update(form) {
-    const input = form.querySelector('input[name="quantity"]');
-
     try {
         const data = await send(form);
 
         updateHeader(data.cart);
         message(form, data.ok ? '' : data.message);
 
-        if (input && String(data.quantity) !== input.value) {
-            input.value = data.quantity;
-            // x-qty обновит своё состояние; detail — чтобы не отправить это изменение снова
-            input.dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { fromServer: true } }));
-        }
+        return data;
     } catch {
         fallback(form);
+
+        return null;
     }
 }
 
@@ -157,12 +154,11 @@ document.addEventListener('submit', (event) => {
         add(form);
     } else if (form.matches('form[data-cart-update]')) {
         event.preventDefault();
-        clearTimeout(timers.get(form));
-        update(form);
+        queueQuantity(form, update);
     }
 });
 
-// «−/+» и ввод количества: отправка после паузы — серия нажатий даёт один запрос
+// «−/+» — после паузы (серия нажатий — один запрос), ручной ввод — сразу
 document.addEventListener('change', (event) => {
     const form = event.target.closest?.('form[data-cart-update]');
 
@@ -170,8 +166,7 @@ document.addEventListener('change', (event) => {
         return;
     }
 
-    clearTimeout(timers.get(form));
-    timers.set(form, setTimeout(() => update(form), DEBOUNCE));
+    queueQuantity(form, update, { delay: event.detail?.source === 'button' });
 });
 
 function restore() {

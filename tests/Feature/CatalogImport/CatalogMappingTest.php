@@ -71,6 +71,34 @@ class CatalogMappingTest extends TestCase
         $this->assertSame('Без категории', $this->map->uncategorized());
     }
 
+    public function test_type_at_name_start_wins_over_mixer_rules(): void
+    {
+        $rule = fn (string $name, ?string $series = null) => $this->map->ruleFor($name, $series)[0];
+
+        $this->assertSame(['Смесители', 'Сенсорные'], $rule('Сенсорный смеситель для умывальника с гайкой'));
+        $this->assertSame(['Душевые системы и трапы', 'Душевые стойки'], $rule('Душевая система со смесителем и тропическим душем'));
+        $this->assertSame(['Душевые системы и трапы', 'Шланги для душа'], $rule('Шланг для гигиенического душа Savol S-FXRG003A 1,2м'));
+        $this->assertSame(['Аксессуары для ванной', 'Ёршики'], $rule('Стакан для туалетного ёршика стеклянный Savol S-MTB33'));
+        $this->assertSame(['Аксессуары для ванной', 'Держатели и стойки'], $rule('Многофункциональная стойка настенная', 'Ёршики'));
+        $this->assertSame(['Краны и вентили', 'Кран угловой'], $rule('Кран для подключения сантехприборов', 'Серия Смесители из нержавеющей стали (Новинки!)'));
+        // Прежние правила не сломаны
+        $this->assertSame(['Смесители', 'Для ванны и душа'], $rule('Смеситель для ванны с душевым гарнитуром'));
+        $this->assertSame(['Смесители', 'Гигиенический душ'], $rule('Гигиенический душ со шлангом и лейкой'));
+        $this->assertSame(['Аксессуары для ванной', 'Стаканы и подстаканники'], $rule('Стакан для зубных щёток'));
+    }
+
+    public function test_category_values_and_products_from_client_test(): void
+    {
+        $this->assertSame(['Аксессуары для ванной', 'Шторы для ванной'], $this->map->mappedPath('кольца'));
+        $this->assertSame(['Мойки и умывальники', 'Аксессуары для моек'], $this->map->mappedPath('Омыватель бокалов'));
+        $this->assertSame(['Смесители', 'Запчасти'], $this->map->mappedPath('шпильки'));
+        $this->assertSame(['Мойки и умывальники', 'Аксессуары для моек'], $this->map->mappedPath('аксессуары'));
+
+        $this->assertSame(['Смесители', 'Для ванны и душа'], $this->map->productPath('LOFFREY-LFB2270'));
+        $this->assertSame(['Душевые системы и трапы', 'Душевые стойки'], $this->map->productPath(' SAVOL-SK-H3145H '));
+        $this->assertNull($this->map->productPath('SAVOL-S-YLK001'));
+    }
+
     public function test_attribute_keys_are_merged_and_skipped(): void
     {
         $this->assertSame('Цвет', $this->map->attributeFor('Цвет покрытия'));

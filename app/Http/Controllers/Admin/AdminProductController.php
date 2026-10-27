@@ -36,23 +36,27 @@ class AdminProductController extends Controller
     public function index()
     {
         // «Без категории»: служебная категория (скрыта на сайте) или категория не задана;
-        // «Без названия»: пусто или sku вместо названия (на сайте — «БРЕНД артикул»)
+        // «Без названия»: пусто или sku вместо названия (на сайте — «БРЕНД артикул»);
+        // «Описание не одобрено»: сгенерированное импортом, на сайте не показывается
         $uncategorized = request('category') === 'none';
         $unnamed = request('name') === 'none';
+        $unapproved = request('description') === 'unapproved';
         $hiddenIds = Category::where('is_hidden', true)->pluck('id');
         $noCategory = fn ($q) => $q->where(fn ($q) => $q->whereNull('category_id')->orWhereIn('category_id', $hiddenIds));
 
         $products = Product::with('draft')
             ->when($uncategorized, $noCategory)
             ->when($unnamed, fn ($q) => $q->withoutName())
+            ->when($unapproved, fn ($q) => $q->where('description_generated', true))
             ->latest()
             ->paginate(50)
             ->withQueryString();
 
         $uncategorizedCount = Product::query()->tap($noCategory)->count();
         $unnamedCount = Product::withoutName()->count();
+        $unapprovedCount = Product::where('description_generated', true)->count();
 
-        return view('admin.products', compact('products', 'uncategorized', 'uncategorizedCount', 'unnamed', 'unnamedCount'));
+        return view('admin.products', compact('products', 'uncategorized', 'uncategorizedCount', 'unnamed', 'unnamedCount', 'unapproved', 'unapprovedCount'));
     }
 
     public function create()
@@ -154,7 +158,9 @@ class AdminProductController extends Controller
 
         // Характеристики — до записи: ошибка в них не сохраняет ничего
         if (request()->has('attributes_sent')) {
-            $data['attributes'] = $this->attributes->fromRows((array) request('attributes', []));
+            // Не менявшиеся значения (товара и черновика) — как есть, даже нечисловые
+            $known = [...$this->attributes->current($product), ...($product->draft?->data['attributes'] ?? [])];
+            $data['attributes'] = $this->attributes->fromRows((array) request('attributes', []), $known);
         }
 
         $direct = $manual ? $this->normalizeVat(array_intersect_key($data, array_flip(self::ERP_FIELDS))) : [];
@@ -163,6 +169,11 @@ class AdminProductController extends Controller
             if (request()->has($field)) {
                 $direct[$field] = $data[$field] ?? null;
             }
+        }
+
+        // «Новинку» изменили вручную — импорт каталога её больше не трогает (A-6)
+        if (array_key_exists('is_new', $direct) && (bool) $direct['is_new'] !== $product->is_new) {
+            $direct['is_new_locked'] = true;
         }
 
         $product->update($direct);
@@ -341,14 +352,20 @@ class AdminProductController extends Controller
     private function attributeRows($values): array
     {
         if (is_array(old('attributes'))) {
-            $units = ProductAttribute::pluck('unit', 'name_key');
+            $dictionary = ProductAttribute::all()->keyBy('name_key');
 
             return collect(old('attributes'))
-                ->map(fn ($row) => [
-                    'name' => (string) ($row['name'] ?? ''),
-                    'value' => (string) ($row['value'] ?? ''),
-                    'unit' => $units[ProductAttribute::key($row['name'] ?? '')] ?? null,
-                ])
+                ->map(function ($row) use ($dictionary) {
+                    $attribute = $dictionary[ProductAttribute::key($row['name'] ?? '')] ?? null;
+                    $value = (string) ($row['value'] ?? '');
+
+                    return [
+                        'name' => (string) ($row['name'] ?? ''),
+                        'value' => $value,
+                        'unit' => $attribute?->unit,
+                        'warning' => $this->notNumberWarning($attribute, $value),
+                    ];
+                })
                 ->filter(fn ($row) => $row['name'] !== '' || $row['value'] !== '')
                 ->values()->all();
         }
@@ -357,7 +374,19 @@ class AdminProductController extends Controller
             'name' => $v->attribute->name,
             'value' => $v->value,
             'unit' => $v->attribute->unit,
+            'warning' => $this->notNumberWarning($v->attribute, $v->value),
         ])->values()->all();
+    }
+
+    /**
+     * Нечисловое значение числовой характеристики (из импорта) сохраняется как есть —
+     * предупреждение у поля; изменить его можно только на число.
+     */
+    private function notNumberWarning(?ProductAttribute $attribute, string $value): ?string
+    {
+        return $attribute?->isNumber() && $value !== '' && ProductAttribute::parseNumber($value) === null
+            ? 'Числовая характеристика, значение не число — сохраняется как есть; новое значение — только число'
+            : null;
     }
 
     private function publishProduct(Product $product): void

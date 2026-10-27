@@ -37,12 +37,12 @@ class ProductAttributesTest extends TestCase
         $this->client = User::factory()->create(['organization_id' => Organization::factory()->create()->id]);
 
         $this->product = Product::create([
-            'name'         => 'Grohe Start',
-            'sku'          => 'GR-001',
-            'price'        => 100,
-            'stock'        => 5,
-            'category_id'  => Category::create(['name' => 'Смесители', 'slug' => 'smesiteli'])->id,
-            'is_active'    => true,
+            'name' => 'Grohe Start',
+            'sku' => 'GR-001',
+            'price' => 100,
+            'stock' => 5,
+            'category_id' => Category::create(['name' => 'Смесители', 'slug' => 'smesiteli'])->id,
+            'is_active' => true,
             'is_published' => true,
         ]);
     }
@@ -55,11 +55,11 @@ class ProductAttributesTest extends TestCase
     private function value(ProductAttribute $attribute, string $value, int $order = 0, ?Product $product = null): ProductAttributeValue
     {
         return ProductAttributeValue::create([
-            'product_id'   => ($product ?? $this->product)->id,
+            'product_id' => ($product ?? $this->product)->id,
             'attribute_id' => $attribute->id,
-            'value'        => $value,
+            'value' => $value,
             'value_number' => ProductAttribute::parseNumber($value),
-            'sort_order'   => $order,
+            'sort_order' => $order,
         ]);
     }
 
@@ -71,13 +71,13 @@ class ProductAttributesTest extends TestCase
         return $this->actingAs($this->admin)
             ->from("/admin/product/{$this->product->id}")
             ->post("/admin/product/{$this->product->id}", [
-                'action'          => $action,
-                'name'            => $this->product->name,
-                'sku'             => $this->product->sku,
-                'price'           => $this->product->price,
-                'stock'           => $this->product->stock,
+                'action' => $action,
+                'name' => $this->product->name,
+                'sku' => $this->product->sku,
+                'price' => $this->product->price,
+                'stock' => $this->product->stock,
                 'attributes_sent' => 1,
-                'attributes'      => array_map(fn ($r) => ['name' => $r[0], 'value' => $r[1]], $rows),
+                'attributes' => array_map(fn ($r) => ['name' => $r[0], 'value' => $r[1]], $rows),
             ]);
     }
 
@@ -187,6 +187,54 @@ class ProductAttributesTest extends TestCase
         $this->assertSame(150.5, $this->product->attributeValues()->first()->value_number);
     }
 
+    public function test_imported_long_and_not_number_values_are_saved_unchanged(): void
+    {
+        $kit = $this->attribute('Комплектация');
+        $pressure = $this->attribute('Рабочее давление', ['type' => 'number', 'unit' => 'бар']);
+        $long = str_repeat('Смеситель, гибкая подводка, крепёж, ', 20); // ~720 символов, больше 255
+        $this->value($kit, trim($long));
+        ProductAttributeValue::create([
+            'product_id' => $this->product->id, 'attribute_id' => $pressure->id,
+            'value' => '6 бар (10 для испытания)', 'value_number' => 6, 'sort_order' => 1,
+        ]);
+
+        // В форме — предупреждение у поля
+        $this->actingAs($this->admin)->get("/admin/product/{$this->product->id}")->assertOk()
+            ->assertSee('data-attribute-warning', false)->assertSee('сохраняется как есть')
+            ->assertSee('maxlength="1000"', false);
+
+        // Ничего не меняли — сохраняется как есть, value_number из импорта остаётся
+        foreach (['publish', 'draft'] as $action) {
+            $this->save([['Комплектация', trim($long)], ['Рабочее давление', '6 бар (10 для испытания)']], $action)
+                ->assertSessionHasNoErrors();
+        }
+        $this->assertSame([['Комплектация', trim($long)], ['Рабочее давление', '6 бар (10 для испытания)']], $this->live());
+        $this->assertSame(6.0, (float) $pressure->values()->sole()->value_number);
+        $this->assertSame(0, ProductDraft::count());
+
+        // Изменённое — проверяется как раньше: только число
+        $this->save([['Комплектация', trim($long)], ['Рабочее давление', '8 бар (10 для испытания)']], 'publish')
+            ->assertSessionHasErrors('attributes');
+        $this->assertSame('6 бар (10 для испытания)', $pressure->values()->sole()->value);
+
+        // Длиннее 1000 — ошибка
+        $this->save([['Комплектация', str_repeat('а', 1001)]], 'publish')->assertSessionHasErrors('attributes');
+
+        $this->save([['Комплектация', trim($long)], ['Рабочее давление', '8']], 'publish')->assertSessionHasNoErrors();
+        $this->assertSame(8.0, (float) $pressure->values()->sole()->value_number);
+        $this->actingAs($this->admin)->get("/admin/product/{$this->product->id}")->assertDontSee('data-attribute-warning', false);
+    }
+
+    public function test_not_number_value_is_unchanged_only_for_same_product(): void
+    {
+        $pressure = $this->attribute('Рабочее давление', ['type' => 'number']);
+        $other = Product::create(['name' => 'Other', 'sku' => 'GR-002', 'price' => 1, 'stock' => 1]);
+        $this->value($pressure, '6 бар (10 для испытания)', 0, $other);
+
+        $this->save([['Рабочее давление', '6 бар (10 для испытания)']], 'publish')->assertSessionHasErrors('attributes');
+        $this->assertSame([], $this->live());
+    }
+
     public function test_attributes_go_through_draft_until_publish(): void
     {
         $this->save([['Цвет', 'Хром']], 'publish');
@@ -216,13 +264,13 @@ class ProductAttributesTest extends TestCase
     public function test_new_product_gets_attributes_immediately(): void
     {
         $this->actingAs($this->admin)->post('/admin/product', [
-            'action'          => 'draft',
-            'name'            => 'Новый',
-            'sku'             => 'NEW-1',
-            'price'           => 10,
-            'stock'           => 1,
+            'action' => 'draft',
+            'name' => 'Новый',
+            'sku' => 'NEW-1',
+            'price' => 10,
+            'stock' => 1,
             'attributes_sent' => 1,
-            'attributes'      => [['name' => 'Цвет', 'value' => 'Хром']],
+            'attributes' => [['name' => 'Цвет', 'value' => 'Хром']],
         ])->assertSessionHasNoErrors();
 
         $product = Product::where('sku', 'NEW-1')->firstOrFail();
@@ -311,7 +359,7 @@ class ProductAttributesTest extends TestCase
         ProductDraft::create(['product_id' => $other->id, 'data' => ['attributes' => [['attribute_id' => $colorBody->id, 'value' => 'Серый']]]]);
 
         $this->actingAs($this->admin)->post('/admin/attributes/merge', [
-            'target_id'  => $color->id,
+            'target_id' => $color->id,
             'source_ids' => [$colorBody->id, $tint->id, $color->id],
         ])->assertSessionHasNoErrors()
             ->assertSessionHas('success', fn ($m) => str_contains($m, 'Перенесено значений: 2') && str_contains($m, 'отброшено'));

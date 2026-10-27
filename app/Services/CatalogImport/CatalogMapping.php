@@ -124,6 +124,16 @@ class CatalogMapping
     }
 
     /**
+     * Путь из products (решение по отдельному товару) или null.
+     *
+     * @return list<string>|null
+     */
+    public function productPath(?string $sku): ?array
+    {
+        return $this->categories['products'][trim((string) $sku)] ?? null;
+    }
+
+    /**
      * Категория по словам названия, затем серии: [путь, описание правила] или null.
      *
      * @return array{0: list<string>, 1: string}|null

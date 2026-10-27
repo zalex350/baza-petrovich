@@ -9,11 +9,10 @@
 // Сеть / не JSON — обычная отправка формы.
 
 import { updateHeader } from './cart-actions';
+import { queueQuantity } from './qty-sync';
 
-const DEBOUNCE = 400;
 const HIGHLIGHT_MS = 2000;
 
-const timers = new WeakMap();
 let refreshing = null;
 
 const page = () => document.querySelector('[data-cart-page]');
@@ -106,24 +105,20 @@ async function refresh() {
     });
 }
 
-async function changeQuantity(form) {
-    const input = form.querySelector('input[name="quantity"]');
-
+// Количество — через qty-sync.js: один запрос за раз, последнее значение побеждает
+async function changeQuantity(form, quantity) {
     try {
-        const data = await post(form.action, { quantity: input.value });
+        const data = await post(form.action, { quantity });
 
         updateHeader(data.cart);
         message(form, data.ok ? '' : data.message);
+        refresh();
 
-        if (String(data.quantity) !== input.value) {
-            input.value = data.quantity;
-            // x-qty обновит своё состояние; detail — чтобы не отправить это изменение снова
-            input.dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { fromServer: true } }));
-        }
-
-        await refresh();
+        return data;
     } catch {
         form.submit();
+
+        return null;
     }
 }
 
@@ -175,6 +170,23 @@ async function remove(form) {
 // поля очищаются, фокус — снова в артикул
 async function quickAdd(form) {
     const fields = { sku: form.querySelector('input[name="sku"]'), qty: form.querySelector('input[name="qty"]') };
+
+    // Пока идёт добавление — повторный Enter не отправляет форму второй раз; пустые поля
+    // (например, Enter сразу после успешного добавления и очистки) — ничего не делать, без ошибки
+    if (form.dataset.busy !== undefined || (fields.sku.value.trim() === '' && fields.qty.value === '')) {
+        return;
+    }
+
+    form.dataset.busy = '';
+
+    try {
+        await quickAddSend(form, fields);
+    } finally {
+        delete form.dataset.busy;
+    }
+}
+
+async function quickAddSend(form, fields) {
 
     const showErrors = (errors = {}) => {
         for (const [name, input] of Object.entries(fields)) {
@@ -252,8 +264,7 @@ document.addEventListener('change', (event) => {
     const form = target.closest('form[data-cart-qty]');
 
     if (form && ! event.detail?.fromServer) {
-        clearTimeout(timers.get(form));
-        timers.set(form, setTimeout(() => changeQuantity(form), DEBOUNCE));
+        queueQuantity(form, changeQuantity, { delay: event.detail?.source === 'button' });
     }
 });
 
@@ -266,8 +277,7 @@ document.addEventListener('submit', (event) => {
 
     if (form.matches('form[data-cart-qty]')) {
         event.preventDefault();
-        clearTimeout(timers.get(form));
-        changeQuantity(form);
+        queueQuantity(form, changeQuantity);
     } else if (form.matches('form[data-quick-add]')) {
         event.preventDefault();
         quickAdd(form);

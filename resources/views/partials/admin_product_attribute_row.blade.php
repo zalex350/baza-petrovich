@@ -1,6 +1,6 @@
-{{-- Строка блока «Характеристики»: $index, $row ['name', 'value', 'unit'], $form, $spare (пустая запасная строка) --}}
+{{-- Строка блока «Характеристики»: $index, $row ['name', 'value', 'unit', 'warning'?], $form, $spare (пустая запасная строка) --}}
 <li
-    class="flex flex-wrap sm:flex-nowrap items-center gap-2"
+    class="flex flex-wrap {{ empty($row['warning']) ? 'sm:flex-nowrap' : '' }} items-center gap-2"
     data-attribute-row
     @if($spare ?? false) data-spare x-show="! ready" @endif
 >
@@ -26,11 +26,15 @@
         value="{{ $row['value'] }}"
         placeholder="Значение"
         aria-label="Значение"
-        maxlength="255"
+        maxlength="{{ \App\Services\ProductAttributes::VALUE_MAX }}"
         class="w-full sm:flex-1 border rounded px-3 py-2"
     >
 
     <span class="w-12 text-sm text-slate-500" title="Единица из справочника">{{ $row['unit'] ?? '' }}</span>
+
+    @if(! empty($row['warning']))
+        <p class="w-full text-xs text-tone-warning-text sm:order-last" data-attribute-warning>{{ $row['warning'] }}</p>
+    @endif
 
     <button type="button" x-show="ready" x-cloak @click="remove($event)" class="w-9 h-9 rounded-lg border border-slate-300 text-slate-500 hover:text-red-600 hover:border-red-300" aria-label="Удалить характеристику" title="Удалить">×</button>
 </li>

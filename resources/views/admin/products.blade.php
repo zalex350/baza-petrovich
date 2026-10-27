@@ -23,10 +23,11 @@
 
 </div>
 
-{{-- Фильтры: без категории (служебная «Без категории» скрыта на сайте), без названия --}}
+{{-- Фильтры: без категории (служебная «Без категории» скрыта на сайте), без названия,
+     описание не одобрено (сгенерированное, на сайте не показывается) --}}
 <div class="mb-4 flex flex-wrap items-center gap-2 text-sm" data-admin-product-filter>
-    @if($uncategorized || $unnamed)
-        <x-badge tone="warning" size="md">{{ $uncategorized ? 'Без категории' : 'Без названия' }}: {{ $products->total() }}</x-badge>
+    @if($uncategorized || $unnamed || $unapproved)
+        <x-badge tone="warning" size="md">{{ $uncategorized ? 'Без категории' : ($unnamed ? 'Без названия' : 'Описание не одобрено') }}: {{ $products->total() }}</x-badge>
         <x-button variant="link" size="sm" href="/admin/products">Показать все</x-button>
     @else
         @if($uncategorizedCount)
@@ -34,6 +35,9 @@
         @endif
         @if($unnamedCount)
             <x-button variant="secondary" size="sm" href="/admin/products?name=none">Без названия ({{ $unnamedCount }})</x-button>
+        @endif
+        @if($unapprovedCount)
+            <x-button variant="secondary" size="sm" href="/admin/products?description=unapproved">Описание не одобрено ({{ $unapprovedCount }})</x-button>
         @endif
     @endif
 </div>
