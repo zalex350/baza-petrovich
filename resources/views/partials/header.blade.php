@@ -88,7 +88,7 @@
                         :amount="$cartSummary['total']"
                         class="block font-semibold text-ink"
                         data-cart-total
-                        title="с НДС, в т.ч. НДС {{ \App\Support\Money::format($cartSummary['vat']) }}"
+                        title="с НДС, в т.ч. НДС {{ money($cartSummary['vat']) }}"
                     />
                 </span>
             </a>

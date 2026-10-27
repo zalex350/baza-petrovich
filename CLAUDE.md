@@ -122,7 +122,7 @@ User uploads go to `storage/app/public/` (accessible via `/storage/...` URLs via
 - **Элементы UI — только компоненты из `resources/views/components`** (`x-button`, `x-input`, `x-table`, `x-badge`, `x-alert`, `x-price`, `x-confirm` и т.д.), без локальной разметки кнопок, полей, таблиц, бейджей и сообщений.
 - **`@include` — только для крупных блоков страницы** (`partials/order_items`, `partials/header` и т.п.).
 - **Новые элементы — добавлять в кит**, не делать локально на экране.
-- Подтверждение действий — `x-confirm`, не `onclick="return confirm(...)"`. Суммы — `x-price` (`App\Support\Money`: `1 234,50 BYN`). Flash-сообщения выводят layouts (`x-alert.flash`) — на экранах не подключать.
+- Подтверждение действий — `x-confirm`, не `onclick="return confirm(...)"`. Суммы — `x-price` или `money()` в тексте (`App\Support\Money`: `1 234,50 BYN`; пустая цена: витрина «Цена уточняется», админка «—»), даты — `date_ru()` (списки без времени, карточки и история — `date_ru($d, time: true)`). Flash-сообщения выводят layouts (`x-alert.flash`) — на экранах не подключать.
 - **При переводе формы на `x-input`/`x-select`** (и `x-textarea`) общий список ошибок заменяется одним alert «Проверьте выделенные поля»: в шаблоне экрана `@section('flash-validation', 'summary')`, тексты ошибок остаются только у полей. Пока на экране есть формы не на ките — оставлять список (по умолчанию). Пример — `admin/orders.blade.php`.
 - Breeze-компоненты (`x-primary-button`, `x-text-input`, `x-input-label`, `x-input-error`, `x-guest-layout` и др.) — наследие auth/профиля; в новом коде не использовать.
 

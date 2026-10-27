@@ -66,7 +66,7 @@
                 <span class="inline-flex rounded-full bg-red-100 text-red-700 px-2 py-0.5 text-xs">
                     Заблокирован
                 </span>
-                <span class="text-sm text-slate-400 ml-2">с {{ $user->blocked_at->format('d.m.Y H:i') }}</span>
+                <span class="text-sm text-slate-400 ml-2">с {{ date_ru($user->blocked_at, true) }}</span>
             @else
                 <span class="inline-flex rounded-full bg-green-100 text-green-700 px-2 py-0.5 text-xs">
                     Активен
@@ -78,7 +78,7 @@
         <dd>{{ $user->orders_count }}</dd>
 
         <dt class="text-slate-500">Создан</dt>
-        <dd>{{ $user->created_at?->format('d.m.Y H:i') }}</dd>
+        <dd>{{ date_ru($user->created_at, true) }}</dd>
 
     </dl>
 

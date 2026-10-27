@@ -53,7 +53,7 @@
                     <tr>
 
                         <td class="py-2 pr-4 text-slate-700 whitespace-nowrap">
-                            {{ $record->created_at?->format('d.m.Y H:i') }}
+                            {{ date_ru($record->created_at, true) }}
                         </td>
 
                         <td class="py-2 pr-4">

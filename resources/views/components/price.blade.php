@@ -1,5 +1,5 @@
 {{--
-    Сумма в BYN в едином формате (App\Support\Money): 1 234.50 BYN.
+    Сумма в BYN в едином формате (App\Support\Money; в тексте — money()): 1 234,50 BYN.
     <x-price :amount="$order->total_with_vat" />                  — просто сумма
     <x-price :amount="$line->net" vat="net" />                    — с пометкой «без НДС» / vat="gross" — «с НДС»
     <x-price :product="$product" />                               — цена товара: без НДС + строка «с НДС: …»

@@ -108,7 +108,7 @@
                                     @if($product->vat_rate === null)
                                         НДС не облагается
                                     @else
-                                        с НДС {{ $product->vat_rate_label }} — {{ \App\Support\Money::format($product->price_with_vat) }}
+                                        с НДС {{ $product->vat_rate_label }} — {{ money($product->price_with_vat) }}
                                     @endif
                                 </div>
                             @endif

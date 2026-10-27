@@ -108,7 +108,7 @@
                 </x-table.td>
 
                 <x-table.td label="Дата">
-                    {{ $order->placed_at?->format('d.m.Y H:i') }}
+                    {{ date_ru($order->placed_at) }}
                 </x-table.td>
 
                 <x-table.td label="Клиент">

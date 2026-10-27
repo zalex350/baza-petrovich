@@ -102,7 +102,7 @@
                     </td>
 
                     <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
-                        {{ number_format($item->price, 2, '.', '') }} BYN
+                        <x-price :amount="$item->price" />
                     </td>
 
                     <td class="px-4 py-3 text-right text-slate-700">
@@ -110,7 +110,7 @@
                     </td>
 
                     <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
-                        {{ number_format($item->amount_without_vat, 2, '.', '') }} BYN
+                        <x-price :amount="$item->amount_without_vat" />
                     </td>
 
                     <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
@@ -118,11 +118,11 @@
                     </td>
 
                     <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
-                        {{ number_format($item->vat_amount, 2, '.', '') }} BYN
+                        <x-price :amount="$item->vat_amount" />
                     </td>
 
                     <td class="px-4 py-3 text-right font-semibold text-slate-800 whitespace-nowrap">
-                        {{ number_format($item->amount_with_vat, 2, '.', '') }} BYN
+                        <x-price :amount="$item->amount_with_vat" />
                     </td>
 
                 </tr>

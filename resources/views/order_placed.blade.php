@@ -11,7 +11,7 @@
     </h1>
 
     <p class="text-slate-600 mb-6">
-        Дата оформления: {{ $order->placed_at?->format('d.m.Y H:i') }}.
+        Дата оформления: {{ date_ru($order->placed_at, true) }}.
         Статус:
         @include('partials.order_status', ['status' => $order->status])
     </p>

@@ -52,7 +52,7 @@
                     </td>
 
                     <td class="px-4 py-3 text-slate-700">
-                        {{ $order->placed_at?->format('d.m.Y') }}
+                        {{ date_ru($order->placed_at) }}
                     </td>
 
                     <td class="px-4 py-3">
@@ -79,15 +79,15 @@
                     </td>
 
                     <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
-                        {{ number_format($order->total_without_vat, 2, '.', '') }} BYN
+                        <x-price :amount="$order->total_without_vat" />
                     </td>
 
                     <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
-                        {{ number_format($order->total_vat, 2, '.', '') }} BYN
+                        <x-price :amount="$order->total_vat" />
                     </td>
 
                     <td class="px-4 py-3 text-right font-semibold text-slate-800 whitespace-nowrap">
-                        {{ number_format($order->total_with_vat, 2, '.', '') }} BYN
+                        <x-price :amount="$order->total_with_vat" />
                     </td>
 
                     <td class="px-4 py-3">

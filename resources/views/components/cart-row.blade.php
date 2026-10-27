@@ -70,7 +70,7 @@
                     <span class="font-semibold leading-snug text-ink-muted">{{ $item->title() }}</span>
                 @endif
                 <div class="mt-0.5 text-meta text-ink-muted">
-                    {{ $product?->sku }}@if($product && ! $unavailable) · <x-price :amount="$item->price_at_add" />/шт.@endif
+                    {{ $product?->sku }}@if($product && ! $unavailable) · <x-price :amount="$item->price_at_add" vat="net" />/шт.@endif
                 </div>
                 <div class="mt-0.5 text-meta" data-refresh="{{ $key }}-stock">
                     @if($unavailable)
@@ -200,7 +200,7 @@
             <span class="text-ink-muted">—</span>
         @else
             <div class="font-bold"><x-price :amount="$line->net" /></div>
-            <div class="text-meta text-ink-muted">{{ $card ? 'без НДС' : 'с НДС '.\App\Support\Money::format($line->gross, false) }}</div>
+            <div class="text-meta text-ink-muted">{{ $card ? 'без НДС' : 'с НДС '.money($line->gross, false) }}</div>
         @endif
     </div>
 
