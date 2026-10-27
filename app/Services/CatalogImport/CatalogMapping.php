@@ -124,6 +124,47 @@ class CatalogMapping
     }
 
     /**
+     * Путь из split для общей категории каталога («для душевых»): правила по названию,
+     * серии, описанию или характеристике строки catalog.db. [путь, описание правила]
+     * или null — значение не из split или ни одно правило не подошло.
+     *
+     * @param  array{name?: ?string, series?: ?string, description?: ?string, attributes?: ?string}  $row
+     * @return array{0: list<string>, 1: string}|null
+     */
+    public function splitPath(?string $value, array $row): ?array
+    {
+        $rules = null;
+
+        foreach ($this->categories['split'] ?? [] as $splitValue => $list) {
+            if (self::key($splitValue) === self::key($value)) {
+                $rules = $list;
+            }
+        }
+
+        if ($rules === null) {
+            return null;
+        }
+
+        $attributes = json_decode((string) ($row['attributes'] ?? ''), true) ?: [];
+
+        foreach ($rules as [$field, $pattern, $path]) {
+            $text = match ($field) {
+                'название' => $row['name'] ?? '',
+                'серия' => $row['series'] ?? '',
+                'описание' => $row['description'] ?? '',
+                default => is_scalar($attributes[$field] ?? null) ? $attributes[$field] : '',
+            };
+            $text = mb_strtolower(trim(preg_replace('/\s+/u', ' ', (string) $text)));
+
+            if ($text !== '' && preg_match('/'.$pattern.'/u', $text)) {
+                return [$path, "{$field}: /{$pattern}/"];
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Путь из products (решение по отдельному товару) или null.
      *
      * @return list<string>|null
