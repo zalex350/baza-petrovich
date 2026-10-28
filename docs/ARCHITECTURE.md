@@ -187,22 +187,123 @@ erDiagram
     products ||--o| product_drafts : "черновик"
     products ||--o{ product_client_codes : ""
 
-    organizations { bigint id string name string unp string guid "1С" }
-    users { bigint id string email string role "client|admin" bigint organization_id timestamp blocked_at bool notify_new_order bool notify_cancel_request }
-    products { bigint id string sku string guid "1С" string name string display_name decimal price "без НДС" decimal vat_rate int stock bool on_order int min_qty int qty_step bool is_active bool is_published bool description_generated bool is_new_locked timestamp deleted_at }
-    categories { bigint id string name string slug bigint parent_id bool is_hidden }
-    carts { bigint id bigint user_id "unique" }
-    cart_items { bigint id bigint product_id int quantity bool selected decimal price_at_add string product_name }
-    orders { bigint id string number "SM-ГГГГ-000001" string status decimal total_with_vat string delivery_address "снимок" string checkout_token timestamp cancel_requested_at }
-    order_items { bigint id string product_name string product_sku decimal price decimal vat_rate decimal amount_with_vat string client_code }
-    order_status_history { bigint id string from_status string to_status string event bigint user_id string comment }
-    attributes { bigint id string name string name_key "unique" string type "text|number" bool is_filterable }
-    product_attribute_values { bigint id string value decimal value_number int sort_order }
-    category_filters { bigint id string type bigint attribute_id int sort_order }
-    product_images { bigint id string path bool is_main int sort_order }
-    product_drafts { bigint id json data }
-    delivery_addresses { bigint id string title string address bool is_default }
-    product_client_codes { bigint id string code }
+    organizations {
+        bigint id
+        string name
+        string unp
+        string guid "1С"
+    }
+    users {
+        bigint id
+        string email
+        string role "client|admin"
+        bigint organization_id
+        timestamp blocked_at
+        bool notify_new_order
+        bool notify_cancel_request
+    }
+    products {
+        bigint id
+        string sku
+        string guid "1С"
+        string name
+        string display_name
+        decimal price "без НДС"
+        decimal vat_rate
+        int stock
+        bool on_order
+        int min_qty
+        int qty_step
+        bool is_active
+        bool is_published
+        bool description_generated
+        bool is_new_locked
+        timestamp deleted_at
+    }
+    categories {
+        bigint id
+        string name
+        string slug
+        bigint parent_id
+        bool is_hidden
+    }
+    carts {
+        bigint id
+        bigint user_id "unique"
+    }
+    cart_items {
+        bigint id
+        bigint product_id
+        int quantity
+        bool selected
+        decimal price_at_add
+        string product_name
+    }
+    orders {
+        bigint id
+        string number "SM-ГГГГ-000001"
+        string status
+        decimal total_with_vat
+        string delivery_address "снимок"
+        string checkout_token
+        timestamp cancel_requested_at
+    }
+    order_items {
+        bigint id
+        string product_name
+        string product_sku
+        decimal price
+        decimal vat_rate
+        decimal amount_with_vat
+        string client_code
+    }
+    order_status_history {
+        bigint id
+        string from_status
+        string to_status
+        string event
+        bigint user_id
+        string comment
+    }
+    attributes {
+        bigint id
+        string name
+        string name_key "unique"
+        string type "text|number"
+        bool is_filterable
+    }
+    product_attribute_values {
+        bigint id
+        string value
+        decimal value_number
+        int sort_order
+    }
+    category_filters {
+        bigint id
+        string type
+        bigint attribute_id
+        int sort_order
+    }
+    product_images {
+        bigint id
+        string path
+        bool is_main
+        int sort_order
+    }
+    product_drafts {
+        bigint id
+        json data
+    }
+    delivery_addresses {
+        bigint id
+        string title
+        string address
+        bool is_default
+    }
+    product_client_codes {
+        bigint id
+        string code
+    }
 ```
 
 | Таблица | Заметки |
