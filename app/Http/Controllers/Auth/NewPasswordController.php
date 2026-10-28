@@ -8,6 +8,8 @@ use App\Notifications\UserInvitation;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -19,10 +21,24 @@ class NewPasswordController extends Controller
 {
     /**
      * Display the password reset view.
+     * Ссылка приглашения проверяется сразу: использованная (пароль уже установлен), устаревшая
+     * или подменённая — страница «Ссылка недействительна или устарела», без формы.
      */
-    public function create(Request $request): View
+    public function create(Request $request): Response|View
     {
+        if ($request->boolean('invite') && ! $this->invitationValid($request)) {
+            return response()->view('auth.invite-invalid', [], 410);
+        }
+
         return view('auth.reset-password', ['request' => $request]);
+    }
+
+    private function invitationValid(Request $request): bool
+    {
+        $user = User::where('email', (string) $request->query('email'))->first();
+
+        return $user !== null
+            && Password::broker(UserInvitation::BROKER)->tokenExists($user, (string) $request->route('token'));
     }
 
     /**
@@ -42,19 +58,32 @@ class NewPasswordController extends Controller
         // will update the password on an actual user model and persist it to the
         // database. Otherwise we will parse the error and return the response.
         // Приглашение и обычный сброс — разные брокеры: разный срок и таблица токенов
-        $broker = $request->boolean('invite') ? UserInvitation::BROKER : null;
+        $invite = $request->boolean('invite');
+        $broker = $invite ? UserInvitation::BROKER : null;
+        $invited = null;
 
         $status = Password::broker($broker)->reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
-            function (User $user) use ($request) {
+            function (User $user) use ($request, &$invited) {
                 $user->forceFill([
                     'password' => Hash::make($request->password),
                     'remember_token' => Str::random(60),
                 ])->save();
 
                 event(new PasswordReset($user));
+
+                $invited = $user;
             }
         );
+
+        // Приглашение принято — сразу вход: клиент — в каталог, администратор — к заказам
+        if ($invite && $status == Password::PASSWORD_RESET && $invited) {
+            Auth::login($invited);
+            $request->session()->regenerate();
+
+            return redirect($invited->isAdmin() ? '/admin/orders' : route('catalog.index'))
+                ->with('success', 'Пароль установлен. Добро пожаловать!');
+        }
 
         // If the password was successfully reset, we will redirect the user back to
         // the application's home authenticated view. If there is an error we can

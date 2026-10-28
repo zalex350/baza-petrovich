@@ -6,8 +6,12 @@
     <x-product-row.buy :product="$product" :in-cart="$item" layout="card" />   — крупно, на всю ширину (48px)
     Гость — «Войдите, чтобы заказать» (возврат на эту страницу); администратор — «Редактировать»
     (товар в админке; заказывать он не может, BR-121); иной не клиент — ничего;
-    нет цены / нет остатка — неактивная кнопка; товар в корзине — x-qty (POST /order/update/{item}) и
-    «В корзине · перейти»; иначе — x-qty с кратностью товара и «В корзину» (POST /order/add/{id}).
+    нет цены / нет остатка — неактивная кнопка; иначе — x-qty с кратностью товара и «В корзину»
+    (POST /order/add/{id}): кнопка видна всегда, товар уже в корзине — количество добавляется
+    к имеющемуся. Под количеством — «В корзине: N шт. · перейти»; место под неё оставлено
+    во всех строках, чтобы строки списка не отличались по высоте.
+    В строке колонки фиксированной ширины (grid-cols-product-buy): количество | кнопка —
+    одна под другой во всех строках; кнопка без количества — во второй колонке.
     Без JS — обычные формы. Сообщение об ошибке — в [data-cart-message].
 --}}
 @props(['product', 'inCart' => null, 'layout' => 'row'])
@@ -16,65 +20,55 @@
     $user = auth()->user();
     $card = $layout === 'card';
 
-    // Количество в корзине, не попадающее в кратность (положили до её настройки), x-qty не «исправляет»
-    $min = (int) $product->min_qty;
-    $step = (int) $product->qty_step;
-    $aligned = $inCart && $inCart->quantity >= $min && ($inCart->quantity - $min) % max(1, $step) === 0;
-
     $size = $card ? 'lg' : 'md';
-    $wide = $card ? 'w-full' : 'w-full md:w-auto';
-    $addButton = $card ? 'grow basis-48' : 'grow md:grow-0';
+    // Строка: на телефоне количество | кнопка на всю оставшуюся ширину, с md — фиксированные колонки
+    $grid = 'grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-2 gap-y-1 md:grid-cols-product-buy';
+    // Кнопка без количества: в строке — во второй колонке, в карточке — на всю ширину
+    $single = $card ? 'w-full' : 'col-span-2 w-full md:col-span-1 md:col-start-2';
 @endphp
 
-<div {{ $attributes->class(['flex flex-col', $card ? 'gap-2' : 'gap-1 md:items-end']) }} data-cart-buy>
+<div {{ $attributes->class(['flex flex-col', $card ? 'gap-2' : 'gap-1']) }} data-cart-buy>
     @guest
-        <x-button variant="secondary" :size="$size" :href="route('login', ['return' => request()->getRequestUri()])" :class="$wide">
+        <x-button variant="secondary" :size="$size" :href="route('login', ['return' => request()->getRequestUri()])" class="w-full">
             Войдите, чтобы заказать
         </x-button>
     @elseif($user->isAdmin())
-        <x-button variant="secondary" :size="$size" :href="'/admin/product/'.$product->id" :class="$wide" data-admin-edit>
-            Редактировать
-        </x-button>
+        <div @class([$grid => ! $card])>
+            <x-button variant="secondary" :size="$size" :href="'/admin/product/'.$product->id" :class="$single" data-admin-edit>
+                Редактировать
+            </x-button>
+        </div>
     @elseif($user->isClient())
-        @if($product->price === null)
-            <x-button variant="secondary" :size="$size" type="button" disabled :class="$wide" data-buy-disabled>Цена уточняется</x-button>
-        @elseif($product->stock < 1)
-            <x-button variant="secondary" :size="$size" type="button" disabled :class="$wide" data-buy-disabled>Нет в наличии</x-button>
-        @elseif($inCart)
-            <form method="POST" action="/order/update/{{ $inCart->id }}" @class(['flex', $card ? 'flex-wrap items-center gap-x-4 gap-y-2' : 'md:justify-end']) data-cart-update>
-                @csrf
-                <x-qty
-                    name="quantity"
-                    :id="'cart-qty-'.$product->id"
-                    :value="$inCart->quantity"
-                    :min="$aligned ? $min : 1"
-                    :step="$aligned ? $step : 1"
-                    :max="$product->stock"
-                    :size="$card ? 'lg' : 'sm'"
-                    label="Количество в корзине"
-                />
-                {{-- Без JS количество отправляется этой кнопкой --}}
-                <button type="submit" class="sr-only">Обновить количество</button>
-
-                @if($card)
-                    <a href="/order" class="text-link hover:underline" data-in-cart>В корзине · перейти</a>
-                @endif
-            </form>
-
-            @unless($card)
-                <a href="/order" class="text-meta text-link hover:underline" data-in-cart>В корзине · перейти</a>
-            @endunless
+        @if($product->price === null || $product->stock < 1)
+            <div @class([$grid => ! $card])>
+                <x-button variant="secondary" :size="$size" type="button" disabled :class="$single" data-buy-disabled>
+                    {{ $product->price === null ? 'Цена уточняется' : 'Нет в наличии' }}
+                </x-button>
+            </div>
         @else
-            <form method="POST" action="/order/add/{{ $product->id }}" @class(['flex gap-2', 'flex-wrap gap-2.5' => $card]) data-cart-add data-product-id="{{ $product->id }}">
+            <form
+                method="POST"
+                action="/order/add/{{ $product->id }}"
+                @class([$card ? 'flex flex-wrap gap-2.5' : $grid])
+                data-cart-add
+                data-product-id="{{ $product->id }}"
+            >
                 @csrf
                 @if($card)
                     <input type="hidden" name="layout" value="card">
                 @endif
                 <x-qty name="qty" :id="'qty-'.$product->id" :product="$product" :max="$product->stock" :size="$card ? 'lg' : 'sm'" />
-                <x-button :size="$size" :class="$addButton">В корзину</x-button>
+                <x-button :size="$size" :class="$card ? 'grow basis-48' : 'w-full'">В корзину</x-button>
             </form>
         @endif
 
-        <div @class(['text-meta text-tone-danger-text empty:hidden', 'md:text-right' => ! $card]) role="status" data-cart-message></div>
+        {{-- «В корзине: N шт.» — место оставлено и без товара в корзине --}}
+        <div class="min-h-5 text-meta text-ink-muted" data-in-cart-slot>
+            @if($inCart)
+                <span data-in-cart>В корзине: {{ $inCart->quantity }} шт. · <a href="/order" class="text-link hover:underline">перейти</a></span>
+            @endif
+        </div>
+
+        <div class="text-meta text-tone-danger-text empty:hidden" role="status" data-cart-message></div>
     @endguest
 </div>

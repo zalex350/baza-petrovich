@@ -295,6 +295,48 @@ class AdminUserTest extends TestCase
             ->assertSessionHasErrors('email');
     }
 
+    public function test_taken_email_error_is_shown_under_email_field(): void
+    {
+        User::factory()->create(['email' => 'ivanov@santeh.by']);
+
+        $this->actingAs($this->admin)->from('/admin/user/create')
+            ->post('/admin/user', $this->payload())
+            ->assertRedirect('/admin/user/create')
+            ->assertSessionHasErrors(['email' => 'Пользователь с таким email уже есть.']);
+
+        $html = $this->actingAs($this->admin)->get('/admin/user/create')->assertOk()->getContent();
+
+        // Текст ошибки — у поля email (x-input), сверху — общий alert без списка
+        $this->assertMatchesRegularExpression('#id="f-email"[^>]*aria-invalid="true"#s', $html);
+        $this->assertMatchesRegularExpression('#id="f-email-error"[^>]*>\s*Пользователь с таким email уже есть\.#u', $html);
+        $this->assertSame(1, substr_count($html, 'Пользователь с таким email уже есть.'));
+        $this->assertStringContainsString('Проверьте выделенные поля', $html);
+        // Введённое сохраняется
+        $this->assertStringContainsString('value="Иванов Иван Иванович"', $html);
+    }
+
+    public function test_other_field_errors_are_shown_under_their_fields(): void
+    {
+        $this->actingAs($this->admin)->from('/admin/user/create')
+            ->post('/admin/user', $this->payload(['name' => '', 'organization_id' => '', 'password' => '']));
+
+        $html = $this->actingAs($this->admin)->get('/admin/user/create')->getContent();
+
+        $this->assertStringContainsString('id="f-name-error"', $html);
+        $this->assertStringContainsString('id="f-organization_id-error"', $html);
+        $this->assertStringContainsString('id="f-password-error"', $html);
+        $this->assertStringContainsString('Укажите ФИО.', $html);
+    }
+
+    public function test_email_in_upper_case_is_saved_in_lower_case(): void
+    {
+        $this->actingAs($this->admin)
+            ->post('/admin/user', $this->payload(['email' => ' Ivanov@Santeh.BY ']))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('users', ['email' => 'ivanov@santeh.by']);
+    }
+
     public function test_unknown_role_is_rejected(): void
     {
         $this->actingAs($this->admin)

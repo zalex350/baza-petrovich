@@ -2,14 +2,10 @@
 //
 // - «В корзину» (form[data-cart-add]) — fetch с Accept: application/json; CartController::add
 //   отвечает {ok, message, cart, html, toast}: блок покупки строки заменяется на html
-//   (x-qty + «В корзине · перейти»), шапка — по cart, сообщение — поверх страницы (toast);
-// - количество товара в корзине (form[data-cart-update], x-qty) — fetch на /order/update/{id}
-//   через qty-sync.js (ручной ввод — сразу, «−/+» — после паузы, без гонок);
-//   ошибка — прежнее количество и текст в [data-cart-message];
+//   (количество по умолчанию + «В корзине: N шт. · перейти»), шапка — по cart, сообщение —
+//   поверх страницы (toast); ошибка — текст в [data-cart-message];
 // - не получилось (сеть, не JSON) — обычная отправка формы: сервер вернёт на ту же страницу,
 //   позиция прокрутки и flash-сообщение поверх страницы восстанавливаются, как раньше.
-
-import { queueQuantity } from './qty-sync';
 
 const KEY = 'cart-add-scroll';
 const TOAST_MS = 4000;
@@ -131,42 +127,13 @@ async function add(form) {
     }
 }
 
-async function update(form) {
-    try {
-        const data = await send(form);
-
-        updateHeader(data.cart);
-        message(form, data.ok ? '' : data.message);
-
-        return data;
-    } catch {
-        fallback(form);
-
-        return null;
-    }
-}
-
 document.addEventListener('submit', (event) => {
     const form = event.target;
 
     if (form.matches('form[data-cart-add]')) {
         event.preventDefault();
         add(form);
-    } else if (form.matches('form[data-cart-update]')) {
-        event.preventDefault();
-        queueQuantity(form, update);
     }
-});
-
-// «−/+» — после паузы (серия нажатий — один запрос), ручной ввод — сразу
-document.addEventListener('change', (event) => {
-    const form = event.target.closest?.('form[data-cart-update]');
-
-    if (! form || event.detail?.fromServer) {
-        return;
-    }
-
-    queueQuantity(form, update, { delay: event.detail?.source === 'button' });
 });
 
 function restore() {

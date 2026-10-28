@@ -160,6 +160,23 @@ class HeaderTest extends TestCase
             ->assertSee('title="с НДС, в т.ч. НДС '.Money::format(50.10).'"', false);
     }
 
+    public function test_count_and_sum_include_unselected_positions(): void
+    {
+        $client = $this->client();
+        $cart = Cart::create(['user_id' => $client->id]);
+
+        foreach ([['C-1', 1, 100, true], ['C-2', 1, 50, false]] as [$sku, $qty, $price, $selected]) {
+            $product = Product::create(['name' => $sku, 'sku' => $sku, 'price' => $price, 'stock' => 10]);
+            CartItem::create(['cart_id' => $cart->id, 'product_id' => $product->id, 'quantity' => $qty, 'price_at_add' => $price, 'selected' => $selected]);
+        }
+
+        // 120.00 + 60.00 — снятая с заказа позиция тоже в сумме, как и в счётчике
+        $this->actingAs($client)->get('/')
+            ->assertSee('Корзина: 2 поз.')
+            ->assertSee('Корзина, с НДС')
+            ->assertSee(Money::format(180));
+    }
+
     public function test_cart_sum_is_with_vat_by_lines_and_matches_cart_page(): void
     {
         $client = $this->client();

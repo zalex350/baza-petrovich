@@ -59,7 +59,8 @@
     $description = $product->description_generated ? '' : trim((string) $product->description);
     // «Упаковка и логистика» — свёрнутым блоком; служебные (ТН ВЭД) — только в админке
     $logisticsRows = rescue(fn () => $product->specRows('logistics'), collect());
-    $package = trim((string) $product->package_contents);
+    // «Комплектация»: поле товара, если пусто — характеристика (в таблице характеристик её нет)
+    $package = rescue(fn () => $product->packageContents()['text'], '');
     $hasSpecs = $specRows->isNotEmpty() || $specText !== '';
     $hasDetails = $hasSpecs || $description !== '' || $package !== '' || $logisticsRows->isNotEmpty();
 @endphp
@@ -184,7 +185,7 @@
 
                     @if($package !== '')
                         <h2 @class(['mb-2 text-xl font-bold', 'mt-6' => $hasSpecs || $description !== ''])>Комплектация</h2>
-                        <p class="max-w-prose text-ink" data-package>{!! nl2br(e($package)) !!}</p>
+                        <p class="max-w-prose whitespace-pre-line break-words text-ink" data-package>{{ $package }}</p>
                     @endif
 
                     @if($logisticsRows->isNotEmpty())

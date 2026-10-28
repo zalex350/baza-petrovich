@@ -75,22 +75,42 @@ class ProductRowTest extends TestCase
                 ->assertDontSee('Латунь')
                 ->assertSee('data-stock="few"', false)
                 ->assertSee(Money::format(100))
-                ->assertSee('без НДС · с НДС '.Money::format(120, false));
+                ->assertSeeInOrder(['без НДС', 'с НДС '.Money::format(120, false)])
+                // Наличие | цена | покупка — колонки фиксированной ширины
+                ->assertSee('md:grid-cols-product-row', false)
+                ->assertSee('md:grid-cols-product-buy', false);
         }
     }
 
-    public function test_product_in_cart_shows_quantity_and_link_instead_of_button(): void
+    public function test_product_in_cart_keeps_add_button_and_shows_quantity_in_cart(): void
     {
         $cart = Cart::create(['user_id' => $this->client->id]);
         $item = CartItem::create(['cart_id' => $cart->id, 'product_id' => $this->product->id, 'quantity' => 3, 'price_at_add' => 100]);
 
-        $this->actingAs($this->client)->get('/catalog/smesiteli')
+        $html = $this->actingAs($this->client)->get('/catalog/smesiteli')
             ->assertOk()
-            ->assertSee('action="/order/update/'.$item->id.'"', false)
-            ->assertSee('name="quantity"', false)
-            ->assertSee('value="3"', false)
-            ->assertSee('В корзине · перейти')
-            ->assertDontSee('action="/order/add/'.$this->product->id.'"', false);
+            ->assertSee('action="/order/add/'.$this->product->id.'"', false)
+            ->assertDontSee('action="/order/update/'.$item->id.'"', false)
+            ->assertSee('В корзине: 3 шт.')
+            ->getContent();
+
+        // Место под «В корзине: N шт.» — в каждой строке
+        $this->assertSame(substr_count($html, 'data-product-row'), substr_count($html, 'data-in-cart-slot'));
+    }
+
+    public function test_add_from_row_adds_to_quantity_in_cart(): void
+    {
+        $cart = Cart::create(['user_id' => $this->client->id]);
+        CartItem::create(['cart_id' => $cart->id, 'product_id' => $this->product->id, 'quantity' => 1, 'price_at_add' => 100]);
+
+        $html = $this->actingAs($this->client)
+            ->postJson("/order/add/{$this->product->id}", ['qty' => 2])
+            ->assertOk()
+            ->json('html');
+
+        $this->assertSame(3, CartItem::sole()->quantity);
+        $this->assertStringContainsString('В корзине: 3 шт.', $html);
+        $this->assertStringContainsString('action="/order/add/'.$this->product->id.'"', $html);
     }
 
     public function test_add_returns_in_cart_block_and_header_summary(): void
@@ -104,8 +124,8 @@ class ProductRowTest extends TestCase
 
         $item = CartItem::sole();
 
-        $this->assertStringContainsString('action="/order/update/'.$item->id.'"', $response->json('html'));
-        $this->assertStringContainsString('В корзине · перейти', $response->json('html'));
+        $this->assertStringContainsString('action="/order/add/'.$this->product->id.'"', $response->json('html'));
+        $this->assertStringContainsString('В корзине: '.$item->quantity.' шт.', $response->json('html'));
         $this->assertStringContainsString('Товар добавлен в корзину', $response->json('toast'));
     }
 

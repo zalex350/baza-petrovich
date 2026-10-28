@@ -114,6 +114,8 @@
 | BR-123…BR-125 | Проверки позиции: товар существует, активен, опубликован, есть цена, кратность (`min_qty`, `qty_step`), остаток, цена не изменилась с `price_at_add` |
 | Состояние | Изменение цены — «Требует обновления», пользователь принимает новые цены кнопкой (`accept-prices`); остальное — «Требует корректировки», пользователь исправляет сам |
 | Добавление | Проверяется итоговое количество (уже в корзине + добавляемое); строка корзины блокируется, параллельные добавления не дублируют позицию |
+| Строка списка и карточка | «В корзину» видна всегда: товар уже в корзине — количество добавляется к имеющемуся; под количеством «В корзине: N шт. · перейти» (место оставлено во всех строках). Колонки строки фиксированной ширины — токены `grid-cols-product-row`, `grid-cols-product-buy` |
+| Шапка | Счётчик и сумма с НДС — по одним и тем же позициям (все доступные с ценой), галочка «в заказ» на них не влияет; отмеченные считаются только в панели «Ваш заказ» |
 | «Добавить по артикулу» | Артикул + количество (пусто — `default_qty`); ошибки у полей |
 | Выбор | В заказ идут только позиции с галочкой (`selected`); добавленная позиция отмечается автоматически |
 | Ответы | При `Accept: application/json` — JSON со сводкой для шапки, иначе редирект назад |
@@ -224,7 +226,7 @@
 
 | | |
 |---|---|
-| Маршруты | `GET /admin/products` (фильтры `?category=none`, `?name=none`, `?description=unapproved`), `GET /admin/product/create`, `POST /admin/product`, `GET/POST /admin/product/{id}`, `POST …/draft`, `…/draft/delete`, `…/publish`, `GET …/preview`, `POST …/approve-description`, `…/toggle-visibility`, `…/delete`, `…/images*` |
+| Маршруты | `GET /admin/products` (поиск `?q=` по артикулу, названию, бренду — вместе с фильтрами `?category=none`, `?name=none`, `?description=unapproved`, сохраняется в пагинации), `GET /admin/product/create`, `POST /admin/product`, `GET/POST /admin/product/{id}`, `POST …/draft`, `…/draft/delete`, `…/publish`, `GET …/preview`, `POST …/approve-description`, `…/toggle-visibility`, `…/delete`, `…/images*` |
 | Контроллеры | `AdminProductController`, `AdminProductImageController` (+ трейт `UploadsProductImages`) |
 | Сервисы | `ProductAttributes`, `Images\ProductImageService`, `Vat\VatCalculator` |
 | Модели | `Product`, `ProductDraft`, `ProductImage`, `ProductAttributeValue` |
@@ -238,9 +240,10 @@
 | `is_new_locked` | «Новинка», заданная в админке, фиксируется, и импорт её не меняет |
 | Видимость | «Скрыть/показать» переключает `is_active`; удаление мягкое |
 | Описание | Сгенерированное импортом показывается на сайте после «Одобрить» (`description_generated = false`) |
+| Комплектация | Один источник (`Product::packageContents()`): поле `package_contents`, если пусто — характеристика «Комплектация» (из импорта). В таблице и в «Коротко» карточки характеристика не выводится; в форме — пометка, откуда значение. Длинные значения характеристик — многострочным полем |
 | Фото (BR-051…054) | webp `thumb` 300 / `medium` 800 / `large` 1600, ориентация по EXIF, оригинал не хранится; до 10 МБ, JPEG, PNG или WebP (MIME по содержимому); ровно одно основное; изменения сразу, без черновика |
 
-Тесты: `AdminProductFormTest`, `AdminCreateProductTest`, `AdminDeleteProductTest`, `AdminProductValidationTest`, `AdminProductVisibilityTest`, `AdminProductBadgeFlowTest`, `AdminProductQtyBadgesTest`, `ProductDraftPublishTest`, `ProductImageAdminTest`, `ProductGuidTest`.
+Тесты: `AdminProductFormTest`, `AdminProductSearchTest`, `ProductPackageContentsTest`, `AdminCreateProductTest`, `AdminDeleteProductTest`, `AdminProductValidationTest`, `AdminProductVisibilityTest`, `AdminProductBadgeFlowTest`, `AdminProductQtyBadgesTest`, `ProductDraftPublishTest`, `ProductImageAdminTest`, `ProductGuidTest`.
 
 ### 8.2. Характеристики
 
@@ -307,7 +310,8 @@
 |---|---|
 | SRS §10.5, BR-115 | Удаления нет — блокировка (`blocked_at`); заблокированный не входит, активная сессия завершается; себя заблокировать нельзя |
 | BR-111 | Клиент обязан быть привязан к организации, администратор — нет |
-| Создание | Пароль вручную или «Пригласить»: случайный пароль и письмо со ссылкой на установку пароля |
+| Создание | Пароль вручную или «Пригласить»: случайный пароль и письмо со ссылкой на установку пароля. Форма на ките: ошибки у полей (email занят — под email), email приводится к строчным |
+| Принятие приглашения | Пароль установлен — сразу вход: клиент — в каталог, администратор — к заказам. Использованная, устаревшая или чужая ссылка — сразу страница «Ссылка недействительна или устарела» (410, `auth/invite-invalid`), без формы |
 | Ссылка приглашения | В карточке, пока приглашение не принято: поле + `x-copy`, «Действует до ДД.ММ.ГГГГ ЧЧ:ММ». Токен хранится хешем, для показа — зашифрованная копия (`token_encrypted`) |
 | Новая ссылка | «Выпустить новую ссылку» (`x-confirm`): старая перестаёт действовать, новая уходит письмом; у принятого приглашения и у пользователя с паролем — ошибка |
 | Сброс пароля | «Сбросить пароль» — письмо со ссылкой; текущий пароль действует до смены |

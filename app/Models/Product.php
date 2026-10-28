@@ -13,6 +13,9 @@ use Illuminate\Support\Collection;
  */
 class Product extends Model
 {
+    /** Характеристика, которая показывается в разделе «Комплектация», а не в таблице */
+    public const PACKAGE_ATTRIBUTE = 'Комплектация';
+
     use SoftDeletes;
 
     protected $fillable = [
@@ -224,6 +227,8 @@ class Product extends Model
 
     /**
      * Строки таблицы характеристик карточки: в заданном порядке, пустые не выводятся (BR-062).
+     * Характеристика «Комплектация» в таблицу не попадает — она в разделе «Комплектация»
+     * (packageContents()).
      *
      * @return Collection<int, array{name: string, value: string}>
      */
@@ -231,6 +236,7 @@ class Product extends Model
     {
         return $this->attributeValues
             ->filter(fn (ProductAttributeValue $v) => $v->attribute && trim((string) $v->value) !== '')
+            ->reject(fn (ProductAttributeValue $v) => self::isPackageAttribute($v->attribute->name))
             ->filter(fn (ProductAttributeValue $v) => match ($group) {
                 // «Характеристики»: без логистики и служебных (только для админки)
                 'main' => ! $v->attribute->is_logistics && ! $v->attribute->is_admin_only,
@@ -240,5 +246,33 @@ class Product extends Model
             })
             ->map(fn (ProductAttributeValue $v) => ['name' => $v->attribute->name, 'value' => $v->displayValue()])
             ->values();
+    }
+
+    /**
+     * Раздел «Комплектация» карточки — один источник: поле товара (package_contents), а если оно
+     * пусто — характеристика «Комплектация» (обычно из импорта). source: field | attribute | null.
+     *
+     * @return array{text: string, source: ?string}
+     */
+    public function packageContents(): array
+    {
+        $field = trim((string) $this->package_contents);
+
+        if ($field !== '') {
+            return ['text' => $field, 'source' => 'field'];
+        }
+
+        $attribute = trim((string) $this->attributeValues
+            ->first(fn (ProductAttributeValue $v) => $v->attribute && self::isPackageAttribute($v->attribute->name))
+            ?->value);
+
+        return $attribute !== ''
+            ? ['text' => $attribute, 'source' => 'attribute']
+            : ['text' => '', 'source' => null];
+    }
+
+    public static function isPackageAttribute(?string $name): bool
+    {
+        return ProductAttribute::key($name) === ProductAttribute::key(self::PACKAGE_ATTRIBUTE);
     }
 }

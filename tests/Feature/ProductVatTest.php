@@ -187,7 +187,7 @@ class ProductVatTest extends TestCase
 
         $this->actingAs($user)->get('/catalog/smesiteli')
             ->assertStatus(200)
-            ->assertSeeInOrder([Money::format(100), 'без НДС · с НДС '.Money::format(120, false)]);
+            ->assertSeeInOrder([Money::format(100), 'без НДС', 'с НДС '.Money::format(120, false)]);
     }
 
     public function test_search_shows_price_with_vat(): void
@@ -197,6 +197,6 @@ class ProductVatTest extends TestCase
 
         $this->actingAs($user)->get('/search?q=Grohe')
             ->assertStatus(200)
-            ->assertSeeInOrder([Money::format(100), 'без НДС · с НДС '.Money::format(120, false)]);
+            ->assertSeeInOrder([Money::format(100), 'без НДС', 'с НДС '.Money::format(120, false)]);
     }
 }
