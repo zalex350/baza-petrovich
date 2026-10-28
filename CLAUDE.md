@@ -14,9 +14,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Setup (first time):**
 ```bash
-composer setup
-# Installs deps, creates .env, generates APP_KEY, migrates DB, runs npm install + build
+cp .env.example .env             # задать DB_PASSWORD и DB_ROOT_PASSWORD
+docker-compose up -d --build
+docker-compose exec php composer setup     # composer install, APP_KEY (если пуст), migrate, storage:link
+docker-compose exec node npm install && docker-compose exec node npm run build
 ```
+Подробно — `docs/ONBOARDING.md`.
 
 **Development (local, non-Docker):**
 ```bash

@@ -142,6 +142,10 @@ class OrderStatusService
         $this->record($order, null, $order->status, $by, null);
     }
 
+    /**
+     * Снимает открытый запрос на отмену: при любой отмене заказа (в том числе по запросу)
+     * и при отказе. Сохраняет вызывающий. Сам запрос остаётся в order_status_history.
+     */
     private function closeCancelRequest(Order $order): void
     {
         $order->cancel_requested_at = null;
@@ -166,6 +170,10 @@ class OrderStatusService
         ]);
     }
 
+    /**
+     * Запись истории о смене статуса. $from = null — оформление заказа (recordPlaced);
+     * $by = null — смена без пользователя; пустой комментарий хранится как null.
+     */
     private function record(Order $order, ?OrderStatus $from, OrderStatus $to, ?User $by, ?string $comment): void
     {
         $comment = trim((string) $comment);

@@ -66,6 +66,10 @@ class CatalogImportApplier
         CatalogMenu::flush();
     }
 
+    /**
+     * Справочник характеристик: найти по name_key или создать. У существующей название
+     * не меняется (его могли поправить в админке), тип, единица и флаги — из маппинга.
+     */
     private function applyAttributes(CatalogImportPlan $plan): void
     {
         foreach ($plan->attributes as $name => $def) {
@@ -83,6 +87,11 @@ class CatalogImportApplier
         }
     }
 
+    /**
+     * Категории из плана: existing — как есть, rename — новое название (slug сохраняется,
+     * старые ссылки работают), иначе — создать с уникальным slug. Родители — раньше детей.
+     * Запоминает id по pathKey для переноса товаров.
+     */
     private function applyCategories(CatalogImportPlan $plan): void
     {
         // Сначала корни, затем подкатегории
@@ -131,6 +140,9 @@ class CatalogImportApplier
         return $parentId;
     }
 
+    /**
+     * Slug из названия; занят — с суффиксом -2, -3…
+     */
     private function uniqueSlug(string $name): string
     {
         $base = Str::slug($name) ?: 'category';
@@ -237,6 +249,11 @@ class CatalogImportApplier
         }
     }
 
+    /**
+     * Дубли: в оставляемый товар — недостающие поля, «Новинка» и характеристики дубля, позиции
+     * корзин переводятся на него; дубль удаляется мягко или физически — по признаку soft из плана
+     * (мягко — если он есть в заказах). Тестовые товары — по действию из плана (soft / force).
+     */
     private function applyCleanup(CatalogImportPlan $plan): void
     {
         foreach ($plan->duplicates as $dup) {
@@ -278,6 +295,10 @@ class CatalogImportApplier
         }
     }
 
+    /**
+     * Удаление опустевших категорий из плана с повторной проверкой: ни товаров (включая
+     * удалённые), ни подкатегорий.
+     */
     private function deleteCategories(CatalogImportPlan $plan): void
     {
         foreach (array_keys($plan->deleteCategories) as $id) {
@@ -292,6 +313,11 @@ class CatalogImportApplier
         }
     }
 
+    /**
+     * Фильтры категорий из filters.php: стандартные ключи (brand, price, stock) — как есть,
+     * характеристики — в ключ attribute:ID, такие характеристики помечаются is_filterable.
+     * Набор категории заменяется целиком (CatalogFilters::save). Категории нет — пропуск.
+     */
     private function applyFilters(CatalogImportPlan $plan): void
     {
         $filterable = [];
@@ -319,6 +345,10 @@ class CatalogImportApplier
         }
     }
 
+    /**
+     * Категория по pathKey («Корень / Подкатегория») — как findCategory в планировщике,
+     * но запросами к БД (после applyCategories).
+     */
     private function findByPathKey(string $pathKey): ?Category
     {
         $parentId = null;

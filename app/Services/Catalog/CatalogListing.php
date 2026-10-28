@@ -72,6 +72,12 @@ class CatalogListing
 
     // --- Разбор параметров ---
 
+    /**
+     * Разбор GET-параметров в $selected. Принимаются только фильтры, включённые для категории
+     * (CatalogFilters), остальные параметры молча игнорируются — ссылка со «старым» фильтром
+     * не ломает список. Текстовая характеристика берёт только элементы списка a[ID][] (целые
+     * ключи), числовая — только a[ID][from] / a[ID][to]. Неизвестная сортировка — default.
+     */
     private function parse(): void
     {
         $q = $this->query;
@@ -111,6 +117,9 @@ class CatalogListing
         $this->sort = array_key_exists($sort, $this->sorts()) ? $sort : 'default';
     }
 
+    /**
+     * Значения фильтра-списка: только строки, без пустых и повторов, не длиннее 255 символов.
+     */
     private function strings($values): array
     {
         return array_values(array_unique(array_filter(
@@ -119,6 +128,10 @@ class CatalogListing
         )));
     }
 
+    /**
+     * Диапазон «от–до» как [from, to] (null — граница не задана); числа — как в характеристиках
+     * («1,5» → 1.5, ProductAttribute::parseNumber), не число — null.
+     */
     private function range($raw): array
     {
         $raw = (array) $raw;
@@ -146,6 +159,11 @@ class CatalogListing
             ->where('products.is_published', true);
     }
 
+    /**
+     * base() с выбранными фильтрами (BR-018): каждый фильтр — отдельное условие (И), значения
+     * внутри фильтра — whereIn / orWhere (ИЛИ). Характеристики — whereExists по
+     * product_attribute_values: текстовые по value, числовые по value_number.
+     */
     public function filtered(): Builder
     {
         $query = $this->base();
@@ -191,6 +209,10 @@ class CatalogListing
         return $query;
     }
 
+    /**
+     * Три взаимоисключающих статуса наличия — те же правила, что CASE в stockOptions():
+     * остаток > 0 — «В наличии»; иначе on_order — «Под заказ», иначе — «Нет в наличии».
+     */
     private function whereStock(Builder $q, string $status): void
     {
         match ($status) {
@@ -332,6 +354,10 @@ class CatalogListing
         ];
     }
 
+    /**
+     * Варианты фильтра «Наличие» со счётчиками по всей категории (BR-017, без учёта выбора
+     * в других фильтрах); статус без товаров не показывается.
+     */
     private function stockOptions(): array
     {
         $counts = $this->base()->toBase()

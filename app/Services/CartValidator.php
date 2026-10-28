@@ -127,6 +127,10 @@ class CartValidator
         return "Количество должно быть не меньше {$min}".($step > 1 ? " и кратно {$step}" : '');
     }
 
+    /**
+     * Цена для сравнения — строкой с точностью до копеек: decimal из БД («1234.50») и float
+     * («1234.5») иначе давали бы ложное «Цена изменилась».
+     */
     private function money($value): string
     {
         return number_format((float) $value, 2, '.', '');
