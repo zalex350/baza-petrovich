@@ -7,6 +7,20 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Документация
+
+| Документ | О чём |
+|---|---|
+| [docs/ONBOARDING.md](docs/ONBOARDING.md) | Проект с нуля на Windows + Docker: `.env`, запуск, демо-данные, тесты, почта, импорт каталога |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Стек, Docker-сервисы, слои, роли, очередь, фронт, схема БД, данные 1С и сайта |
+| [docs/MODULES.md](docs/MODULES.md) | Модули: маршруты, код, бизнес-правила, тесты |
+| [CLAUDE.md](CLAUDE.md) | Команды и правила работы: ветки, мерж, тесты, бэкап, UI-кит |
+| [docs/UI_INVENTORY.md](docs/UI_INVENTORY.md) | Карта экранов «URL → контроллер → шаблон» |
+| [docs/CATALOG_ANALYSIS.md](docs/CATALOG_ANALYSIS.md) | Импорт каталога: анализ и решения |
+| [docs/STAGING.md](docs/STAGING.md) | Тестовый стенд и деплой |
+| [docs/TEST_GUIDE.md](docs/TEST_GUIDE.md) | Как проверять стенд |
+| [docs/BACKLOG.md](docs/BACKLOG.md) | Отложенные задачи |
+
 ## Локальная разработка
 
 Приложение работает в Docker: `http://localhost:8090`, MySQL на порту 3307.

@@ -108,6 +108,10 @@ class CatalogMapping
         return $this->categories['uncategorized'] ?? 'Без категории';
     }
 
+    /**
+     * Значение category каталога — «Новинки» (categories.php → novelty): это метка, а не раздел;
+     * товар раскладывается по правилам, флаг is_new ставится отдельно.
+     */
     public function isNovelty(?string $value): bool
     {
         return isset($this->categories['novelty']) && self::key($value) === self::key($this->categories['novelty']);
@@ -206,6 +210,12 @@ class CatalogMapping
         return $this->noveltySeriesIndex[self::key($series)] ?? null;
     }
 
+    /**
+     * Корни, которые удаляются после переносов, если в них не осталось товаров и подкатегорий
+     * (categories.php → drop_roots).
+     *
+     * @return list<string>
+     */
     public function dropRoots(): array
     {
         return $this->categories['drop_roots'] ?? [];

@@ -25,6 +25,19 @@ class CatalogImportPlanner
         private readonly ?ColumnLimits $limits = null,
     ) {}
 
+    /**
+     * План импорта по catalog.db. Порядок:
+     * 1. чтение каталога и нашего состояния (товары, в том числе удалённые; категории; значения
+     *    характеристик);
+     * 2. по каждой строке каталога (кроме дублей и тестовых из cleanup.php) — целевая категория
+     *    (targetFor: products → split → map / rules) и набор характеристик; товара у нас нет —
+     *    в newProducts; есть — изменения полей сайта (бренд, видео, «Новинка» с учётом
+     *    is_new_locked, описание, характеристики) в products. Цены, остатки и уже заполненные
+     *    на сайте тексты не трогаются;
+     * 3. очистка (дубли, тестовые) — раньше категорий, затем категории (создать / переименовать /
+     *    перенести товары / удалить опустевшие), справочник характеристик и фильтры.
+     * Только чтение — запись делает CatalogImportApplier.
+     */
     public function plan(string $path): CatalogImportPlan
     {
         $plan = new CatalogImportPlan;
@@ -404,6 +417,10 @@ class CatalogImportPlanner
 
     // --- Категории ---
 
+    /**
+     * Наша категория по пути названий от корня (сравнение через CatalogMapping::key — без учёта
+     * регистра и пробелов) или null, если хоть одного уровня нет.
+     */
     private function findCategory(array $path): ?Category
     {
         $parentId = null;
