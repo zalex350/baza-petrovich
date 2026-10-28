@@ -35,18 +35,25 @@ cp .env.example .env
 Все команды `docker-compose` — из корня репозитория.
 
 ```bash
-docker-compose up -d --build                         # первый раз — сборка образа php
-docker-compose exec php composer install             # vendor — в томе Docker, не на диске
-docker-compose exec php php artisan key:generate
-docker-compose exec php php artisan migrate
-docker-compose exec php php artisan storage:link     # внутри контейнера, иначе ссылка на Windows не работает
+docker-compose up -d --build                     # первый раз — сборка образа php
+docker-compose exec php composer setup           # PHP-часть, см. ниже
 docker-compose exec node npm install
 docker-compose exec node npm run build
 ```
 
-Сайт: http://localhost:8090. MySQL снаружи: `localhost:3307`.
+`composer setup` (в контейнере `php`) по шагам:
 
-> `composer setup` из `composer.json` рассчитан на запуск без Docker (`npm` на хосте). В Docker используйте шаги выше.
+| Шаг | Команда |
+|---|---|
+| Зависимости PHP (в том Docker) | `composer install` |
+| Ключ приложения — только если `APP_KEY` пуст (повторный запуск ключ не меняет) | `artisan key:generate` |
+| Миграции | `artisan migrate --force` |
+| Ссылка `public/storage` (внутри контейнера, иначе на Windows не работает) | `artisan storage:link --force` |
+| Напоминание про фронт | вывод команд для контейнера `node` |
+
+Фронт собирается в контейнере `node` (в `php` нет npm) — две последние команды блока выше. `.env` скрипт не создаёт: без него не стартуют контейнеры (§2). Скрипт можно запускать повторно.
+
+Сайт: http://localhost:8090. MySQL снаружи: `localhost:3307`.
 
 ## 4. Демо-данные и учётки
 
