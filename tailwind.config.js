@@ -136,6 +136,13 @@ export default {
                 touch: '2.75rem',
             },
 
+            gridTemplateColumns: {
+                // Строка товара (x-product-row): наличие | цена | покупка — одинаковые колонки во всех строках
+                'product-row': '7.5rem 9rem 19rem',
+                // Покупка в строке (x-product-row.buy): количество | кнопка
+                'product-buy': '8.5rem 10rem',
+            },
+
             borderRadius: {
                 // Полоски индикатора наличия
                 bar: '1px',

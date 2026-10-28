@@ -38,13 +38,20 @@ class AdminProductController extends Controller
         // «Без категории»: служебная категория (скрыта на сайте) или категория не задана;
         // «Без названия»: пусто или sku вместо названия (на сайте — «БРЕНД артикул»);
         // «Описание не одобрено»: сгенерированное импортом, на сайте не показывается
+        // Поиск (артикул, название, бренд) работает вместе с фильтром; оба — в ссылках пагинации
         $uncategorized = request('category') === 'none';
         $unnamed = request('name') === 'none';
         $unapproved = request('description') === 'unapproved';
+        $search = mb_substr(trim((string) request('q')), 0, 100);
         $hiddenIds = Category::where('is_hidden', true)->pluck('id');
         $noCategory = fn ($q) => $q->where(fn ($q) => $q->whereNull('category_id')->orWhereIn('category_id', $hiddenIds));
+        $matches = fn ($q) => $q->when($search !== '', fn ($q) => $q->where(function ($q) use ($search) {
+            $like = '%'.$search.'%';
+            $q->where('sku', 'like', $like)->orWhere('name', 'like', $like)->orWhere('brand', 'like', $like);
+        }));
 
         $products = Product::with('draft')
+            ->tap($matches)
             ->when($uncategorized, $noCategory)
             ->when($unnamed, fn ($q) => $q->withoutName())
             ->when($unapproved, fn ($q) => $q->where('description_generated', true))
@@ -52,11 +59,19 @@ class AdminProductController extends Controller
             ->paginate(50)
             ->withQueryString();
 
-        $uncategorizedCount = Product::query()->tap($noCategory)->count();
-        $unnamedCount = Product::withoutName()->count();
-        $unapprovedCount = Product::where('description_generated', true)->count();
+        // Счётчики фильтров — среди найденного
+        $uncategorizedCount = Product::query()->tap($matches)->tap($noCategory)->count();
+        $unnamedCount = Product::query()->tap($matches)->withoutName()->count();
+        $unapprovedCount = Product::query()->tap($matches)->where('description_generated', true)->count();
 
-        return view('admin.products', compact('products', 'uncategorized', 'uncategorizedCount', 'unnamed', 'unnamedCount', 'unapproved', 'unapprovedCount'));
+        // Активный фильтр — для скрытого поля формы поиска и ссылок «Показать все»
+        $filter = array_filter([
+            'category' => $uncategorized ? 'none' : null,
+            'name' => $unnamed ? 'none' : null,
+            'description' => $unapproved ? 'unapproved' : null,
+        ]);
+
+        return view('admin.products', compact('products', 'uncategorized', 'uncategorizedCount', 'unnamed', 'unnamedCount', 'unapproved', 'unapprovedCount', 'search', 'filter'));
     }
 
     public function create()

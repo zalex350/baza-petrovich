@@ -259,7 +259,7 @@ class OrderVatTest extends TestCase
 
         $this->actingAs($this->client)->get('/search?q=Grohe')
             ->assertOk()
-            ->assertSeeInOrder([Money::format(80), 'без НДС · НДС не облагается']);
+            ->assertSeeInOrder([Money::format(80), 'без НДС', 'НДС не облагается']);
     }
 
     // --- Админка: ставка «Без НДС» ---

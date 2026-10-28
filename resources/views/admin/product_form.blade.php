@@ -209,8 +209,27 @@
         </div>
 
         <div>
+            @php
+                // Раздел «Комплектация» на сайте: это поле, а если оно пусто — характеристика «Комплектация»
+                $packageField = trim((string) $site('package_contents'));
+                $packageAttribute = trim((string) (collect($attributeRows)->first(fn ($row) => \App\Models\Product::isPackageAttribute($row['name'] ?? ''))['value'] ?? ''));
+            @endphp
             <label for="f-package" class="block mb-2 font-semibold">Комплектация</label>
             <textarea id="f-package" name="package_contents" form="{{ $form }}" rows="5" class="{{ $input }}">{{ $site('package_contents') }}</textarea>
+
+            <div class="mt-2 text-sm text-slate-500" data-package-source="{{ $packageField !== '' ? 'field' : ($packageAttribute !== '' ? 'attribute' : 'none') }}">
+                @if($packageField !== '')
+                    На сайте — это поле.
+                    @if($packageAttribute !== '')
+                        Характеристика «Комплектация» (из импорта) не показывается.
+                    @endif
+                @elseif($packageAttribute !== '')
+                    Поле пусто — на сайте показывается характеристика «Комплектация» (из импорта):
+                    <div class="mt-1 rounded border border-slate-200 bg-slate-50 p-2 whitespace-pre-line break-words text-slate-700" data-package-attribute>{{ $packageAttribute }}</div>
+                @else
+                    Пусто — раздел на сайте не показывается.
+                @endif
+            </div>
         </div>
 
         @if($isNew)

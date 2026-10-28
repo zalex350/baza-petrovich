@@ -82,8 +82,8 @@
                 </span>
                 {{-- На 1024px подписи скрыты, чтобы поиску хватило ширины --}}
                 <span class="leading-tight hidden xl:block">
-                    <span class="block text-meta text-ink-muted">Корзина</span>
-                    {{-- Сумма с НДС; подпись «с НДС» — в title, как в макете --}}
+                    <span class="block text-meta text-ink-muted">Корзина, с НДС</span>
+                    {{-- Сумма с НДС всех позиций корзины (как и счётчик); НДС в ней — в title --}}
                     <x-price
                         :amount="$cartSummary['total']"
                         class="block font-semibold text-ink"

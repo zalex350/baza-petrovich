@@ -101,8 +101,9 @@ class ProductController extends Controller
 
         return rescue(fn () => $product->attributeValues
             ->filter(fn (ProductAttributeValue $v) => $v->attribute && trim((string) $v->value) !== '')
-            // Логистика и служебные (ТН ВЭД) в «Коротко» не попадают
-            ->reject(fn (ProductAttributeValue $v) => $v->attribute->is_logistics || $v->attribute->is_admin_only)
+            // Логистика и служебные (ТН ВЭД) в «Коротко» не попадают; «Комплектация» — свой раздел
+            ->reject(fn (ProductAttributeValue $v) => $v->attribute->is_logistics || $v->attribute->is_admin_only
+                || Product::isPackageAttribute($v->attribute->name))
             ->sortBy(fn (ProductAttributeValue $v, $i) => [isset($order[$v->attribute_id]) ? 0 : 1, $order[$v->attribute_id] ?? $i])
             ->take(self::KEY_ROWS)
             ->map(fn (ProductAttributeValue $v) => ['name' => $v->attribute->name, 'value' => $v->displayValue()])

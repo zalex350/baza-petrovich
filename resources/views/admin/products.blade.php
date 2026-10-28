@@ -23,21 +23,49 @@
 
 </div>
 
+@php
+    // Ссылки фильтров сохраняют поиск, поиск — фильтр
+    $withSearch = fn (array $params = []) => '/admin/products'.(($query = http_build_query(array_filter($params + ['q' => $search]))) !== '' ? '?'.$query : '');
+@endphp
+
+{{-- Поиск по артикулу, названию, бренду (вместе с текущим фильтром) --}}
+<form method="GET" action="/admin/products" class="mb-4 flex flex-wrap items-end gap-2" data-admin-product-search>
+    @foreach($filter as $key => $value)
+        <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+    @endforeach
+    <x-input
+        name="q"
+        id="q"
+        type="search"
+        label="Поиск"
+        :value="$search"
+        placeholder="Артикул, название, бренд"
+        class="grow max-w-xl"
+    />
+    <x-button>Найти</x-button>
+    @if($search !== '')
+        <x-button variant="link" :href="$withSearch($filter + ['q' => null])">Сбросить поиск</x-button>
+    @endif
+</form>
+
 {{-- Фильтры: без категории (служебная «Без категории» скрыта на сайте), без названия,
      описание не одобрено (сгенерированное, на сайте не показывается) --}}
 <div class="mb-4 flex flex-wrap items-center gap-2 text-sm" data-admin-product-filter>
     @if($uncategorized || $unnamed || $unapproved)
         <x-badge tone="warning" size="md">{{ $uncategorized ? 'Без категории' : ($unnamed ? 'Без названия' : 'Описание не одобрено') }}: {{ $products->total() }}</x-badge>
-        <x-button variant="link" size="sm" href="/admin/products">Показать все</x-button>
+        <x-button variant="link" size="sm" :href="$withSearch()">Показать все</x-button>
     @else
+        @if($search !== '')
+            <x-badge tone="info" size="md">Найдено: {{ $products->total() }}</x-badge>
+        @endif
         @if($uncategorizedCount)
-            <x-button variant="secondary" size="sm" href="/admin/products?category=none">Без категории ({{ $uncategorizedCount }})</x-button>
+            <x-button variant="secondary" size="sm" :href="$withSearch(['category' => 'none'])">Без категории ({{ $uncategorizedCount }})</x-button>
         @endif
         @if($unnamedCount)
-            <x-button variant="secondary" size="sm" href="/admin/products?name=none">Без названия ({{ $unnamedCount }})</x-button>
+            <x-button variant="secondary" size="sm" :href="$withSearch(['name' => 'none'])">Без названия ({{ $unnamedCount }})</x-button>
         @endif
         @if($unapprovedCount)
-            <x-button variant="secondary" size="sm" href="/admin/products?description=unapproved">Описание не одобрено ({{ $unapprovedCount }})</x-button>
+            <x-button variant="secondary" size="sm" :href="$withSearch(['description' => 'unapproved'])">Описание не одобрено ({{ $unapprovedCount }})</x-button>
         @endif
     @endif
 </div>

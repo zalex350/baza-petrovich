@@ -2,6 +2,9 @@
 
 @section('title', $user->exists ? 'Редактирование пользователя' : 'Новый пользователь')
 
+{{-- Ошибки — у полей (x-input / x-select), сверху — один alert «Проверьте выделенные поля» --}}
+@section('flash-validation', 'summary')
+
 @section('content')
 
 @php
@@ -23,18 +26,6 @@
     {{ $user->exists ? 'Редактирование пользователя' : 'Новый пользователь' }}
 </h1>
 
-@if($errors->any())
-
-    <div class="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6">
-        <ul class="list-disc list-inside text-red-700 space-y-1">
-            @foreach($errors->all() as $error)
-                <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    </div>
-
-@endif
-
 <div class="bg-white rounded-2xl border border-slate-200 p-6">
 
     <form
@@ -46,92 +37,42 @@
 
         @csrf
 
-        <!-- Name -->
-        <div>
-            <label class="block mb-2 font-semibold">
-                ФИО <span class="text-red-600">*</span>
-            </label>
-            <input
-                type="text"
-                name="name"
-                value="{{ old('name', $user->name) }}"
-                class="w-full border rounded px-3 py-2"
+        <x-input name="name" label="ФИО" :value="$user->name" required autocomplete="name" />
+
+        <x-input name="email" type="email" label="Email" :value="$user->email" required autocomplete="email" />
+
+        <x-input name="phone" label="Телефон" :value="$user->phone" autocomplete="tel" />
+
+        @if($isSelf)
+            <input type="hidden" name="role" value="{{ \App\Enums\UserRole::Admin->value }}">
+            <x-select
+                name="role_display"
+                id="f-role"
+                label="Роль"
+                :options="[\App\Enums\UserRole::Admin->value => \App\Enums\UserRole::Admin->label()]"
+                :value="\App\Enums\UserRole::Admin->value"
+                hint="Нельзя снять с себя роль администратора."
+                disabled
+            />
+        @else
+            <x-select
+                name="role"
+                label="Роль"
                 required
-            >
-        </div>
+                :options="collect(\App\Enums\UserRole::cases())->mapWithKeys(fn ($case) => [$case->value => $case->label()])"
+                :value="$currentRole"
+                x-model="role"
+            />
+        @endif
 
-        <!-- Email -->
-        <div>
-            <label class="block mb-2 font-semibold">
-                Email <span class="text-red-600">*</span>
-            </label>
-            <input
-                type="email"
-                name="email"
-                value="{{ old('email', $user->email) }}"
-                class="w-full border rounded px-3 py-2"
-                required
-            >
-        </div>
-
-        <!-- Phone -->
-        <div>
-            <label class="block mb-2 font-semibold">Телефон</label>
-            <input
-                type="text"
-                name="phone"
-                value="{{ old('phone', $user->phone) }}"
-                class="w-full border rounded px-3 py-2"
-            >
-        </div>
-
-        <!-- Role -->
-        <div>
-            <label class="block mb-2 font-semibold">
-                Роль <span class="text-red-600">*</span>
-            </label>
-
-            @if($isSelf)
-
-                <input type="hidden" name="role" value="{{ \App\Enums\UserRole::Admin->value }}">
-
-                <select class="w-full border rounded px-3 py-2 bg-slate-100 text-slate-500" disabled>
-                    <option>{{ \App\Enums\UserRole::Admin->label() }}</option>
-                </select>
-
-                <p class="text-xs text-slate-400 mt-1">Нельзя снять с себя роль администратора.</p>
-
-            @else
-
-                <select name="role" class="w-full border rounded px-3 py-2" x-model="role">
-                    @foreach(\App\Enums\UserRole::cases() as $case)
-                        <option value="{{ $case->value }}" @selected($currentRole === $case->value)>
-                            {{ $case->label() }}
-                        </option>
-                    @endforeach
-                </select>
-
-            @endif
-        </div>
-
-        <!-- Organization -->
-        <div>
-            <label class="block mb-2 font-semibold">
-                Организация
-                <span class="text-slate-400 font-normal text-sm">(обязательна для клиента)</span>
-            </label>
-            <select name="organization_id" class="w-full border rounded px-3 py-2">
-                <option value="">— не выбрана —</option>
-                @foreach($organizations as $organization)
-                    <option
-                        value="{{ $organization->id }}"
-                        @selected((string) old('organization_id', $user->organization_id) === (string) $organization->id)
-                    >
-                        {{ $organization->name }}{{ $organization->unp ? ' (УНП '.$organization->unp.')' : '' }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
+        <x-select
+            name="organization_id"
+            label="Организация"
+            hint="Обязательна для клиента."
+            placeholder="— не выбрана —"
+            :options="$organizations->mapWithKeys(fn ($organization) => [$organization->id => $organization->name.($organization->unp ? ' (УНП '.$organization->unp.')' : '')])"
+            :value="$user->organization_id"
+        />
 
         <!-- Notifications: только для администратора -->
         <fieldset
@@ -168,41 +109,41 @@
 
                 <legend class="mb-2 font-semibold">Пароль</legend>
 
-                <label class="flex items-start gap-2">
-                    <input
-                        type="radio"
-                        name="password_mode"
-                        value="{{ \App\Http\Controllers\Admin\AdminUserController::PASSWORD_INVITE }}"
-                        @checked($passwordMode === \App\Http\Controllers\Admin\AdminUserController::PASSWORD_INVITE)
-                        class="mt-1"
-                    >
-                    <span>
-                        Отправить ссылку для установки пароля
-                        <span class="block text-sm text-slate-400">На email придёт приглашение на smesitel.by со ссылкой для установки пароля.</span>
-                    </span>
-                </label>
+                <x-field id="f-password_mode" error="password_mode" class="space-y-3">
+                    <label class="flex items-start gap-2">
+                        <input
+                            type="radio"
+                            name="password_mode"
+                            value="{{ \App\Http\Controllers\Admin\AdminUserController::PASSWORD_INVITE }}"
+                            @checked($passwordMode === \App\Http\Controllers\Admin\AdminUserController::PASSWORD_INVITE)
+                            class="mt-1"
+                        >
+                        <span>
+                            Отправить ссылку для установки пароля
+                            <span class="block text-sm text-slate-400">На email придёт приглашение на smesitel.by со ссылкой для установки пароля.</span>
+                        </span>
+                    </label>
 
-                <label class="flex items-start gap-2">
-                    <input
-                        type="radio"
-                        name="password_mode"
-                        value="{{ \App\Http\Controllers\Admin\AdminUserController::PASSWORD_MANUAL }}"
-                        @checked($passwordMode === \App\Http\Controllers\Admin\AdminUserController::PASSWORD_MANUAL)
-                        class="mt-1"
-                    >
-                    <span>Задать пароль вручную</span>
-                </label>
+                    <label class="flex items-start gap-2">
+                        <input
+                            type="radio"
+                            name="password_mode"
+                            value="{{ \App\Http\Controllers\Admin\AdminUserController::PASSWORD_MANUAL }}"
+                            @checked($passwordMode === \App\Http\Controllers\Admin\AdminUserController::PASSWORD_MANUAL)
+                            class="mt-1"
+                        >
+                        <span>Задать пароль вручную</span>
+                    </label>
+                </x-field>
 
-                <div>
-                    <input
-                        type="password"
-                        name="password"
-                        autocomplete="new-password"
-                        placeholder="Пароль (не короче 8 символов)"
-                        class="w-full border rounded px-3 py-2"
-                    >
-                    <p class="text-xs text-slate-400 mt-1">Используется только при выборе «Задать пароль вручную».</p>
-                </div>
+                <x-input
+                    name="password"
+                    type="password"
+                    label="Пароль"
+                    autocomplete="new-password"
+                    placeholder="Не короче 8 символов"
+                    hint="Используется только при выборе «Задать пароль вручную»."
+                />
 
             </fieldset>
 

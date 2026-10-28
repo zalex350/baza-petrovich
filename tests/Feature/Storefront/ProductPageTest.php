@@ -101,10 +101,11 @@ class ProductPageTest extends TestCase
 
         $this->actingAs($this->client)->get("/product/{$this->product->id}")
             ->assertOk()
-            ->assertSee('action="/order/update/'.$item->id.'"', false)
-            ->assertSee('value="4"', false)
-            ->assertSee('В корзине · перейти')
-            ->assertDontSee('action="/order/add/'.$this->product->id.'"', false);
+            // «В корзину» видна и для товара в корзине — добавляет к имеющемуся
+            ->assertSee('action="/order/add/'.$this->product->id.'"', false)
+            ->assertDontSee('action="/order/update/'.$item->id.'"', false)
+            ->assertSee('В корзине: 4 шт.')
+            ->assertSee('href="/order"', false);
     }
 
     public function test_add_from_card_returns_card_layout(): void
@@ -114,8 +115,9 @@ class ProductPageTest extends TestCase
             ->assertOk()
             ->json('html');
 
-        $this->assertStringContainsString('data-cart-update', $html);
-        $this->assertStringContainsString('В корзине · перейти', $html);
+        $this->assertStringContainsString('data-cart-add', $html);
+        $this->assertStringContainsString('name="layout" value="card"', $html);
+        $this->assertStringContainsString('В корзине: 2 шт.', $html);
         $this->assertStringContainsString('h-12', $html);
     }
 

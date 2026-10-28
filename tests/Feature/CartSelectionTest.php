@@ -68,8 +68,9 @@ class CartSelectionTest extends TestCase
         $this->actingAs($this->client)->postJson("/order/select/{$item->id}", ['selected' => 0])
             ->assertOk()
             ->assertJson(['ok' => true, 'selected' => false])
-            // Сумма в шапке — по отмеченным
-            ->assertJsonPath('cart.total_text', Money::format(0));
+            // Сумма в шапке — по всем позициям корзины, галочка её не меняет
+            ->assertJsonPath('cart.count', 1)
+            ->assertJsonPath('cart.total_text', Money::format(240));
 
         $this->assertFalse($item->refresh()->selected);
 

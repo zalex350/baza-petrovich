@@ -66,6 +66,8 @@ class AdminUserController extends Controller
 
     public function store(): RedirectResponse
     {
+        $this->normalizeEmail();
+
         $data = request()->validate(
             $this->rules() + [
                 'password_mode' => ['required', Rule::in([self::PASSWORD_MANUAL, self::PASSWORD_INVITE])],
@@ -145,6 +147,8 @@ class AdminUserController extends Controller
     public function update($id): RedirectResponse
     {
         $user = User::findOrFail($id);
+        $this->normalizeEmail();
+
         $data = request()->validate($this->rules($user), $this->messages());
 
         if ($this->isSelf($user) && $data['role'] !== UserRole::Admin->value) {
@@ -249,9 +253,28 @@ class AdminUserController extends Controller
         }
     }
 
+    /**
+     * Email без пробелов по краям и строчными: «Ivanov@Santeh.by » — тот же адрес, не ошибка формы.
+     */
+    private function normalizeEmail(): void
+    {
+        if (is_string(request('email'))) {
+            request()->merge(['email' => mb_strtolower(trim(request('email')))]);
+        }
+    }
+
     private function messages(): array
     {
         return [
+            'name.required' => 'Укажите ФИО.',
+            'email.required' => 'Укажите email.',
+            'email.email' => 'Неверный формат email.',
+            'email.lowercase' => 'Email — строчными буквами.',
+            'email.unique' => 'Пользователь с таким email уже есть.',
+            'phone.max' => 'Телефон — не длиннее 50 символов.',
+            'role.required' => 'Выберите роль.',
+            'password_mode.required' => 'Выберите, как задать пароль.',
+            'password.required' => 'Укажите пароль или выберите отправку ссылки.',
             'organization_id.required' => 'Для клиента необходимо выбрать организацию.',
             'organization_id.exists' => 'Выбранная организация не найдена.',
         ];
