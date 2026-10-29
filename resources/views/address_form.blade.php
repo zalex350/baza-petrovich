@@ -1,8 +1,8 @@
-@extends('layouts.app')
+@extends('layouts.account')
 
 @section('title', $address->exists ? 'Редактирование адреса' : 'Новый адрес доставки')
 
-@section('content')
+@section('account')
 
 <a
     href="/addresses"

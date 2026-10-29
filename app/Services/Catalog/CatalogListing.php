@@ -21,6 +21,9 @@ use Illuminate\Support\Facades\DB;
  * sort=…, page=…. Между фильтрами — И, между значениями одного фильтра — ИЛИ (BR-018).
  * Значения фильтра считаются по всей категории и от выбора в других не зависят (BR-017).
  * Только активные и опубликованные товары.
+ *
+ * Без категории ($categoryIds = null) с флагом ($flag: is_promo | is_new | is_hit) — страницы «Акции»,
+ * «Новинки», «Хиты»: товары всего каталога с этим флагом, фильтры по умолчанию (CatalogFilters::DEFAULT).
  */
 class CatalogListing
 {
@@ -51,14 +54,19 @@ class CatalogListing
 
     public string $sort = 'default';
 
-    private array $categoryIds;
+    /** null — без отбора по категории */
+    private ?array $categoryIds;
+
+    /** Флаги товара для страниц-подборок */
+    public const FLAGS = ['is_promo', 'is_new', 'is_hit'];
 
     public function __construct(
         public readonly Category $category,
-        array $categoryIds,
+        ?array $categoryIds,
         CatalogFilters $config,
         private readonly array $query,
         private readonly bool $withPrices,
+        private readonly ?string $flag = null,
     ) {
         $this->categoryIds = $categoryIds;
 
@@ -154,7 +162,8 @@ class CatalogListing
     public function base(): Builder
     {
         return Product::query()
-            ->whereIn('products.category_id', $this->categoryIds)
+            ->when($this->categoryIds !== null, fn ($q) => $q->whereIn('products.category_id', $this->categoryIds))
+            ->when(in_array($this->flag, self::FLAGS, true), fn ($q) => $q->where('products.'.$this->flag, true))
             ->where('products.is_active', true)
             ->where('products.is_published', true);
     }
@@ -422,7 +431,13 @@ class CatalogListing
      */
     public function resetUrl(string $baseUrl): string
     {
-        return $this->sort === 'default' ? $baseUrl : $baseUrl . '?' . http_build_query(['sort' => $this->sort]);
+        // Сортировка и вид списка (плитка/список) при сбросе фильтров сохраняются
+        $query = http_build_query(array_filter([
+            'sort' => $this->sort === 'default' ? null : $this->sort,
+            'view' => ($this->query['view'] ?? null) === 'grid' ? 'grid' : null,
+        ]));
+
+        return $query === '' ? $baseUrl : "{$baseUrl}?{$query}";
     }
 
     /**

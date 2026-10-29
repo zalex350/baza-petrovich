@@ -167,6 +167,7 @@
             <div class="flex flex-wrap gap-6">
                 <x-checkbox name="is_hit" label="ХИТ" :checked="$product->is_hit" :form="$form" />
                 <x-checkbox name="is_new" label="НОВИНКА" :checked="$product->is_new" :form="$form" />
+                <x-checkbox name="is_promo" label="Акция (бейдж «%», страница «Акции»)" :checked="$product->is_promo" :form="$form" />
             </div>
         </fieldset>
 

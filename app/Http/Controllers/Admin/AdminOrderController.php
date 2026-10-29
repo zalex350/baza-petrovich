@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\InvoiceSource;
 use App\Enums\OrderStatus;
 use App\Exceptions\CancelRequestException;
 use App\Exceptions\InvalidStatusTransition;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\OrderInvoice;
 use App\Services\OrderStatusService;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class AdminOrderController extends Controller
@@ -67,7 +70,7 @@ class AdminOrderController extends Controller
 
     public function show($id)
     {
-        $order = Order::with(['user', 'organization', 'items.product.mainImage', 'statusHistory.user', 'cancelRequester'])->findOrFail($id);
+        $order = Order::with(['user', 'organization', 'items.product.mainImage', 'statusHistory.user', 'cancelRequester', 'invoice.uploader'])->findOrFail($id);
 
         return view(
             'admin.order',
@@ -169,6 +172,51 @@ class AdminOrderController extends Controller
         }
 
         return back()->with('success', 'Запрос на отмену отклонён');
+    }
+
+    /**
+     * Счёт на оплату (SRS §8.10, UC-035): PDF, заменяет прежний. Позже счёт будет приходить
+     * из 1С — тогда OrderInvoice::attach(..., InvoiceSource::Erp, externalId: …).
+     */
+    public function uploadInvoice($id)
+    {
+        $order = Order::findOrFail($id);
+
+        request()->validate([
+            'invoice' => ['required', 'file', 'mimetypes:application/pdf', 'max:'.OrderInvoice::MAX_KB],
+        ], [
+            'invoice.required' => 'Выберите PDF-файл счёта',
+            'invoice.uploaded' => 'Файл не загрузился — возможно, он больше '.intdiv(OrderInvoice::MAX_KB, 1024).' МБ',
+            'invoice.mimetypes' => 'Счёт — только PDF',
+            'invoice.max' => 'Файл больше '.intdiv(OrderInvoice::MAX_KB, 1024).' МБ',
+        ]);
+
+        $replaced = $order->invoice()->exists();
+
+        OrderInvoice::attach($order, request()->file('invoice'), InvoiceSource::Manual, auth()->user());
+
+        return back()->with('success', $replaced ? 'Счёт заменён' : 'Счёт загружен — клиент может его скачать');
+    }
+
+    public function deleteInvoice($id)
+    {
+        $order = Order::with('invoice')->findOrFail($id);
+
+        $order->invoice?->deleteWithFile();
+
+        return back()->with('success', 'Счёт удалён');
+    }
+
+    /**
+     * Скачать счёт из админки (проверить загруженный файл).
+     */
+    public function downloadInvoice($id)
+    {
+        $order = Order::with('invoice')->findOrFail($id);
+
+        abort_unless($order->invoice, 404);
+
+        return Storage::disk(OrderInvoice::DISK)->download($order->invoice->path, $order->invoice->downloadName());
     }
 
     private function manualStatus(): bool

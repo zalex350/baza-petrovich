@@ -89,7 +89,7 @@ class OrderItemWithoutProductTest extends TestCase
         $this->actingAs($this->client)
             ->post("/order/{$this->order->id}/reorder")
             ->assertRedirect('/order')
-            ->assertSessionHas('warning', 'недоступен: Grohe Start');
+            ->assertSessionHas('reorder_issues', [['name' => 'Grohe Start', 'reason' => 'снят с продажи']]);
 
         $item = CartItem::sole();
         $this->assertSame($this->kept->id, $item->product_id);

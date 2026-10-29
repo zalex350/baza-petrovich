@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\Order;
 use App\Models\User;
+use App\Notifications\Concerns\MarkdownText;
 use App\Support\Money;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -19,7 +20,7 @@ use Illuminate\Notifications\Notification;
  */
 abstract class AdminOrderNotification extends Notification implements ShouldQueue
 {
-    use Queueable;
+    use MarkdownText, Queueable;
 
     public int $tries = 3;
 
@@ -74,25 +75,5 @@ abstract class AdminOrderNotification extends Notification implements ShouldQueu
     protected static function money(float|string|null $amount): string
     {
         return Money::format($amount ?? 0);
-    }
-
-    /**
-     * Текст пользователя (комментарий, причина, названия) — без разметки Markdown:
-     * строки письма рендерятся как Markdown, и «[ссылка](http://…)» стала бы ссылкой.
-     * HTML (< > &) экранирует сам шаблон письма — их не трогаем, иначе в письме
-     * будет видно «&lt;» (двойное экранирование).
-     */
-    protected static function text(?string $value): string
-    {
-        // Одна строка: переносы клиента не дают блочной разметки («# …», «- …», «> …»)
-        $value = trim(preg_replace('/\s+/u', ' ', (string) $value));
-
-        if ($value === '') {
-            return '—';
-        }
-
-        // Экранируется только то, что даёт разметку внутри строки: ссылки и выделение.
-        // Точки, скобки, дефисы не трогаем — иначе «\.» и «\(» видны в текстовой версии письма
-        return preg_replace('/([\\\\`*_\[\]~])/u', '\\\\$1', $value);
     }
 }

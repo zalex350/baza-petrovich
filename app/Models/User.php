@@ -52,12 +52,13 @@ class User extends Authenticatable
             'blocked_at' => 'datetime',
             'notify_new_order' => 'boolean',
             'notify_cancel_request' => 'boolean',
+            'notify_partner_request' => 'boolean',
         ];
     }
 
     /**
      * Получатели email-уведомления: активные администраторы с включённой галочкой.
-     * $setting — notify_new_order | notify_cancel_request (у клиентов значения игнорируются).
+     * $setting — notify_new_order | notify_cancel_request | notify_partner_request (у клиентов значения игнорируются).
      */
     public function scopeNotifiedAdmins(Builder $query, string $setting): void
     {

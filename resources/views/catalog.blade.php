@@ -12,8 +12,33 @@
     <span class="text-ink-muted" data-found aria-live="polite">{{ \App\Support\Plural::ru($products->total(), ['товар', 'товара', 'товаров']) }}</span>
 </div>
 
-{{-- Подкатегории: страница раздела показывает товары всех вложенных подкатегорий, чипы — переход в одну --}}
-@if($subcategories)
+{{-- Подкатегории: страница раздела показывает товары всех вложенных подкатегорий, плитка/чип — переход в одну.
+     Плитки с картинкой — если картинка есть хотя бы у одной подкатегории (у остальных — заглушка), иначе чипы --}}
+@if($subcategories && $subcategoryTiles)
+    @php($brief = 12)
+    @php($more = count($subcategories) > $brief)
+    <nav aria-label="Подкатегории" class="mb-5" data-subcategories data-subcategory-tiles @if($more) x-data="{ all: false }" @endif>
+        <ul class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
+            @foreach($subcategories as $sub)
+                <li @if($more && $loop->index >= $brief) x-show="all" x-cloak @endif>
+                    <a href="{{ $sub['url'] }}" class="flex h-full flex-col items-center gap-2 rounded-card border border-line bg-surface p-3 text-center text-sm text-ink hover:border-primary hover:text-primary" data-subcategory>
+                        <span class="flex aspect-square w-full items-center justify-center overflow-hidden rounded-control bg-media">
+                            <img src="{{ $sub['image'] ?? \App\Models\ProductImage::placeholderUrl() }}" alt="" loading="lazy" class="h-full w-full object-contain p-2">
+                        </span>
+                        <span class="font-medium leading-tight">{{ $sub['name'] }}</span>
+                        <span class="text-meta text-ink-muted tabular-nums">{{ $sub['count'] }}</span>
+                    </a>
+                </li>
+            @endforeach
+        </ul>
+
+        @if($more)
+            <button type="button" class="mt-2 px-2 py-1.5 text-sm text-link hover:underline" @click="all = ! all" :aria-expanded="all.toString()" x-text="all ? 'Свернуть' : 'Показать все ({{ count($subcategories) }})'">
+                Показать все ({{ count($subcategories) }})
+            </button>
+        @endif
+    </nav>
+@elseif($subcategories)
     {{-- Видно первые $brief, остальные — по «Показать все» --}}
     @php($brief = 12)
     @php($more = count($subcategories) > $brief)

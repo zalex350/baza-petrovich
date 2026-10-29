@@ -15,6 +15,9 @@
 | `/` | `HomeController@index` | `home` | app | — |
 | `/catalog` | `CatalogController@index` | `catalog_index` | app | — |
 | `/catalog/{slug}` | `CatalogController@show` | `catalog` (+ `partials/catalog_filters`, `catalog_results`) | app | — |
+| `/promo`, `/new`, `/hits` | `CatalogController@collection` | `catalog` (без подкатегорий) | app | — |
+| `/delivery`, `/about`, `/contacts`, `/page/{slug}` | `PageController@show` | `pages/show` | app | — |
+| `/partner` | `PartnerController@create` | `partner` | app | `partner` |
 | `/catalog/menu.json` | `CatalogController@menu` | JSON (мега-меню) | — | — |
 | `/product/{id}` | `ProductController@show` | `product` | app | — |
 | `/search` | `SearchController@index` | `search` | app | — |
@@ -28,9 +31,13 @@
 | `/order/{id}/placed` | `OrderController@placed` | `order_placed` | — |
 | `/orders` | `OrderController@index` | `orders` (+ `partials/orders_table` ×2) | — |
 | `/order/{id}` | `OrderController@show` | `order_show` | `order/{id}/cancel-request`, `order/{id}/reorder` |
+| `/order/{id}/invoice` | `OrderController@invoice` | файл PDF (нет — назад с ERR-024) | — |
+| `/account/organization` | `AccountController@organization` | `account/organization` | — |
+| `/account/users` | `AccountController@users` | `account/users` | — |
+| `/account/password` | `AccountController@password` | `account/password` | `PUT password` |
 | `/addresses` | `DeliveryAddressController@index` | `addresses` (+ `partials/address_list`) | `addresses/{id}/default`, `addresses/{id}/delete` |
 | `/addresses/create`, `/addresses/{id}/edit` | `…@create`, `…@edit` | `address_form` (+ `partials/address_fields`) | `addresses`, `addresses/{id}` |
-| `/profile` | `ProfileController@edit` | `profile/edit` (+ 2 partials на Breeze-компонентах) | `PATCH profile`, `PUT password` |
+| `/profile` | `ProfileController@edit` | `profile/edit` | `PATCH profile` |
 | `/dashboard` | замыкание | редирект на `/catalog` | — |
 
 ### Админка (`/admin`, auth + admin)
@@ -41,7 +48,7 @@
 | `/admin/product/create`, `/admin/product/{id}` | `…@create`, `…@show` | `admin/product_form` (+ `vat_rate_select`, `admin_product_attributes`, `admin_product_images`, `image_queue`) | `product`, `product/{id}`, `draft`, `draft/delete`, `publish`, `images…` (store/reorder/main/move/replace/delete), `documents…` (store/reorder/update/delete) |
 | `/admin/product/{id}/preview` | `…@preview` | `product` (витринный, `$preview`) | — |
 | `/admin/orders` | `AdminOrderController@index` | `admin/orders` | — |
-| `/admin/order/{id}` | `…@show` | `admin/order` (+ `order_items`, `order_delivery`, `order_history`) | `order/{id}`, `status`, `cancel-request/approve`, `cancel-request/reject` |
+| `/admin/order/{id}` | `…@show` | `admin/order` (+ `order_items`, `order_delivery`, `order_history`) | `order/{id}`, `status`, `cancel-request/approve`, `cancel-request/reject`, `invoice`, `invoice/delete` (GET `invoice` — скачать) |
 | `/admin/organizations` | `AdminOrganizationController@index` | `admin/organizations` | — |
 | `/admin/organization/{id}` | `…@show` | `admin/organization` (+ `address_list`) | `organization/{id}/delete` |
 | `/admin/organization/create`, `…/{id}/edit` | `…@create`, `…@edit` | `admin/organization_form` | `organization`, `organization/{id}` |
@@ -53,6 +60,13 @@
 | `/admin/attribute/create`, `…/{id}/edit` | `…@create`, `…@edit` | `admin/attribute_form` | `attribute`, `attribute/{id}` |
 | `/admin/catalog-filters` | `AdminCatalogFilterController@index` | `admin/catalog_filters` | — |
 | `/admin/catalog-filters/{id}` | `…@edit` | `admin/catalog_filter_form` | `catalog-filters/{id}` |
+| `/admin/categories` | `AdminCategoryController@index` | `admin/categories` | `category/{id}/image`, `category/{id}/image/delete` |
+| `/admin/banners` | `AdminBannerController@index` | `admin/banners` | `banner/{id}/toggle`, `banner/{id}/delete` |
+| `/admin/banner/create`, `…/{id}/edit` | `…@create`, `…@edit` | `admin/banner_form` | `banner`, `banner/{id}` |
+| `/admin/pages` | `AdminPageController@index` | `admin/pages` | — |
+| `/admin/page/create`, `/admin/page/{id}` | `…@create`, `…@edit` | `admin/page_form` | `page`, `page/{id}`, `page/{id}/delete` |
+| `/admin/settings` | `AdminSettingsController@edit` | `admin/settings` | `settings` |
+| `/admin/partners` | `AdminPartnerRequestController@index` | `admin/partners` | `partner/{id}/status` |
 
 ### Auth (Breeze)
 

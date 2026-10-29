@@ -1,8 +1,8 @@
-@extends('layouts.app')
+@extends('layouts.account')
 
 @section('title', 'Заказ ' . $order->number)
 
-@section('content')
+@section('account')
 
 <h1 class="text-3xl font-bold mb-6">
     Заказ {{ $order->number }}
@@ -34,6 +34,21 @@
         Дата оформления:
         {{ date_ru($order->placed_at, true) }}
     </p>
+
+    {{-- Счёт на оплату (SRS §8.10, UC-035); нет — ERR-024 --}}
+    <div class="mt-4 flex flex-wrap items-center gap-3" data-invoice>
+        @if($order->invoice)
+            <x-button variant="secondary" :href="'/order/'.$order->id.'/invoice'" data-invoice-download>
+                @svg('heroicon-o-arrow-down-tray', 'h-5 w-5')
+                Скачать счёт
+            </x-button>
+        @else
+            <span class="inline-flex items-center gap-2 text-ink-muted" data-invoice-missing>
+                @svg('heroicon-o-document-text', 'h-5 w-5')
+                {{ \App\Models\OrderInvoice::NOT_READY }}
+            </span>
+        @endif
+    </div>
 
 </div>
 
@@ -115,21 +130,16 @@
 
     <div class="flex items-center gap-3">
 
-    <form
-        method="POST"
-        action="/order/{{ $order->id }}/reorder"
-    >
-
-        @csrf
-
-        <button
-            type="submit"
-            class="rounded-xl bg-slate-800 hover:bg-slate-700 text-white px-5 py-2.5 transition"
-        >
-            Повторить заказ
-        </button>
-
-    </form>
+    @if(auth()->user()->isClient())
+        {{-- «Повторить» (SRS §8.11): позиции — в текущую корзину, итог — на странице корзины --}}
+        <form method="POST" action="/order/{{ $order->id }}/reorder" data-reorder>
+            @csrf
+            <x-button>
+                @svg('heroicon-o-arrow-path', 'h-5 w-5')
+                Повторить заказ
+            </x-button>
+        </form>
+    @endif
 
     </div>
 

@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\CancelRequestException;
-use App\Models\CartItem;
 use App\Models\Order;
+use App\Models\OrderInvoice;
 use App\Services\OrderStatusService;
+use App\Services\ReorderService;
+use App\Support\Plural;
+use Illuminate\Support\Facades\Storage;
 
 class OrderController extends Controller
 {
@@ -26,11 +29,26 @@ class OrderController extends Controller
     public function show($id)
     {
         $order = Order::visibleTo(auth()->user())
-            ->with(['items.product.mainImage', 'user', 'statusHistory.user'])
+            ->with(['items.product.mainImage', 'user', 'statusHistory.user', 'invoice'])
             ->where('id', $id)
             ->firstOrFail();
 
         return view('order_show', compact('order'));
+    }
+
+    /**
+     * «Скачать счёт» (SRS §8.10, UC-035): заказ своей организации; счёта нет — назад
+     * с «Счёт ещё не сформирован» (ERR-024). Чужой заказ — 404.
+     */
+    public function invoice($id)
+    {
+        $order = Order::visibleTo(auth()->user())->with('invoice')->where('id', $id)->firstOrFail();
+
+        if (! $order->invoice || ! Storage::disk(OrderInvoice::DISK)->exists($order->invoice->path)) {
+            return redirect("/order/{$order->id}")->with('error', OrderInvoice::NOT_READY);
+        }
+
+        return Storage::disk(OrderInvoice::DISK)->download($order->invoice->path, $order->invoice->downloadName());
     }
 
     /**
@@ -73,90 +91,27 @@ class OrderController extends Controller
             ->with('success', "Запрос на отмену заказа {$order->number} отправлен менеджеру");
     }
 
-    public function reorder($id)
+    /**
+     * «Повторить» (SRS §8.11, UC-036): позиции заказа — в текущую корзину через CartValidator
+     * (ReorderService), итог — в корзине: сколько добавлено и что недоступно или скорректировано.
+     * Заказ коллеги по организации тоже можно повторить; исходный заказ не меняется (BR-118).
+     */
+    public function reorder($id, ReorderService $reorder)
     {
-        $oldOrder = Order::visibleTo(auth()->user())->where('id', $id)->firstOrFail();
+        $order = Order::visibleTo(auth()->user())->where('id', $id)->firstOrFail();
 
-        $cart = auth()->user()->cart()->firstOrCreate();
-
-        $warnings = [];
-
-        foreach ($oldOrder->items as $item) {
-
-            $product = $item->product;
-
-            if (! $product || ! $product->is_active) {
-
-                $warnings[] = 'недоступен: '.($item->product_name ?? $product?->name ?? 'Товар');
-
-                continue;
-
-            }
-
-            if ($product->stock <= 0) {
-
-                $warnings[] = 'недоступен: '.$product->name;
-
-                continue;
-
-            }
-
-            $requestedQty = (int) $item->quantity;
-
-            $qtyToAdd = min($requestedQty, $product->stock);
-
-            $existingItem = CartItem::where('cart_id', $cart->id)
-                ->where('product_id', $product->id)
-                ->first();
-
-            if ($existingItem) {
-
-                $available = $product->stock - $existingItem->quantity;
-
-                if ($available <= 0) {
-
-                    $warnings[] = 'недоступен: '.$product->name;
-
-                    continue;
-
-                }
-
-                $qtyToAdd = min($requestedQty, $available);
-
-                $existingItem->quantity += $qtyToAdd;
-
-                $existingItem->price_at_add = $product->price;
-
-                $existingItem->save();
-
-            } else {
-
-                CartItem::create([
-                    'cart_id' => $cart->id,
-                    'product_id' => $product->id,
-                    'product_name' => $product->title(),
-                    'quantity' => $qtyToAdd,
-                    'price_at_add' => $product->price,
-                ]);
-
-            }
-
-            if ($qtyToAdd < $requestedQty) {
-
-                $warnings[] = 'Не удалось добавить полностью: '.$product->name.' (запрошено '.$requestedQty.', добавлено '.$qtyToAdd.')';
-
-            }
-
+        if (! auth()->user()->isClient()) {
+            abort(403);
         }
 
-        $redirect = redirect('/order')->with('success', 'Товары добавлены в корзину');
+        ['added' => $added, 'issues' => $issues] = $reorder->reorder($order, auth()->user());
 
-        if (! empty($warnings)) {
+        $redirect = redirect('/order')
+            ->with('reorder_number', $order->number)
+            ->with('reorder_issues', $issues);
 
-            $redirect->with('warning', implode('; ', $warnings));
-
-        }
-
-        return $redirect;
+        return $added > 0
+            ? $redirect->with('success', 'Добавлено в корзину: '.Plural::ru($added, ['позиция', 'позиции', 'позиций'])." из заказа {$order->number}")
+            : $redirect->with('error', "Ни одну позицию заказа {$order->number} сейчас нельзя добавить в корзину");
     }
 }

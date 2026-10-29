@@ -1,7 +1,8 @@
 {{--
     Список товаров категории (макет docs/design/Catalog): выбранные фильтры (чипы с ×) и сортировка,
-    строки товаров (x-product-row) в одной карточке, пагинация.
-    Данные: $listing, $products, $chips, $baseUrl, $cartItems.
+    товары — строками (x-product-row, по умолчанию) или плиткой (x-product-card, ?view=grid),
+    «Показать ещё» (следующая страница без перезагрузки — catalog-filters.js) и пагинация.
+    Данные: $listing, $products, $chips, $baseUrl, $cartItems, $view.
 --}}
 <div class="flex flex-col gap-3" data-catalog-results aria-live="polite">
 
@@ -45,6 +46,26 @@
                 x-on:change="changed($event)"
                 data-sort
             />
+
+            {{-- Вид списка: выбор запоминается (localStorage) и хранится в URL (?view=grid) --}}
+            <div class="flex overflow-hidden rounded-control border border-line-strong" role="group" aria-label="Вид списка" data-view-switch>
+                @foreach(['list' => ['heroicon-o-bars-4', 'Списком'], 'grid' => ['heroicon-o-squares-2x2', 'Плиткой']] as $mode => [$icon, $label])
+                    <a
+                        @php($query = http_build_query(\Illuminate\Support\Arr::except(request()->query(), ['view', 'page']) + ($mode === 'grid' ? ['view' => 'grid'] : [])))
+                        href="{{ url()->current().($query !== '' ? '?'.$query : '') }}"
+                        @class([
+                            'flex h-touch w-touch items-center justify-center transition',
+                            'bg-primary text-white' => $view === $mode,
+                            'bg-surface text-ink-muted hover:text-primary' => $view !== $mode,
+                        ])
+                        title="{{ $label }}"
+                        aria-label="{{ $label }}"
+                        @if($view === $mode) aria-current="true" @endif
+                        data-catalog-link
+                        data-view="{{ $mode }}"
+                    >@svg($icon, 'h-5 w-5')</a>
+                @endforeach
+            </div>
         </div>
 
     </div>
@@ -79,11 +100,29 @@
 
     @else
 
-        <div class="divide-y divide-line-soft overflow-hidden rounded-card border border-line bg-surface" data-product-list>
-            @foreach($products as $product)
-                <x-product-row :product="$product" :in-cart="$cartItems[$product->id] ?? null" />
-            @endforeach
-        </div>
+        @if($view === 'grid')
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4" data-product-list data-view-grid>
+                @foreach($products as $product)
+                    <x-product-card :product="$product" :in-cart="$cartItems[$product->id] ?? null" />
+                @endforeach
+            </div>
+        @else
+            <div class="divide-y divide-line-soft overflow-hidden rounded-card border border-line bg-surface" data-product-list>
+                @foreach($products as $product)
+                    <x-product-row :product="$product" :in-cart="$cartItems[$product->id] ?? null" />
+                @endforeach
+            </div>
+        @endif
+
+        {{-- Следующая страница — под списком без перезагрузки; без JS — обычная ссылка --}}
+        @if($products->hasMorePages())
+            <div class="flex justify-center" data-load-more-wrap>
+                <x-button variant="secondary" :href="$products->nextPageUrl()" class="w-full sm:w-auto" data-load-more>
+                    Показать ещё
+                    <span class="text-ink-muted">({{ min($products->perPage(), $products->total() - $products->currentPage() * $products->perPage()) }})</span>
+                </x-button>
+            </div>
+        @endif
 
     @endif
 

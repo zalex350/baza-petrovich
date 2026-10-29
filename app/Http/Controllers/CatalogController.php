@@ -17,6 +17,19 @@ class CatalogController extends Controller
     /** Ключ сессии: последний открытый список — категория или поиск («← Продолжить покупки» в корзине) */
     public const CONTINUE_URL = 'shop.continue_url';
 
+    /** Подборки по флагу товара: адрес → [флаг, заголовок] */
+    public const COLLECTIONS = [
+        'promo' => ['is_promo', 'Акции'],
+        'new' => ['is_new', 'Новинки'],
+        'hits' => ['is_hit', 'Хиты'],
+    ];
+
+    /** Вид списка: list (строки, по умолчанию) | grid (плитка); параметр URL view, выбор — в localStorage */
+    public static function view(): string
+    {
+        return request('view') === 'grid' ? 'grid' : 'list';
+    }
+
     public function index()
     {
         $parents = Category::whereNull('parent_id')
@@ -59,8 +72,45 @@ class CatalogController extends Controller
             auth()->check(),
         );
 
-        $baseUrl = '/catalog/'.$category->slug;
+        // Подкатегории над списком: прямые потомки из дерева меню (кэш, без запросов);
+        // плитки с картинкой — если картинка есть хотя бы у одной, иначе чипы
+        $subcategories = $menu->node($category->id)['children'] ?? [];
 
+        return $this->listingView($listing, '/catalog/'.$category->slug, $keyAttributes, $cart, [
+            'category' => $category,
+            'breadcrumbs' => $this->breadcrumbs($category, $menu),
+            'subcategories' => $subcategories,
+            'subcategoryTiles' => collect($subcategories)->contains(fn ($sub) => ! empty($sub['image'])),
+        ], $keyAttributes->attributeIds($listing->filters));
+    }
+
+    /**
+     * «Акции» (/promo) и «Новинки» (/new): каталожный список товаров с флагом — фильтры,
+     * сортировка, вид, «Показать ещё» — как в категории.
+     */
+    public function collection(string $key, CatalogFilters $filters, KeyAttributes $keyAttributes, CartSummary $cart)
+    {
+        [$flag, $title] = self::COLLECTIONS[$key] ?? abort(404);
+
+        // Страница без категории: заголовок — из «категории»-заглушки, фильтры — по умолчанию
+        $category = new Category(['name' => $title, 'slug' => $key]);
+
+        $listing = new CatalogListing($category, null, $filters, request()->query(), auth()->check(), $flag);
+
+        return $this->listingView($listing, '/'.$key, $keyAttributes, $cart, [
+            'category' => $category,
+            'breadcrumbs' => [['label' => 'Главная', 'url' => '/'], ['label' => $title]],
+            'subcategories' => [],
+            'subcategoryTiles' => false,
+        ]);
+    }
+
+    /**
+     * Общий рендер списка (catalog.blade): адрес запоминается для «← Вернуться к списку»
+     * и «← Продолжить покупки»; $attributeIds — ключевые характеристики строк (null — по категории товара).
+     */
+    private function listingView(CatalogListing $listing, string $baseUrl, KeyAttributes $keyAttributes, CartSummary $cart, array $data, ?array $attributeIds = null)
+    {
         session([
             self::BACK_URL => request()->getRequestUri(),
             self::CONTINUE_URL => request()->getRequestUri(),
@@ -68,21 +118,27 @@ class CatalogController extends Controller
 
         $products = $listing->products();
 
-        // Строка товара: ключевые характеристики — из фильтров этой категории
-        $keyAttributes->load($products->getCollection(), $keyAttributes->attributeIds($listing->filters));
+        $keyAttributes->load($products->getCollection(), $attributeIds);
 
-        return view('catalog', [
-            'category' => $category,
+        return view('catalog', $data + [
             'listing' => $listing,
             'products' => $products,
             'cartItems' => $cart->items(auth()->user()),
-            'breadcrumbs' => $this->breadcrumbs($category, $menu),
-            // Чипы подкатегорий над списком: прямые потомки из дерева меню (кэш, без запросов)
-            'subcategories' => $menu->node($category->id)['children'] ?? [],
             'facets' => $listing->facets(),
             'chips' => $listing->chips($baseUrl),
             'baseUrl' => $baseUrl,
+            'view' => self::view(),
         ]);
+    }
+
+    /**
+     * Адрес списка витрины (категория, подборка или поиск) — для возвратов; не открытый редирект.
+     */
+    private static function isListUrl(string $url, bool $withSearch = false): bool
+    {
+        return str_starts_with($url, '/catalog/')
+            || preg_match('#^/(promo|new|hits)(\?|$)#', $url) === 1
+            || ($withSearch && str_starts_with($url, '/search?'));
     }
 
     /**
@@ -110,7 +166,7 @@ class CatalogController extends Controller
     {
         $url = session(self::CONTINUE_URL);
 
-        if (is_string($url) && (str_starts_with($url, '/catalog/') || str_starts_with($url, '/search?'))) {
+        if (is_string($url) && self::isListUrl($url, withSearch: true)) {
             return $url;
         }
 
@@ -124,6 +180,6 @@ class CatalogController extends Controller
     {
         $url = session(self::BACK_URL);
 
-        return is_string($url) && str_starts_with($url, '/catalog/') ? $url : null;
+        return is_string($url) && self::isListUrl($url) ? $url : null;
     }
 }

@@ -87,6 +87,8 @@ export default {
                 badge: {
                     hit: tone('#FDECEC', '#9B1C1C'),
                     new: tone('#E8EEF9', '#1E3A8A'),
+                    // «%» — акция
+                    promo: tone('#FDF0E1', '#9A3412'),
                 },
 
                 // Единая карта цветов статусов заказа (App\Enums\OrderStatus::color())
@@ -113,6 +115,12 @@ export default {
                 price: ['32px', { lineHeight: '1.15', letterSpacing: '-0.01em' }],
             },
 
+            aspectRatio: {
+                // Баннер главной: десктоп 1320×400, телефон 3:2
+                banner: '33 / 10',
+                'banner-mobile': '3 / 2',
+            },
+
             maxWidth: {
                 // Ширина контента витрины (макеты: 1320px)
                 page: '1320px',
@@ -134,6 +142,10 @@ export default {
                 card: '1.5rem',
                 // Высота полей и кнопок шапки, поля количества (44px — удобно пальцем)
                 touch: '2.75rem',
+                // Ширина плитки в карусели главной: телефон — две с краем следующей, sm, lg
+                'carousel-item': '44vw',
+                'carousel-item-sm': '13.5rem',
+                'carousel-item-lg': '14.75rem',
             },
 
             gridTemplateColumns: {

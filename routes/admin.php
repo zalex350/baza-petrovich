@@ -1,13 +1,18 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminAttributeController;
+use App\Http\Controllers\Admin\AdminBannerController;
 use App\Http\Controllers\Admin\AdminCatalogFilterController;
+use App\Http\Controllers\Admin\AdminCategoryController;
 use App\Http\Controllers\Admin\AdminDeliveryAddressController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminOrganizationController;
+use App\Http\Controllers\Admin\AdminPageController;
+use App\Http\Controllers\Admin\AdminPartnerRequestController;
 use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminProductDocumentController;
 use App\Http\Controllers\Admin\AdminProductImageController;
+use App\Http\Controllers\Admin\AdminSettingsController;
 use App\Http\Controllers\Admin\AdminUserController;
 use Illuminate\Support\Facades\Route;
 
@@ -100,6 +105,11 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         '/admin/order/{id}/cancel-request/reject',
         [AdminOrderController::class, 'rejectCancel']
     );
+
+    // Счёт на оплату (SRS §8.10): загрузка PDF, удаление, проверка
+    Route::post('/admin/order/{id}/invoice', [AdminOrderController::class, 'uploadInvoice']);
+    Route::post('/admin/order/{id}/invoice/delete', [AdminOrderController::class, 'deleteInvoice']);
+    Route::get('/admin/order/{id}/invoice', [AdminOrderController::class, 'downloadInvoice']);
 
     Route::get(
         '/admin/products',
@@ -281,4 +291,34 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         '/admin/user/{id}/invitation',
         [AdminUserController::class, 'reissueInvitation']
     );
+
+    // Категории: картинка (плитки подкатегорий)
+    Route::get('/admin/categories', [AdminCategoryController::class, 'index']);
+    Route::post('/admin/category/{id}/image', [AdminCategoryController::class, 'updateImage']);
+    Route::post('/admin/category/{id}/image/delete', [AdminCategoryController::class, 'deleteImage']);
+
+    // Баннеры слайдера на главной
+    Route::get('/admin/banners', [AdminBannerController::class, 'index']);
+    Route::get('/admin/banner/create', [AdminBannerController::class, 'create']);
+    Route::post('/admin/banner', [AdminBannerController::class, 'store']);
+    Route::get('/admin/banner/{id}/edit', [AdminBannerController::class, 'edit']);
+    Route::post('/admin/banner/{id}', [AdminBannerController::class, 'update']);
+    Route::post('/admin/banner/{id}/toggle', [AdminBannerController::class, 'toggle']);
+    Route::post('/admin/banner/{id}/delete', [AdminBannerController::class, 'destroy']);
+
+    // Информационные страницы
+    Route::get('/admin/pages', [AdminPageController::class, 'index']);
+    Route::get('/admin/page/create', [AdminPageController::class, 'create']);
+    Route::post('/admin/page', [AdminPageController::class, 'store']);
+    Route::get('/admin/page/{id}', [AdminPageController::class, 'edit']);
+    Route::post('/admin/page/{id}', [AdminPageController::class, 'update']);
+    Route::post('/admin/page/{id}/delete', [AdminPageController::class, 'destroy']);
+
+    // Настройки: реквизиты продавца, тексты подвала
+    Route::get('/admin/settings', [AdminSettingsController::class, 'edit']);
+    Route::post('/admin/settings', [AdminSettingsController::class, 'update']);
+
+    // Заявки «Стать партнёром»
+    Route::get('/admin/partners', [AdminPartnerRequestController::class, 'index']);
+    Route::post('/admin/partner/{id}/status', [AdminPartnerRequestController::class, 'updateStatus']);
 });
