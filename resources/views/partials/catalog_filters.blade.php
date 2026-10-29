@@ -26,6 +26,10 @@
 >
 
     {{-- Сортировка — тоже в URL: select над списком связан с этой формой атрибутом form --}}
+    {{-- Вид списка (плитка) сохраняется при смене фильтров --}}
+    @if(($view ?? 'list') === 'grid')
+        <input type="hidden" name="view" value="grid">
+    @endif
 
     <div
         class="fixed inset-0 bg-black/40 z-[60] lg:hidden"

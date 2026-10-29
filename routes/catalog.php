@@ -31,3 +31,8 @@ Route::get(
     '/product/{id}',
     [ProductController::class, 'show']
 )->name('product.show');
+
+// Подборки по флагу товара: «Акции», «Новинки» — список с фильтрами, как в категории
+foreach (array_keys(CatalogController::COLLECTIONS) as $key) {
+    Route::get('/'.$key, [CatalogController::class, 'collection'])->defaults('key', $key)->name('collection.'.$key);
+}

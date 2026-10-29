@@ -15,6 +15,9 @@
 | `/` | `HomeController@index` | `home` | app | — |
 | `/catalog` | `CatalogController@index` | `catalog_index` | app | — |
 | `/catalog/{slug}` | `CatalogController@show` | `catalog` (+ `partials/catalog_filters`, `catalog_results`) | app | — |
+| `/promo`, `/new`, `/hits` | `CatalogController@collection` | `catalog` (без подкатегорий) | app | — |
+| `/delivery`, `/about`, `/contacts`, `/page/{slug}` | `PageController@show` | `pages/show` | app | — |
+| `/partner` | `PartnerController@create` | `partner` | app | `partner` |
 | `/catalog/menu.json` | `CatalogController@menu` | JSON (мега-меню) | — | — |
 | `/product/{id}` | `ProductController@show` | `product` | app | — |
 | `/search` | `SearchController@index` | `search` | app | — |
@@ -57,6 +60,13 @@
 | `/admin/attribute/create`, `…/{id}/edit` | `…@create`, `…@edit` | `admin/attribute_form` | `attribute`, `attribute/{id}` |
 | `/admin/catalog-filters` | `AdminCatalogFilterController@index` | `admin/catalog_filters` | — |
 | `/admin/catalog-filters/{id}` | `…@edit` | `admin/catalog_filter_form` | `catalog-filters/{id}` |
+| `/admin/categories` | `AdminCategoryController@index` | `admin/categories` | `category/{id}/image`, `category/{id}/image/delete` |
+| `/admin/banners` | `AdminBannerController@index` | `admin/banners` | `banner/{id}/toggle`, `banner/{id}/delete` |
+| `/admin/banner/create`, `…/{id}/edit` | `…@create`, `…@edit` | `admin/banner_form` | `banner`, `banner/{id}` |
+| `/admin/pages` | `AdminPageController@index` | `admin/pages` | — |
+| `/admin/page/create`, `/admin/page/{id}` | `…@create`, `…@edit` | `admin/page_form` | `page`, `page/{id}`, `page/{id}/delete` |
+| `/admin/settings` | `AdminSettingsController@edit` | `admin/settings` | `settings` |
+| `/admin/partners` | `AdminPartnerRequestController@index` | `admin/partners` | `partner/{id}/status` |
 
 ### Auth (Breeze)
 

@@ -92,19 +92,20 @@
                     @svg('heroicon-o-chevron-right', 'w-4 h-4 text-ink-muted')
                 </button>
 
+                {{-- Главное меню, кроме «Каталог» (он — кнопкой выше) --}}
+                @foreach($mainMenu as $item)
+                    @continue($item['label'] === 'Каталог')
+                    <a
+                        href="{{ $item['url'] }}"
+                        @class(['flex items-center gap-3 px-4 py-3 pl-12', 'font-semibold text-link' => $item['active'], 'hover:bg-canvas' => ! $item['active']])
+                        @if($item['active']) aria-current="page" @endif
+                        data-mobile-menu-item
+                    >{{ $item['label'] }}</a>
+                @endforeach
+
                 <a href="#brands" @click="closePanel()" class="flex items-center gap-3 px-4 py-3 hover:bg-canvas">
                     @svg('heroicon-o-tag', 'w-5 h-5 text-ink-muted')
                     Производители
-                </a>
-
-                <a href="#delivery" @click="closePanel()" class="flex items-center gap-3 px-4 py-3 hover:bg-canvas">
-                    @svg('heroicon-o-shopping-bag', 'w-5 h-5 text-ink-muted')
-                    Доставка
-                </a>
-
-                <a href="#contacts" @click="closePanel()" class="flex items-center gap-3 px-4 py-3 hover:bg-canvas">
-                    @svg('heroicon-o-phone', 'w-5 h-5 text-ink-muted')
-                    Контакты
                 </a>
 
                 <div class="my-2 border-t border-line"></div>
@@ -114,6 +115,11 @@
                     <a href="{{ route('login') }}" class="flex items-center gap-3 px-4 py-3 hover:bg-canvas">
                         @svg('heroicon-o-user', 'w-5 h-5 text-ink-muted')
                         Войти
+                    </a>
+
+                    <a href="/partner" class="flex items-center gap-3 px-4 py-3 hover:bg-canvas" data-partner-link>
+                        @svg('heroicon-o-briefcase', 'w-5 h-5 text-ink-muted')
+                        Стать партнёром
                     </a>
 
                 @else

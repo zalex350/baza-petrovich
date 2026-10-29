@@ -12,12 +12,12 @@
 
 | | |
 |---|---|
-| Маршруты | `GET /catalog` (разделы), `GET /catalog/{slug}` (категория), `GET /catalog/menu.json` (дерево для мобильного меню), `GET /` (главная) |
-| Контроллеры | `CatalogController` (`index`, `show`, `menu`), `HomeController` |
+| Маршруты | `GET /catalog` (разделы), `GET /catalog/{slug}` (категория), `GET /promo`, `/new`, `/hits` (подборки по флагу), `GET /catalog/menu.json` (дерево для мобильного меню), `GET /` (главная) |
+| Контроллеры | `CatalogController` (`index`, `show`, `collection`, `menu`), `HomeController` |
 | Сервисы | `Catalog\CatalogListing` (запрос, фасеты, чипы, сортировки), `Catalog\CatalogFilters` (набор фильтров категории), `Catalog\KeyAttributes` (характеристики в строке списка), `CatalogMenu` (дерево с кэшем) |
-| Модели | `Category`, `CategoryFilter`, `Product`, `ProductAttributeValue` |
-| Шаблоны | `catalog_index`, `catalog`, `partials/catalog_filters`, `partials/catalog_results`, `partials/menu`, `home`, компонент `x-product-row` |
-| JS | `catalogFilters`, `megaMenu`, `mobileMenu` |
+| Модели | `Category`, `CategoryFilter`, `Product`, `ProductAttributeValue`, `Banner` |
+| Шаблоны | `catalog_index`, `catalog`, `partials/catalog_filters`, `partials/catalog_results`, `partials/menu`, `home`, компоненты `x-product-row`, `x-product-card`, `x-product-carousel`, `x-banner-slider` |
+| JS | `catalogFilters`, `megaMenu`, `mobileMenu`, `bannerSlider`, `productCarousel` |
 
 Ключевые правила:
 
@@ -31,8 +31,14 @@
 | Цены у гостя | Гостю фильтр по цене и сортировки по цене не показываются (`withPrices`) |
 | BR-084 | «← Продолжить покупки» и крошки карточки возвращают к последнему списку с фильтрами (`CatalogController::CONTINUE_URL` в сессии) |
 | Кэш меню | `CatalogMenuObserver` сбрасывает кэш при изменении категорий и товаров; после массовых `update()` — `CatalogMenu::flush()` |
+| Подборки | «Акции» (`is_promo`), «Новинки» (`is_new`), «Хиты» (`is_hit`) — тот же список (`CatalogListing` без категории, с флагом): фильтры по умолчанию, сортировка, вид, «Показать ещё» |
+| Вид списка | `?view=grid` — плитка (`x-product-card`), иначе строки; выбор — в `localStorage` (`catalog-view`) и применяется к списку, открытому без параметра; сохраняется при смене фильтров и сбросе |
+| «Показать ещё» | Следующая страница дописывается под список без перезагрузки, пагинация и URL обновляются; без JS — ссылка на следующую страницу |
+| Подкатегории | Плитки с картинкой, если картинка есть хотя бы у одной подкатегории (у остальных — заглушка); иначе чипы |
+| Главная | Слайдер баннеров (нет включённых — прежний первый экран), карусели «Акции», «Новинки», «Хиты» по 10 с «Все», «Популярные товары»; пустой блок не выводится |
+| Главное меню | Строка под шапкой (SRS §3.5): Главная · Каталог · Акции · Новинки · Доставка и оплата · О компании · Контакты, активный подсвечен; на телефоне — в панели ☰ |
 
-Тесты: `CatalogFiltersTest`, `Storefront/CatalogMenuTest`, `Storefront/ParentCategoryTest`, `Storefront/ProductRowTest`, `Storefront/ContinueShoppingTest`, `Storefront/HeaderTest`.
+Тесты: `CatalogFiltersTest`, `Storefront/CatalogMenuTest`, `Storefront/ParentCategoryTest`, `Storefront/ProductRowTest`, `Storefront/ContinueShoppingTest`, `Storefront/HeaderTest`, `Storefront/MainMenuTest`, `Storefront/CollectionsTest`, `Storefront/CatalogViewTest`, `Storefront/HomePageTest`.
 
 ---
 
@@ -277,7 +283,7 @@
 
 ### 8.3. Категории и фильтры каталога
 
-Экрана редактирования дерева категорий в админке нет. Категории создаёт и переносит импорт каталога (`catalog:import-db`) и миграции данных; служебная скрытая категория «Без категории» (`Category::UNCATEGORIZED`, `is_hidden`) собирает неразложенные товары. Категорию товару админ задаёт в форме товара.
+Экрана редактирования дерева категорий в админке нет; в «Категориях» (`/admin/categories`, `AdminCategoryController`) задаётся только картинка категории — webp (`Images\WebpImage`, 600 px), для плиток подкатегорий. Категории создаёт и переносит импорт каталога (`catalog:import-db`) и миграции данных; служебная скрытая категория «Без категории» (`Category::UNCATEGORIZED`, `is_hidden`) собирает неразложенные товары. Категорию товару админ задаёт в форме товара.
 
 | | |
 |---|---|
@@ -289,7 +295,44 @@
 | Правила | BR-016: состав и порядок фильтров категории; подкатегория без своей настройки наследует фильтры родителя; характеристика без `is_filterable` из набора выпадает |
 | Команды | `categories:capitalize` (названия с заглавной), `catalog:group-categories` |
 
-Тесты: `CatalogFiltersTest`, `CategoryNameTest`.
+Тесты: `CatalogFiltersTest`, `CategoryNameTest`, `AdminBannerCategoryTest`.
+
+### 8.7. Контент: баннеры, страницы, настройки
+
+| | |
+|---|---|
+| Маршруты | `/admin/banners`, `/admin/banner/create`, `/admin/banner/{id}/edit`; `POST /admin/banner`, `…/{id}`, `…/toggle`, `…/delete`. `/admin/pages`, `/admin/page/create`, `/admin/page/{id}`; `POST /admin/page`, `…/{id}`, `…/delete`. `/admin/settings` (GET/POST) |
+| Контроллеры | `AdminBannerController`, `AdminPageController`, `AdminSettingsController`; витрина — `PageController` (`/delivery`, `/about`, `/contacts`, `/page/{slug}`) |
+| Модели | `Banner`, `Page`, `Setting` (ключ — значение, кэш) |
+| Сервисы | `Images\WebpImage` (картинки баннеров и категорий), `Support\Html` (очистка HTML страниц) |
+| Шаблоны | `admin/banners`, `admin/banner_form`, `admin/pages`, `admin/page_form`, `admin/settings`, `pages/show`, `partials/footer`, компонент `x-file` |
+| JS | `editor.js` — Trix, отдельная точка входа Vite только на форме страницы |
+
+| Правило | Суть |
+|---|---|
+| Баннер | Картинка для десктопа обязательна (33:10), для телефона — нет (3:2, иначе десктопная); ссылка — `/…` или `https://…`; порядок; вкл/выкл. Старые файлы удаляются при замене и удалении |
+| Страницы | Текст — HTML из Trix, на сайте очищается (`Html::clean`: абзацы, заголовки, списки, ссылки http/https/mailto/tel/`/`). Страницы меню (`Page::MENU`) не удаляются, адрес не меняется. Неопубликованная — 404, администратору видна с пометкой |
+| Подвал | Три колонки (о компании, доставка + ссылка, контакты) и реквизиты продавца — из `Setting`; пусто — `[ЗАПОЛНИТЬ]` |
+
+Тесты: `AdminBannerCategoryTest`, `PagesAndFooterTest`, `Storefront/HomePageTest`.
+
+### 8.8. Заявки «Стать партнёром»
+
+| | |
+|---|---|
+| Маршруты | `GET/POST /partner` (POST — `throttle:5,10`); `GET /admin/partners`, `POST /admin/partner/{id}/status` |
+| Контроллеры | `PartnerController`, `AdminPartnerRequestController` |
+| Модель, enum | `PartnerRequest`, `PartnerRequestStatus` (Новая / В работе / Подключён / Отказ) |
+| Событие → письмо | `PartnerRequested` → `NotifyAdmins` → `PartnerRequestNotification` (очередь), флаг `users.notify_partner_request` |
+| Шаблоны | `partner`, `admin/partners` |
+
+| Правило | Суть |
+|---|---|
+| Поля | Организация, УНП (9 цифр, пробелы убираются), контактное лицо, телефон, email (строчными), комментарий, согласие на обработку данных (`consent_at`) |
+| Спам | Скрытое поле `website`: заполнено — заявка не сохраняется, ответ как при успехе; не больше 5 отправок за 10 минут с адреса |
+| Кнопка | «Стать партнёром» в шапке и в меню ☰ — только гостю |
+
+Тесты: `PartnerRequestTest`.
 
 ### 8.4. Клиенты (организации)
 
@@ -344,23 +387,23 @@
 
 ## 9. Уведомления
 
-**Назначение.** Письма администраторам о новых заказах и запросах на отмену; письма пользователям (приглашение, сброс пароля).
+**Назначение.** Письма администраторам о новых заказах, запросах на отмену и заявках партнёров; письма пользователям (приглашение, сброс пароля).
 
 | | |
 |---|---|
-| События | `OrderPlaced`, `CancelRequested` (`ShouldDispatchAfterCommit`) |
+| События | `OrderPlaced`, `CancelRequested`, `PartnerRequested` (`ShouldDispatchAfterCommit`) |
 | Слушатель | `NotifyAdmins` (автообнаружение) |
-| Нотификации | `AdminOrderNotification` (база, `ShouldQueue`): `NewOrderNotification`, `CancelRequestNotification`; `UserInvitation` (без очереди) |
-| Настройка | `users.notify_new_order`, `users.notify_cancel_request` — карточка администратора, `POST /admin/user/{id}/notifications` |
+| Нотификации | `AdminOrderNotification` (база, `ShouldQueue`): `NewOrderNotification`, `CancelRequestNotification`; `PartnerRequestNotification` (`ShouldQueue`); `UserInvitation` (без очереди) |
+| Настройка | `users.notify_new_order`, `users.notify_cancel_request`, `users.notify_partner_request` — карточка администратора, `POST /admin/user/{id}/notifications` |
 | Инфраструктура | `QUEUE_CONNECTION=database`, сервис `queue`; локально почта в Mailpit (`http://localhost:8025`), на стенде `MAIL_MAILER=log` |
 
 | Правило | Суть |
 |---|---|
 | Получатели | Активные (не заблокированные) администраторы с включённой галочкой |
 | Надёжность | Повтор через 1 и 5 минут, затем `failed_jobs`; сбой постановки в очередь не ломает оформление |
-| Безопасность | Текст пользователя (комментарий, причина отмены, названия) в письме — одной строкой, разметка Markdown экранируется (`AdminOrderNotification::text`) |
+| Безопасность | Текст пользователя (комментарий, причина отмены, названия) в письме — одной строкой, разметка Markdown экранируется (трейт `Notifications\Concerns\MarkdownText`) |
 
-Тесты: `AdminNotificationsTest`.
+Тесты: `AdminNotificationsTest`, `PartnerRequestTest`.
 
 ---
 
