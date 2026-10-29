@@ -210,14 +210,18 @@
             @if($documents->isNotEmpty())
                 <aside aria-label="Документы" class="flex min-w-0 flex-col gap-1 rounded-card border border-line bg-surface px-6 py-5" data-documents>
                     <h2 class="mb-2 text-xl font-bold">Документы</h2>
+                    {{-- Иконка типа, название, тип и размер; PDF открывается в новой вкладке, «Скачать» — файлом --}}
                     @foreach($documents as $document)
-                        <a href="{{ $document['url'] }}" class="flex items-center gap-3 border-t border-line-soft py-2.5 hover:text-link" target="_blank" rel="noopener">
-                            @svg('heroicon-o-document-text', 'h-6 w-6 shrink-0 text-danger')
-                            <span class="flex flex-col leading-snug">
-                                <span>{{ $document['title'] }}</span>
-                                <span class="text-meta text-ink-muted">{{ $document['meta'] ?? '' }}</span>
-                            </span>
-                        </a>
+                        <div class="flex items-center gap-3 border-t border-line-soft py-2.5" data-document>
+                            @svg('heroicon-o-'.$document['icon'], 'h-6 w-6 shrink-0 text-danger')
+                            <a href="{{ $document['url'] }}" class="flex min-w-0 grow flex-col leading-snug hover:text-link" target="_blank" rel="noopener">
+                                <span class="break-words">{{ $document['title'] }}</span>
+                                <span class="text-meta text-ink-muted">{{ $document['meta'] }}</span>
+                            </a>
+                            <a href="{{ $document['url'] }}" download class="flex h-10 w-10 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-canvas hover:text-link" aria-label="Скачать: {{ $document['title'] }}" title="Скачать" data-document-download>
+                                @svg('heroicon-o-arrow-down-tray', 'h-5 w-5')
+                            </a>
+                        </div>
                     @endforeach
                 </aside>
             @endif

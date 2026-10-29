@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\AdminOrganizationController;
 use App\Http\Controllers\Admin\AdminPageController;
 use App\Http\Controllers\Admin\AdminPartnerRequestController;
 use App\Http\Controllers\Admin\AdminProductController;
+use App\Http\Controllers\Admin\AdminProductDocumentController;
 use App\Http\Controllers\Admin\AdminProductImageController;
 use App\Http\Controllers\Admin\AdminSettingsController;
 use App\Http\Controllers\Admin\AdminUserController;
@@ -36,6 +37,12 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/attribute/{id}/edit', [AdminAttributeController::class, 'edit']);
     Route::post('/admin/attribute/{id}', [AdminAttributeController::class, 'update']);
     Route::post('/admin/attribute/{id}/delete', [AdminAttributeController::class, 'destroy']);
+
+    // Документы товара (SRS §4.8): загрузка PDF, название и тип, порядок, удаление
+    Route::post('/admin/product/{id}/documents', [AdminProductDocumentController::class, 'store']);
+    Route::post('/admin/product/{id}/documents/reorder', [AdminProductDocumentController::class, 'reorder']);
+    Route::post('/admin/product/{id}/documents/{document}', [AdminProductDocumentController::class, 'update']);
+    Route::post('/admin/product/{id}/documents/{document}/delete', [AdminProductDocumentController::class, 'destroy']);
 
     // Фото товара (SRS §10.4.8): загрузка, порядок, основное, замена, удаление
     Route::post(

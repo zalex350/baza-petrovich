@@ -262,6 +262,7 @@
 
 @unless($isNew)
     @include('partials.admin_product_images', ['product' => $product, 'form' => $form])
+    @include('partials.admin_product_documents', ['product' => $product])
 @endunless
 
 {{-- Сохранение и публикация --}}

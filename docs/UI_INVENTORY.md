@@ -45,7 +45,7 @@
 | URL | Контроллер | Шаблон | Действия (POST) |
 |---|---|---|---|
 | `/admin/products` | `AdminProductController@index` | `admin/products` | `product/{id}/toggle-visibility`, `product/{id}/delete` |
-| `/admin/product/create`, `/admin/product/{id}` | `…@create`, `…@show` | `admin/product_form` (+ `vat_rate_select`, `admin_product_attributes`, `admin_product_images`, `image_queue`) | `product`, `product/{id}`, `draft`, `draft/delete`, `publish`, `images…` (store/reorder/main/move/replace/delete) |
+| `/admin/product/create`, `/admin/product/{id}` | `…@create`, `…@show` | `admin/product_form` (+ `vat_rate_select`, `admin_product_attributes`, `admin_product_images`, `image_queue`) | `product`, `product/{id}`, `draft`, `draft/delete`, `publish`, `images…` (store/reorder/main/move/replace/delete), `documents…` (store/reorder/update/delete) |
 | `/admin/product/{id}/preview` | `…@preview` | `product` (витринный, `$preview`) | — |
 | `/admin/orders` | `AdminOrderController@index` | `admin/orders` | — |
 | `/admin/order/{id}` | `…@show` | `admin/order` (+ `order_items`, `order_delivery`, `order_history`) | `order/{id}`, `status`, `cancel-request/approve`, `cancel-request/reject`, `invoice`, `invoice/delete` (GET `invoice` — скачать) |

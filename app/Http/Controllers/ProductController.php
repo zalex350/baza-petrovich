@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CategoryFilter;
 use App\Models\Product;
 use App\Models\ProductAttributeValue;
+use App\Models\ProductDocument;
 use App\Services\CartSummary;
 use App\Services\Catalog\CatalogFilters;
 use App\Services\Catalog\KeyAttributes;
@@ -54,8 +55,14 @@ class ProductController extends Controller
             'keyRows' => $self->keyRows($product, app(KeyAttributes::class)->attributeIds($categoryFilters)),
             'brandUrl' => $self->brandUrl($product, $categoryFilters),
             'inCart' => app(CartSummary::class)->items(auth()->user())->get($product->id),
-            // Хранения документов товара (инструкции, сертификаты) пока нет — блок «Документы» скрыт
-            'documents' => collect(),
+            // Документы (SRS §4.8): нет ни одного — блок «Документы» скрыт
+            'documents' => $product->documents->map(fn (ProductDocument $document) => [
+                'title' => $document->title,
+                'type' => $document->type->label(),
+                'icon' => $document->type->icon(),
+                'url' => $document->url(),
+                'meta' => $document->type->label().' · '.$document->sizeLabel(),
+            ]),
         ];
     }
 

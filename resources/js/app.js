@@ -16,6 +16,7 @@ import skuSuggest from './sku-suggest';
 import copyText from './copy-text';
 import bannerSlider from './banner-slider';
 import productCarousel from './product-carousel';
+import sortableList from './sortable-list';
 
 window.Alpine = Alpine;
 
@@ -33,5 +34,6 @@ Alpine.data('skuSuggest', skuSuggest);
 Alpine.data('copyText', copyText);
 Alpine.data('bannerSlider', bannerSlider);
 Alpine.data('productCarousel', productCarousel);
+Alpine.data('sortableList', sortableList);
 
 Alpine.start();

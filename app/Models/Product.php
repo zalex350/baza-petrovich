@@ -221,6 +221,14 @@ class Product extends Model
     }
 
     /**
+     * Документы товара (SRS §4.8) в порядке из админки.
+     */
+    public function documents()
+    {
+        return $this->hasMany(ProductDocument::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /**
      * Характеристики в порядке из админки (BR-061).
      */
     public function attributeValues()

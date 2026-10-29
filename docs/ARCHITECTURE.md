@@ -316,6 +316,7 @@ erDiagram
 | `order_items` | Снимок названия, артикула, цены и НДС; `product_id` может стать `null` |
 | `order_sequences` | Счётчик номеров заказов по годам (`Order::nextNumber`) |
 | `order_invoices` | Счёт на оплату, один на заказ: PDF в закрытом хранилище, `source` (`manual` / `erp`), `external_id` (номер в 1С), `uploaded_by` |
+| `product_documents` | Документы товара: PDF на диске фото (публичная ссылка), `type` (`ProductDocumentType`), `title`, `size`, `sort_order` |
 | `user_invitation_tokens` | Брокер приглашений: токен хешем, рядом `token_encrypted` (APP_KEY) для показа ссылки |
 | `product_stocks` | Наследие тестовых данных (`catalog:fill-test-data`), в логике магазина не используется |
 | `categories.image` | Картинка категории (webp) — плитки подкатегорий; в дереве меню (`CatalogMenu`) — поле `image` |
