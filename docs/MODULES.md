@@ -226,11 +226,11 @@
 
 | | |
 |---|---|
-| Маршруты | `GET /admin/products` (поиск `?q=` по артикулу, названию, бренду — вместе с фильтрами `?category=none`, `?name=none`, `?description=unapproved`, сохраняется в пагинации), `GET /admin/product/create`, `POST /admin/product`, `GET/POST /admin/product/{id}`, `POST …/draft`, `…/draft/delete`, `…/publish`, `GET …/preview`, `POST …/approve-description`, `…/toggle-visibility`, `…/delete`, `…/images*` |
+| Маршруты | `GET /admin/products` (поиск `?q=` по артикулу, названию, бренду — вместе с фильтрами `?category=none`, `?name=none`, `?description=unapproved`, сохраняется в пагинации), `GET /admin/product/create`, `POST /admin/product`, `GET/POST /admin/product/{id}`, `POST …/draft`, `…/draft/delete`, `…/publish`, `GET …/preview`, `POST …/approve-description`, `…/toggle-visibility`, `…/delete`, `…/images*`, `…/documents*` |
 | Контроллеры | `AdminProductController`, `AdminProductImageController` (+ трейт `UploadsProductImages`) |
 | Сервисы | `ProductAttributes`, `Images\ProductImageService`, `Vat\VatCalculator` |
-| Модели | `Product`, `ProductDraft`, `ProductImage`, `ProductAttributeValue` |
-| Шаблоны | `admin/products`, `admin/product_form`, `partials/admin_product_attributes`, `partials/admin_product_attribute_row`, `partials/admin_product_images`, `partials/image_queue`, `partials/vat_rate_select`; предпросмотр — витринный `product` |
+| Модели | `Product`, `ProductDraft`, `ProductImage`, `ProductAttributeValue`, `ProductDocument` |
+| Шаблоны | `admin/products`, `admin/product_form`, `partials/admin_product_attributes`, `partials/admin_product_attribute_row`, `partials/admin_product_images`, `partials/admin_product_documents`, `partials/image_queue`, `partials/vat_rate_select`; предпросмотр — витринный `product` |
 | JS | `adminImages`, `imageQueue`, `attributeRows` |
 
 | Правило | Суть |
@@ -241,9 +241,10 @@
 | Видимость | «Скрыть/показать» переключает `is_active`; удаление мягкое |
 | Описание | Сгенерированное импортом показывается на сайте после «Одобрить» (`description_generated = false`) |
 | Комплектация | Один источник (`Product::packageContents()`): поле `package_contents`, если пусто — характеристика «Комплектация» (из импорта). В таблице и в «Коротко» карточки характеристика не выводится; в форме — пометка, откуда значение. Длинные значения характеристик — многострочным полем |
+| Документы (SRS §4.8) | `AdminProductDocumentController`: PDF до 20 МБ на диске фото (`documents/{product_id}/`, публичная ссылка), тип (`ProductDocumentType`: инструкция, паспорт, сертификат, декларация, каталог производителя, схема подключения, руководство, другой), название (пусто — из имени файла), порядок перетаскиванием (`sortableList`, JSON), удаление с подтверждением. Сразу, без черновика. В карточке — блок «Документы»: иконка типа, название, тип и размер, открыть / скачать; нет документов — блока нет |
 | Фото (BR-051…054) | webp `thumb` 300 / `medium` 800 / `large` 1600, ориентация по EXIF, оригинал не хранится; до 10 МБ, JPEG, PNG или WebP (MIME по содержимому); ровно одно основное; изменения сразу, без черновика |
 
-Тесты: `AdminProductFormTest`, `AdminProductSearchTest`, `ProductPackageContentsTest`, `AdminCreateProductTest`, `AdminDeleteProductTest`, `AdminProductValidationTest`, `AdminProductVisibilityTest`, `AdminProductBadgeFlowTest`, `AdminProductQtyBadgesTest`, `ProductDraftPublishTest`, `ProductImageAdminTest`, `ProductGuidTest`.
+Тесты: `AdminProductFormTest`, `AdminProductSearchTest`, `ProductPackageContentsTest`, `AdminCreateProductTest`, `AdminDeleteProductTest`, `AdminProductValidationTest`, `AdminProductVisibilityTest`, `AdminProductBadgeFlowTest`, `AdminProductQtyBadgesTest`, `ProductDraftPublishTest`, `ProductImageAdminTest`, `ProductDocumentTest`, `ProductGuidTest`.
 
 ### 8.2. Характеристики
 

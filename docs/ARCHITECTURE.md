@@ -312,6 +312,7 @@ erDiagram
 | `orders` | Адрес и суммы — снимок на момент оформления. `total` устарел, на экранах — `total_*`. На `user_id` нет внешнего ключа |
 | `order_items` | Снимок названия, артикула, цены и НДС; `product_id` может стать `null` |
 | `order_sequences` | Счётчик номеров заказов по годам (`Order::nextNumber`) |
+| `product_documents` | Документы товара: PDF на диске фото (публичная ссылка), `type` (`ProductDocumentType`), `title`, `size`, `sort_order` |
 | `user_invitation_tokens` | Брокер приглашений: токен хешем, рядом `token_encrypted` (APP_KEY) для показа ссылки |
 | `product_stocks` | Наследие тестовых данных (`catalog:fill-test-data`), в логике магазина не используется |
 
