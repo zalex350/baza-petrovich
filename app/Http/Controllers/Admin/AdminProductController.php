@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\ProductAttribute;
 use App\Models\ProductDraft;
 use App\Services\ProductAttributes;
+use App\Services\ProductDrafts;
 use App\Services\Vat\VatCalculator;
 use Illuminate\Validation\Rule;
 
@@ -22,7 +23,10 @@ class AdminProductController extends Controller
 {
     use UploadsProductImages;
 
-    public function __construct(private readonly ProductAttributes $attributes) {}
+    public function __construct(
+        private readonly ProductAttributes $attributes,
+        private readonly ProductDrafts $drafts,
+    ) {}
 
     /** Поля учётной системы: при shop.catalog.manual_products = false приходят только из 1С */
     private const ERP_FIELDS = ['name', 'sku', 'brand', 'price', 'vat_rate', 'stock', 'on_order', 'min_qty', 'qty_step', 'default_qty'];
@@ -31,7 +35,7 @@ class AdminProductController extends Controller
     private const DIRECT_SITE_FIELDS = ['slug', 'category_id', 'is_hit', 'is_new', 'is_promo'];
 
     /** Тексты сайта: через черновик */
-    private const DRAFT_FIELDS = ['display_name', 'description', 'specifications', 'package_contents'];
+    private const DRAFT_FIELDS = ProductDrafts::FIELDS;
 
     public function index()
     {
@@ -205,16 +209,19 @@ class AdminProductController extends Controller
     {
         $product = Product::findOrFail($id);
 
-        // Черновые характеристики, если есть, сохраняются
-        ProductDraft::updateOrCreate(
-            ['product_id' => $product->id],
-            ['data' => array_merge($product->draft?->data ?? [], [
-                'display_name' => request('display_name'),
-                'description' => request('description'),
-                'specifications' => request('specifications'),
-                'package_contents' => request('package_contents'),
-            ])]
-        );
+        // Черновые характеристики, если есть, сохраняются; переносы строк — как в базе
+        $values = array_merge($product->draft?->data ?? [], collect(ProductDrafts::FIELDS)
+            ->mapWithKeys(fn ($field) => [$field => request()->filled($field) ? str_replace(["\r\n", "\r"], "\n", request($field)) : null])
+            ->all());
+
+        // Черновик — только если отличается от опубликованного
+        if (! $this->drafts->differs($product, $values)) {
+            $product->draft()->delete();
+
+            return back()->with('success', 'Изменений нет — черновик не нужен');
+        }
+
+        ProductDraft::updateOrCreate(['product_id' => $product->id], ['data' => $values]);
 
         return back()->with('success', 'Черновик сохранён');
     }
@@ -333,8 +340,9 @@ class AdminProductController extends Controller
     }
 
     /**
-     * Тексты и характеристики пришли и отличаются от опубликованных (или черновик уже
-     * есть) — в черновик. Сохранение без правок черновик не создаёт.
+     * Тексты и характеристики пришли и по смыслу отличаются от опубликованных (ProductDrafts) —
+     * в черновик. Сохранение без правок черновик не создаёт; черновик, ставший равным
+     * опубликованному, удаляется.
      */
     private function saveDraftFields(Product $product, array $data): void
     {
@@ -349,19 +357,21 @@ class AdminProductController extends Controller
         $values = $draft?->data ?? array_combine(self::DRAFT_FIELDS, array_map(fn ($f) => $product->{$f}, self::DRAFT_FIELDS));
 
         foreach ($sent as $field) {
-            $values[$field] = $data[$field] ?? null;
+            // Переносы строк из браузера (\r\n) — как в базе (\n)
+            $values[$field] = isset($data[$field]) ? str_replace(["\r\n", "\r"], "\n", $data[$field]) : null;
         }
 
         if ($attributesSent) {
             $values['attributes'] = $data['attributes'];
         }
 
-        $changed = collect(self::DRAFT_FIELDS)->contains(
-            fn ($field) => (string) ($values[$field] ?? '') !== (string) ($product->{$field} ?? '')
-        ) || (isset($values['attributes']) && $values['attributes'] !== $this->attributes->current($product));
-
-        if ($draft || $changed) {
+        // Черновик — только если сайтовые поля реально отличаются от опубликованных;
+        // совпал с опубликованным (правки вернули обратно) — удаляется
+        if ($this->drafts->differs($product, $values)) {
             ProductDraft::updateOrCreate(['product_id' => $product->id], ['data' => $values]);
+        } elseif ($draft) {
+            $draft->delete();
+            $product->unsetRelation('draft');
         }
     }
 
