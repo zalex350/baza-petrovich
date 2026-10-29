@@ -93,7 +93,15 @@
 
         <div>
             <label for="f-price" class="block mb-2 font-semibold">Цена без НДС, BYN</label>
-            <input id="f-price" type="number" step="0.01" min="0" name="price" form="{{ $form }}" value="{{ old('price', $product->price) }}" class="{{ $input }}" @disabled($locked) @unless($locked) required @endunless>
+            {{-- У товара без цены (из импорта, цена придёт из 1С) поле не обязательно — иначе браузер
+                 не отправит форму и не сохранятся ни флаги, ни тексты (AdminProductController::erpRules) --}}
+            @php
+                $priceOptional = ! $isNew && $product->price === null;
+            @endphp
+            <input id="f-price" type="number" step="0.01" min="0" name="price" form="{{ $form }}" value="{{ old('price', $product->price) }}" class="{{ $input }}" @disabled($locked) @if(! $locked && ! $priceOptional) required @endif @if($priceOptional) aria-describedby="f-price-hint" @endif>
+            @if($priceOptional)
+                <p id="f-price-hint" class="text-sm text-slate-500 mt-1" data-price-optional>Цены нет — на сайте «Цена уточняется», заказать товар нельзя. Можно сохранить без цены.</p>
+            @endif
         </div>
 
         <div>

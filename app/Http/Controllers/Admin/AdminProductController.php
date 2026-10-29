@@ -279,7 +279,10 @@ class AdminProductController extends Controller
             'name' => 'required|string|max:255',
             'sku' => ['required', 'string', 'max:100', Rule::unique('products', 'sku')->ignore($product?->id)],
             'brand' => 'nullable|string|max:255',
-            'price' => 'required|numeric|min:0',
+            // Цена обязательна у нового товара и у товара с ценой (стереть её нельзя). У товара без
+            // цены (из импорта каталога — цена придёт из 1С) поле может остаться пустым: иначе
+            // форма не сохраняла ничего — ни флаги, ни категорию, ни тексты
+            'price' => [$product && $product->price === null ? 'nullable' : 'required', 'numeric', 'min:0'],
             'vat_rate' => ['sometimes', 'required', VatCalculator::rateRule()],
             'stock' => 'required|integer|min:0',
             'on_order' => 'boolean',
