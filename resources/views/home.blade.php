@@ -4,6 +4,10 @@
 
 <div class="bg-slate-50 min-h-screen">
 
+    {{-- Баннеры (админка «Баннеры»); нет ни одного включённого — прежний первый экран --}}
+    @if($banners->isNotEmpty())
+        <x-banner-slider :banners="$banners" class="mb-8" />
+    @else
     <section class="bg-gradient-to-r from-slate-800 to-slate-600 text-white overflow-hidden">
 
     <div class="max-w-7xl mx-auto px-6 py-16">
@@ -45,6 +49,31 @@
     </div>
 
 </section>
+    @endif
+
+    {{-- Карусели «Акции», «Новинки», «Хиты»: пустая не выводится --}}
+    <div class="flex flex-col gap-8 py-8" data-home-carousels>
+        @foreach($carousels as $carousel)
+            <x-product-carousel :title="$carousel['title']" :url="$carousel['url']" :products="$carousel['products']" :cart-items="$cartItems" />
+        @endforeach
+    </div>
+
+    @if($featuredProducts->isNotEmpty())
+    <section class="pb-12" data-home-popular>
+
+        <h2 class="text-2xl font-bold tracking-tight mb-3">
+            Популярные товары
+        </h2>
+
+        {{-- Те же строки, что в каталоге и поиске: «В корзину» без перезагрузки (cart-actions.js) --}}
+        <div class="divide-y divide-line-soft overflow-hidden rounded-card border border-line bg-surface" data-product-list>
+            @foreach($featuredProducts as $product)
+                <x-product-row :product="$product" :in-cart="$cartItems[$product->id] ?? null" />
+            @endforeach
+        </div>
+
+    </section>
+    @endif
 
     <section class="bg-white border-y border-slate-200">
 
@@ -118,20 +147,6 @@
 
     </section>
 
-    <section class="max-w-7xl mx-auto px-6 pb-20">
-
-        <h2 class="text-3xl font-bold mb-8">
-            Популярные товары
-        </h2>
-
-        {{-- Те же строки, что в каталоге и поиске: «В корзину» без перезагрузки (cart-actions.js) --}}
-        <div class="divide-y divide-line-soft overflow-hidden rounded-card border border-line bg-surface" data-product-list>
-            @foreach($featuredProducts as $product)
-                <x-product-row :product="$product" :in-cart="$cartItems[$product->id] ?? null" />
-            @endforeach
-        </div>
-
-    </section>
 
 </div>
 

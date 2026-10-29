@@ -163,8 +163,8 @@ class CatalogMenu
                 'id' => $category->id,
                 'name' => $category->name,
                 'url' => route('catalog.show', $category->slug, false),
-                // Колонки image у категорий пока нет — подхватится, когда появится
-                'image' => $category->image ? asset('storage/'.$category->image) : null,
+                // Картинка категории (админка «Категории») — плитки подкатегорий
+                'image' => $category->imageUrl(),
                 'count' => $count,
                 'children' => $children,
             ];

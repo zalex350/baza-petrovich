@@ -160,3 +160,47 @@
         }
     }
 }
+
+/*
+ * Текст информационной страницы (pages/show) — HTML из редактора админки (Trix):
+ * абзацы, заголовки, списки, цитаты, ссылки.
+ */
+@layer components {
+    .prose-page {
+        @apply leading-relaxed;
+    }
+
+    .prose-page > * + * {
+        @apply mt-3;
+    }
+
+    .prose-page h1,
+    .prose-page h2 {
+        @apply mt-6 text-xl font-bold;
+    }
+
+    .prose-page h3,
+    .prose-page h4 {
+        @apply mt-5 text-lg font-semibold;
+    }
+
+    .prose-page ul {
+        @apply list-disc pl-6;
+    }
+
+    .prose-page ol {
+        @apply list-decimal pl-6;
+    }
+
+    .prose-page a {
+        @apply text-link underline hover:text-link-hover;
+    }
+
+    .prose-page blockquote {
+        @apply border-l-4 border-line pl-4 text-ink-muted;
+    }
+
+    .prose-page pre {
+        @apply overflow-x-auto rounded-control bg-field p-3 text-sm;
+    }
+}

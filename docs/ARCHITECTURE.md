@@ -111,6 +111,7 @@ Auth на основе Breeze (`laravel/breeze` в dev). Самостоятел�
 |---|---|---|---|
 | `OrderPlaced` | `CheckoutService::place` | `NotifyAdmins::handleOrderPlaced` | `NewOrderNotification` администраторам с `notify_new_order` |
 | `CancelRequested` | `OrderStatusService::requestCancel` | `NotifyAdmins::handleCancelRequested` | `CancelRequestNotification` администраторам с `notify_cancel_request` |
+| `PartnerRequested` | `PartnerController::store` | `NotifyAdmins::handlePartnerRequested` | `PartnerRequestNotification` администраторам с `notify_partner_request` |
 
 - События реализуют `ShouldDispatchAfterCommit`: если транзакция откатилась, письма не будет.
 - Письма идут через очередь (`QUEUE_CONNECTION=database`, таблица `jobs`), по задаче на получателя. При сбое повтор через 1 и 5 минут, потом задача попадает в `failed_jobs`.
@@ -201,6 +202,7 @@ erDiagram
         timestamp blocked_at
         bool notify_new_order
         bool notify_cancel_request
+        bool notify_partner_request
     }
     products {
         bigint id
@@ -218,6 +220,7 @@ erDiagram
         bool is_published
         bool description_generated
         bool is_new_locked
+        bool is_promo
         timestamp deleted_at
     }
     categories {
@@ -314,6 +317,11 @@ erDiagram
 | `order_sequences` | Счётчик номеров заказов по годам (`Order::nextNumber`) |
 | `user_invitation_tokens` | Брокер приглашений: токен хешем, рядом `token_encrypted` (APP_KEY) для показа ссылки |
 | `product_stocks` | Наследие тестовых данных (`catalog:fill-test-data`), в логике магазина не используется |
+| `categories.image` | Картинка категории (webp) — плитки подкатегорий; в дереве меню (`CatalogMenu`) — поле `image` |
+| `banners` | Слайдер главной: `image_desktop`, `image_mobile`, `url`, `sort_order`, `is_active` |
+| `pages` | Информационные страницы: `slug`, `body` (HTML из Trix, при выводе очищается), SEO, `is_published`. Три страницы меню создаёт миграция с `[ЗАПОЛНИТЬ]` |
+| `settings` | Ключ — значение: реквизиты продавца и тексты подвала (`Setting::FIELDS`), кэш `settings.all` |
+| `partner_requests` | Заявки «Стать партнёром»: реквизиты, контакт, `consent_at`, `status`, `ip` |
 
 ## 9. Владение данными: 1С и сайт
 
@@ -324,7 +332,7 @@ erDiagram
 | Название, артикул, бренд, цена, НДС, остаток, «под заказ», кратность (`min_qty`, `qty_step`, `default_qty`) | **1С** (пока вводятся в админке) | `AdminProductController::ERP_FIELDS`. При `SHOP_CATALOG_MANUAL_PRODUCTS=false` поля только для чтения, создание товара — 403 |
 | `products.guid`, `organizations.guid` | **1С** | Не в `$fillable`, в админке только чтение, пока не заполняются |
 | Статусы заказа после «Передан в 1С» | **1С** (пока вручную) | При `SHOP_ORDERS_MANUAL_STATUS=false` ручная смена статусов отключена |
-| Категория, адрес страницы (slug), «ХИТ», «НОВИНКА» | **Сайт** | `DIRECT_SITE_FIELDS`, применяются сразу (SRS §11.3) |
+| Категория, адрес страницы (slug), «ХИТ», «НОВИНКА», «Акция» | **Сайт** | `DIRECT_SITE_FIELDS`, применяются сразу (SRS §11.3) |
 | Отображаемое название, описание, характеристики (текст), комплектация | **Сайт** | `DRAFT_FIELDS`: через черновик (`product_drafts`) и «Опубликовать» |
 | Характеристики, фото, видимость | **Сайт** | Справочник `attributes`, `ProductImageService`, `toggle-visibility` |
 | Структура каталога, тексты, характеристики из `catalog.db` | **Сайт** (импорт) | `catalog:import-db`: цены и остатки не трогает; «Новинку», снятую в админке (`is_new_locked`), не возвращает; сгенерированные описания не показывает до одобрения |

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * is_hidden — служебная категория («Без категории»): нет в меню и каталоге, товары находятся поиском.
@@ -17,6 +18,7 @@ class Category extends Model
         'slug',
         'parent_id',
         'is_hidden',
+        'image',
     ];
 
     protected $casts = [
@@ -41,5 +43,13 @@ class Category extends Model
     public function products()
     {
         return $this->hasMany(Product::class);
+    }
+
+    /**
+     * Картинка категории (webp, плитки подкатегорий) или null.
+     */
+    public function imageUrl(): ?string
+    {
+        return $this->image ? Storage::disk(ProductImage::disk())->url($this->image) : null;
     }
 }
