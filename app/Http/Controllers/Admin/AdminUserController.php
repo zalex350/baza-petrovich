@@ -215,6 +215,7 @@ class AdminUserController extends Controller
         $data = request()->validate([
             'notify_new_order' => ['required', 'boolean'],
             'notify_cancel_request' => ['required', 'boolean'],
+            'notify_partner_request' => ['required', 'boolean'],
         ]);
 
         $this->fillNotifications($user, $data);
@@ -233,6 +234,7 @@ class AdminUserController extends Controller
             'organization_id' => User::organizationRules((string) request('role')),
             'notify_new_order' => ['sometimes', 'boolean'],
             'notify_cancel_request' => ['sometimes', 'boolean'],
+            'notify_partner_request' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -246,7 +248,7 @@ class AdminUserController extends Controller
             return;
         }
 
-        foreach (['notify_new_order', 'notify_cancel_request'] as $field) {
+        foreach (['notify_new_order', 'notify_cancel_request', 'notify_partner_request'] as $field) {
             if (array_key_exists($field, $data)) {
                 $user->{$field} = (bool) $data[$field];
             }

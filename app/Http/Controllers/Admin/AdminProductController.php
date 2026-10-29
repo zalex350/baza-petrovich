@@ -28,7 +28,7 @@ class AdminProductController extends Controller
     private const ERP_FIELDS = ['name', 'sku', 'brand', 'price', 'vat_rate', 'stock', 'on_order', 'min_qty', 'qty_step', 'default_qty'];
 
     /** Данные сайта, которые применяются сразу, без черновика (SRS §11.3: категория — сайта, не 1С) */
-    private const DIRECT_SITE_FIELDS = ['slug', 'category_id', 'is_hit', 'is_new'];
+    private const DIRECT_SITE_FIELDS = ['slug', 'category_id', 'is_hit', 'is_new', 'is_promo'];
 
     /** Тексты сайта: через черновик */
     private const DRAFT_FIELDS = ['display_name', 'description', 'specifications', 'package_contents'];
@@ -316,6 +316,7 @@ class AdminProductController extends Controller
             'package_contents' => 'nullable|string',
             'is_hit' => 'boolean',
             'is_new' => 'boolean',
+            'is_promo' => 'boolean',
         ];
     }
 

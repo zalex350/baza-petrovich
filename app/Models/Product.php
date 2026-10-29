@@ -40,6 +40,7 @@ class Product extends Model
         'is_hit',
         'is_new',
         'is_new_locked',
+        'is_promo',
         'package_contents',
         'video_url',
     ];
@@ -53,6 +54,7 @@ class Product extends Model
         'is_hit' => false,
         'is_new' => false,
         'is_new_locked' => false,
+        'is_promo' => false,
     ];
 
     protected $casts = [
@@ -64,6 +66,7 @@ class Product extends Model
         'is_new' => 'boolean',
         // «Новинку» задали в админке — импорт каталога её не меняет
         'is_new_locked' => 'boolean',
+        'is_promo' => 'boolean',
         // Описание сгенерировано: на сайте не показывается, пока его не одобрят в админке
         'description_generated' => 'boolean',
     ];

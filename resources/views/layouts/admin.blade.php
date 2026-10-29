@@ -22,6 +22,9 @@
         'resources/js/app.js'
     ])
 
+    {{-- Скрипты отдельных экранов (редактор страниц) --}}
+    @stack('head')
+
 </head>
 
 <body class="bg-canvas text-ink" data-layout="admin">
@@ -36,6 +39,11 @@
         ['url' => '/admin/orders',        'label' => 'Заказы',       'icon' => 'heroicon-o-clipboard-document-list', 'active' => ['admin/orders', 'admin/order/*']],
         ['url' => '/admin/organizations', 'label' => 'Клиенты',      'icon' => 'heroicon-o-building-office-2',       'active' => ['admin/organizations', 'admin/organization/*']],
         ['url' => '/admin/users',         'label' => 'Пользователи', 'icon' => 'heroicon-o-users',                   'active' => ['admin/users', 'admin/user/*']],
+        ['url' => '/admin/partners',      'label' => 'Заявки',       'icon' => 'heroicon-o-briefcase',               'active' => ['admin/partners', 'admin/partner/*']],
+        ['url' => '/admin/categories',    'label' => 'Категории',    'icon' => 'heroicon-o-folder',                  'active' => ['admin/categories', 'admin/category/*']],
+        ['url' => '/admin/banners',       'label' => 'Баннеры',      'icon' => 'heroicon-o-photo',                   'active' => ['admin/banners', 'admin/banner/*']],
+        ['url' => '/admin/pages',         'label' => 'Страницы',     'icon' => 'heroicon-o-document-text',           'active' => ['admin/pages', 'admin/page/*']],
+        ['url' => '/admin/settings',      'label' => 'Настройки',    'icon' => 'heroicon-o-cog-6-tooth',             'active' => ['admin/settings']],
     ];
 @endphp
 

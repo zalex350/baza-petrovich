@@ -98,6 +98,13 @@
                 :checked="$notify('notify_cancel_request')"
             />
 
+            <x-checkbox
+                name="notify_partner_request"
+                label="Заявка партнёра"
+                hint="Письмо о новой заявке «Стать партнёром» с сайта."
+                :checked="$notify('notify_partner_request')"
+            />
+
             <p class="text-sm text-slate-500">Письма уходят на email пользователя: {{ $user->email ?: 'указанный выше' }}.</p>
 
         </fieldset>

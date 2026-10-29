@@ -157,6 +157,13 @@
             :checked="$user->notify_cancel_request"
         />
 
+        <x-checkbox
+            name="notify_partner_request"
+            label="Заявка партнёра"
+            hint="Письмо о новой заявке «Стать партнёром» с сайта."
+            :checked="$user->notify_partner_request"
+        />
+
         <x-button size="sm">Сохранить</x-button>
     </form>
 

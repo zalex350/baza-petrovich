@@ -4,8 +4,29 @@
 // На десктопе фильтр применяется сразу; на мобильном — кнопкой «Показать товары».
 // Позиция прокрутки списка запоминается при переходе в карточку товара и
 // восстанавливается при возврате по «← Вернуться к списку» (BR-084).
+// Вид списка (плитка / список) — параметр view в URL; выбор запоминается в localStorage
+// и применяется, когда список открыт без параметра. «Показать ещё» догружает следующую
+// страницу под список, обновляет пагинацию и URL.
 
 const SCROLL_KEY = 'catalog-scroll';
+const VIEW_KEY = 'catalog-view';
+
+const view = {
+    read() {
+        try {
+            return localStorage.getItem(VIEW_KEY);
+        } catch {
+            return null;
+        }
+    },
+    write(value) {
+        try {
+            localStorage.setItem(VIEW_KEY, value);
+        } catch {
+            // без localStorage вид держится только в URL
+        }
+    },
+};
 const DEBOUNCE = 400; // мс — ввод «от/до» применяется не на каждую цифру
 
 const storage = {
@@ -55,15 +76,32 @@ export default () => ({
 
     init() {
         this.restoreScroll();
+        this.applyView();
 
         window.addEventListener('popstate', () => this.load(location.href, { push: false }));
 
         // Ссылки чипов, «Сбросить всё», пагинации — без перезагрузки
         // $root, а не $el: в обработчиках событий $el — элемент события
         this.$root.addEventListener('click', (event) => {
+            const plain = ! event.ctrlKey && ! event.metaKey && ! event.shiftKey && event.button === 0;
+            const more = event.target.closest('a[data-load-more]');
+
+            if (more && plain) {
+                event.preventDefault();
+                this.loadMore(more);
+
+                return;
+            }
+
+            const switcher = event.target.closest('a[data-view]');
+
+            if (switcher) {
+                view.write(switcher.dataset.view);
+            }
+
             const link = event.target.closest('a[data-catalog-link], [data-pagination] a[href]');
 
-            if (link && ! event.ctrlKey && ! event.metaKey && ! event.shiftKey && event.button === 0) {
+            if (link && plain) {
                 event.preventDefault();
                 this.open = false;
                 this.load(link.href, { scrollTop: link.closest('[data-pagination]') !== null });
@@ -76,6 +114,79 @@ export default () => ({
                 storage.write({ url: location.pathname + location.search, y: window.scrollY });
             }
         });
+    },
+
+    // Открыт без ?view — применить сохранённый выбор «плитка»
+    applyView() {
+        const url = new URL(location.href);
+
+        if (url.searchParams.has('view')) {
+            view.write(url.searchParams.get('view') === 'grid' ? 'grid' : 'list');
+
+            return;
+        }
+
+        if (view.read() === 'grid') {
+            url.searchParams.set('view', 'grid');
+            url.searchParams.delete('page');
+            history.replaceState({ catalog: true }, '', url);
+            this.load(url.href, { push: false });
+        }
+    },
+
+    // «Показать ещё»: товары следующей страницы — в конец списка, пагинация и кнопка — новые
+    async loadMore(link) {
+        if (this.loading) {
+            return;
+        }
+
+        this.loading = true;
+
+        try {
+            const response = await fetch(link.href, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'text/html' },
+            });
+
+            if (! response.ok) {
+                throw new Error(response.status);
+            }
+
+            const html = new DOMParser().parseFromString(await response.text(), 'text/html');
+            const list = this.$root.querySelector('[data-product-list]');
+            const fresh = html.querySelector('[data-product-list]');
+
+            if (! list || ! fresh) {
+                throw new Error('list');
+            }
+
+            list.append(...fresh.children);
+
+            for (const selector of ['[data-pagination]']) {
+                const part = html.querySelector(selector);
+                const current = this.$root.querySelector(selector);
+
+                if (part && current) {
+                    current.innerHTML = part.innerHTML;
+                }
+            }
+
+            const wrap = this.$root.querySelector('[data-load-more-wrap]');
+            const nextWrap = html.querySelector('[data-load-more-wrap]');
+
+            if (wrap) {
+                if (nextWrap) {
+                    wrap.innerHTML = nextWrap.innerHTML;
+                } else {
+                    wrap.remove();
+                }
+            }
+
+            history.pushState({ catalog: true }, '', link.href);
+        } catch {
+            location.href = link.href;
+        } finally {
+            this.loading = false;
+        }
     },
 
     isDesktop() {
