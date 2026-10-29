@@ -25,14 +25,14 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        // Только свои ФИО и телефон (BR-116): email, роль, организация не принимаются
+        $data = $request->validated();
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
-        }
+        $request->user()->forceFill([
+            'name' => trim($data['name']),
+            'phone' => filled($data['phone'] ?? null) ? trim($data['phone']) : null,
+        ])->save();
 
-        $request->user()->save();
-
-        return Redirect::route('profile.edit')->with('status', 'profile-updated');
+        return Redirect::route('profile.edit')->with('success', 'Профиль сохранён');
     }
 }

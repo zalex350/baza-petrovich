@@ -31,9 +31,13 @@
 | `/order/{id}/placed` | `OrderController@placed` | `order_placed` | — |
 | `/orders` | `OrderController@index` | `orders` (+ `partials/orders_table` ×2) | — |
 | `/order/{id}` | `OrderController@show` | `order_show` | `order/{id}/cancel-request`, `order/{id}/reorder` |
+| `/order/{id}/invoice` | `OrderController@invoice` | файл PDF (нет — назад с ERR-024) | — |
+| `/account/organization` | `AccountController@organization` | `account/organization` | — |
+| `/account/users` | `AccountController@users` | `account/users` | — |
+| `/account/password` | `AccountController@password` | `account/password` | `PUT password` |
 | `/addresses` | `DeliveryAddressController@index` | `addresses` (+ `partials/address_list`) | `addresses/{id}/default`, `addresses/{id}/delete` |
 | `/addresses/create`, `/addresses/{id}/edit` | `…@create`, `…@edit` | `address_form` (+ `partials/address_fields`) | `addresses`, `addresses/{id}` |
-| `/profile` | `ProfileController@edit` | `profile/edit` (+ 2 partials на Breeze-компонентах) | `PATCH profile`, `PUT password` |
+| `/profile` | `ProfileController@edit` | `profile/edit` | `PATCH profile` |
 | `/dashboard` | замыкание | редирект на `/catalog` | — |
 
 ### Админка (`/admin`, auth + admin)
@@ -44,7 +48,7 @@
 | `/admin/product/create`, `/admin/product/{id}` | `…@create`, `…@show` | `admin/product_form` (+ `vat_rate_select`, `admin_product_attributes`, `admin_product_images`, `image_queue`) | `product`, `product/{id}`, `draft`, `draft/delete`, `publish`, `images…` (store/reorder/main/move/replace/delete) |
 | `/admin/product/{id}/preview` | `…@preview` | `product` (витринный, `$preview`) | — |
 | `/admin/orders` | `AdminOrderController@index` | `admin/orders` | — |
-| `/admin/order/{id}` | `…@show` | `admin/order` (+ `order_items`, `order_delivery`, `order_history`) | `order/{id}`, `status`, `cancel-request/approve`, `cancel-request/reject` |
+| `/admin/order/{id}` | `…@show` | `admin/order` (+ `order_items`, `order_delivery`, `order_history`) | `order/{id}`, `status`, `cancel-request/approve`, `cancel-request/reject`, `invoice`, `invoice/delete` (GET `invoice` — скачать) |
 | `/admin/organizations` | `AdminOrganizationController@index` | `admin/organizations` | — |
 | `/admin/organization/{id}` | `…@show` | `admin/organization` (+ `address_list`) | `organization/{id}/delete` |
 | `/admin/organization/create`, `…/{id}/edit` | `…@create`, `…@edit` | `admin/organization_form` | `organization`, `organization/{id}` |

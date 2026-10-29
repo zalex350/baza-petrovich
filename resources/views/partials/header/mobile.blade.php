@@ -132,12 +132,18 @@
                         @endif
                     </div>
 
-                    <a href="/orders" class="block px-4 py-3 pl-12 hover:bg-canvas">Кабинет</a>
-                    <a href="/orders" class="block px-4 py-3 pl-12 hover:bg-canvas">Мои заказы</a>
-                    @if($user->isClient())
-                        <a href="/addresses" class="block px-4 py-3 pl-12 hover:bg-canvas">Адреса доставки</a>
-                    @endif
-                    <a href="{{ route('profile.edit') }}" class="block px-4 py-3 pl-12 hover:bg-canvas">Профиль</a>
+                    {{-- Разделы кабинета — тот же список, что в меню кабинета и в шапке --}}
+                    @foreach($accountMenu as $item)
+                        <a
+                            href="{{ $item['url'] }}"
+                            @class(['flex items-center gap-3 px-4 py-3', 'font-semibold text-link' => $item['active'], 'hover:bg-canvas' => ! $item['active']])
+                            @if($item['active']) aria-current="page" @endif
+                            data-mobile-account-item
+                        >
+                            @svg($item['icon'], 'w-5 h-5 text-ink-muted')
+                            {{ $item['label'] }}
+                        </a>
+                    @endforeach
 
                     @if($user->isAdmin())
                         <a href="/admin/products" class="flex items-center gap-3 px-4 py-3 hover:bg-canvas" data-admin-link>

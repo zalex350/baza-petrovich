@@ -60,6 +60,17 @@
         </div>
     </div>
 
+    {{-- Итог «Повторить заказ» (OrderController::reorder): что не добавлено или изменено --}}
+    @if(session('reorder_issues'))
+        <x-alert type="warning" title="Не всё из заказа {{ session('reorder_number') }} добавлено как было" class="mb-4" data-reorder-issues>
+            <ul class="mt-1 list-disc space-y-0.5 pl-5">
+                @foreach(session('reorder_issues') as $issue)
+                    <li>«{{ $issue['name'] }}» — {{ $issue['reason'] }}</li>
+                @endforeach
+            </ul>
+        </x-alert>
+    @endif
+
 @if($items->isEmpty())
 
     {{-- Пустая корзина: «Добавить по артикулу» — над пустым состоянием --}}

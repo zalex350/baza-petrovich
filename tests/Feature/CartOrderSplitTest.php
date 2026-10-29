@@ -446,7 +446,8 @@ class CartOrderSplitTest extends TestCase
         $this->actingAs($this->client)
             ->post("/order/{$order->id}/reorder")
             ->assertRedirect('/order')
-            ->assertSessionHas('warning', 'недоступен: Grohe Start');
+            ->assertSessionHas('reorder_issues', [['name' => 'Grohe Start', 'reason' => 'снят с продажи']])
+            ->assertSessionHas('error');
 
         $this->assertSame(0, CartItem::count());
     }

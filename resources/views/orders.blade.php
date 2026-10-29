@@ -1,65 +1,47 @@
-@extends('layouts.app')
+@extends('layouts.account')
 
 @section('title', 'Мои заказы')
 
-@section('content')
+{{--
+    Заказы организации (BR-113, BR-114): видны заказы всех пользователей организации,
+    «Оформил» — кто именно. Активные сверху, завершённые и отменённые — в архиве.
+    Данные: OrderController::index — $activeOrders, $archivedOrders.
+--}}
 
-<h1 class="text-3xl font-bold mb-6">
-    Мои заказы
-</h1>
+@section('account')
 
-@if(!$activeOrders->count() && !$archivedOrders->count())
+<h1 class="text-3xl font-bold tracking-tight mb-1">Мои заказы</h1>
 
-    <div class="bg-white border rounded p-6">
+@if(auth()->user()->organization)
+    <p class="mb-5 text-ink-muted">Заказы всех сотрудников {{ auth()->user()->organization->name }}.</p>
+@endif
 
-        <p>
-            Заказов пока нет
-        </p>
+@if(! $activeOrders->count() && ! $archivedOrders->count())
 
-    </div>
+    <x-empty-state title="Заказов пока нет" icon="clipboard-document-list" data-orders-empty>
+        Оформленные заказы организации появятся здесь.
+        <x-slot:action>
+            <x-button :href="route('catalog.index')">Перейти в каталог</x-button>
+        </x-slot:action>
+    </x-empty-state>
 
 @else
 
-    {{-- Активные заказы --}}
+    <section class="mb-8" data-orders-active>
+        <h2 class="mb-3 text-xl font-bold">Активные</h2>
 
-    <div class="mb-10">
-
-        <h2 class="text-2xl font-bold mb-4">
-            Активные заказы
-        </h2>
-
-        @if(!$activeOrders->count())
-
-            <div class="bg-white border rounded p-6">
-
-                <p>
-                    Нет активных заказов
-                </p>
-
-            </div>
-
+        @if(! $activeOrders->count())
+            <x-empty-state title="Нет активных заказов" icon="inbox" />
         @else
-
             @include('partials.orders_table', ['orders' => $activeOrders])
-
         @endif
-
-    </div>
-
-    {{-- Архив --}}
+    </section>
 
     @if($archivedOrders->count())
-
-        <div>
-
-            <h2 class="text-2xl font-bold mb-4">
-                Архив
-            </h2>
-
+        <section data-orders-archive>
+            <h2 class="mb-3 text-xl font-bold">Архив</h2>
             @include('partials.orders_table', ['orders' => $archivedOrders])
-
-        </div>
-
+        </section>
     @endif
 
 @endif

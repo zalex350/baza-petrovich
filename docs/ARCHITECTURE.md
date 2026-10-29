@@ -315,6 +315,7 @@ erDiagram
 | `orders` | Адрес и суммы — снимок на момент оформления. `total` устарел, на экранах — `total_*`. На `user_id` нет внешнего ключа |
 | `order_items` | Снимок названия, артикула, цены и НДС; `product_id` может стать `null` |
 | `order_sequences` | Счётчик номеров заказов по годам (`Order::nextNumber`) |
+| `order_invoices` | Счёт на оплату, один на заказ: PDF в закрытом хранилище, `source` (`manual` / `erp`), `external_id` (номер в 1С), `uploaded_by` |
 | `user_invitation_tokens` | Брокер приглашений: токен хешем, рядом `token_encrypted` (APP_KEY) для показа ссылки |
 | `product_stocks` | Наследие тестовых данных (`catalog:fill-test-data`), в логике магазина не используется |
 | `categories.image` | Картинка категории (webp) — плитки подкатегорий; в дереве меню (`CatalogMenu`) — поле `image` |

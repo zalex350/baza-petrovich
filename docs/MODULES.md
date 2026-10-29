@@ -193,6 +193,7 @@
 | Отмена | Возвращает остаток на склад (`stock_returned_at` защищает от повторного возврата) |
 | Запрос отмены | Клиент сам не отменяет (BR-133: и не удаляет): запрос с причиной до 1000 символов, только оформивший, только в статусах «Новый» и «Подтверждён», один открытый запрос. Решает администратор: одобрить (→ Отменён) или отклонить с комментарием |
 | Ручные статусы | `SHOP_ORDERS_MANUAL_STATUS=false` отключает смену статусов в админке (на будущее — статусы из 1С) |
+| Счёт на оплату | `OrderInvoice` (один на заказ): PDF до 10 МБ в закрытом хранилище (диск `local`, `invoices/{order_id}/`). В админке заказа — загрузить, заменить, удалить, скачать. `source`: `manual` / `erp` (из 1С, `external_id`) — `OrderInvoice::attach()` |
 
 Тесты: `OrderStatusTest`, `OrderCancelRequestTest`, `OrderStatusMigrationTest`, `OrderItemWithoutProductTest`.
 
@@ -200,27 +201,35 @@
 
 ## 7. Кабинет клиента
 
-**Назначение.** Заказы организации, повтор заказа, адреса доставки, профиль.
+**Назначение.** Личный кабинет (SRS §8): заказы организации, повтор заказа, счёт, организация и её пользователи, адреса доставки, профиль, смена пароля.
+
+Меню кабинета (`layouts/account`): слева на десктопе, вкладками сверху на телефоне — Мои заказы · Организация · Пользователи организации · Адреса доставки · Профиль · Смена пароля. Тот же список (`App\Support\AccountMenu`) — в меню пользователя в шапке и в панели ☰; главное меню витрины остаётся над кабинетом. Пункты организации — только клиенту с организацией; администратору — профиль и пароль (заказов у него нет, BR-121).
 
 | | |
 |---|---|
-| Маршруты (auth) | `GET /orders`, `GET /order/{id}`, `POST /order/{id}/cancel-request`, `POST /order/{id}/reorder`, `GET/PATCH /profile`, `PUT /password`, `/account` (→ `/orders`) |
-| Маршруты (auth + `role:client`) | `GET /addresses`, `/addresses/create`, `/addresses/{id}/edit`; `POST /addresses`, `/addresses/{id}`, `/addresses/{id}/default`, `/addresses/{id}/delete` |
-| Контроллеры | `OrderController`, `DeliveryAddressController`, `ProfileController` |
-| Модели | `Order` (`visibleTo`), `DeliveryAddress` (`createFor`, правила полей общие с админкой) |
-| Шаблоны | `orders` (+ `partials/orders_table`: активные и архив), `order_show`, `addresses`, `address_form`, `partials/address_list`, `partials/address_fields`, `profile/edit` |
+| Маршруты (auth) | `GET /orders`, `GET /order/{id}`, `GET /order/{id}/invoice`, `POST /order/{id}/cancel-request`, `POST /order/{id}/reorder`, `GET/PATCH /profile`, `GET /account/password`, `PUT /password`, `/account` (→ `/orders`) |
+| Маршруты (auth + `role:client`) | `GET /account/organization`, `GET /account/users`; `GET /addresses`, `/addresses/create`, `/addresses/{id}/edit`; `POST /addresses`, `/addresses/{id}`, `/addresses/{id}/default`, `/addresses/{id}/delete` |
+| Контроллеры | `OrderController`, `AccountController`, `DeliveryAddressController`, `ProfileController`, `Auth\PasswordController` |
+| Сервисы | `ReorderService` (повтор через `CartValidator`), `UserInvitations` (статус «приглашён») |
+| Модели | `Order` (`visibleTo`), `OrderInvoice`, `DeliveryAddress` (`createFor`, правила полей общие с админкой) |
+| Шаблоны | `layouts/account`, `orders` (+ `partials/orders_table`: активные и архив), `order_show`, `account/organization`, `account/users`, `account/password`, `addresses`, `address_form`, `partials/address_list`, `partials/address_fields`, `profile/edit` |
 
 Ключевые правила:
 
 | Правило | Суть |
 |---|---|
-| BR-113, BR-114 | Клиент видит все заказы своей организации; без организации — только свои |
+| BR-113, BR-114 | Клиент видит все заказы своей организации (колонка «Оформил»); без организации — только свои; заказ, счёт и повтор чужой организации — 404 |
 | Архив | Заказы в финальных статусах (Выполнен, Отменён) — отдельным списком |
-| Повтор | `reorder` добавляет в корзину позиции старого заказа; недоступные и отсутствующие на складе пропускаются с предупреждением |
+| Повтор (§8.11, UC-036) | «Повторить» в списке и карточке: позиции — в текущую корзину через `CartValidator` (публикация, цена — текущая, остаток, `min_qty`/`qty_step`); количество — вверх до кратности, вниз до остатка с учётом корзины. Итог в корзине: «Добавлено: N позиций» и список с причинами (снят с продажи, нет в наличии, количество скорректировано до X, цена изменилась). Исходный заказ не меняется (BR-118); администратору недоступно |
+| Счёт (§8.10, UC-035) | Есть — «Скачать счёт» (файл из закрытого хранилища, только своей организации), нет — «Счёт ещё не сформирован» (ERR-024) |
+| Организация (§8.5) | Реквизиты — только просмотр |
+| Пользователи (UC-031) | ФИО, email, роль, статус (активен / заблокирован / приглашён, пароль не установлен) — только просмотр; создаёт и блокирует администратор (BR-115) |
+| Профиль (§8.12, BR-116) | Меняются только свои ФИО и телефон; email — только просмотр |
+| Пароль (§8.13) | Текущий пароль, новый (`Password::defaults()`) с повтором |
 | UC-032 | Адреса — только своей организации; у организации ровно один адрес по умолчанию, пока адреса есть; первый адрес становится им сам; при удалении адреса по умолчанию им становится самый старый из оставшихся |
 | Профиль | Удаления своей учётной записи нет: B2B-учётки блокирует администратор |
 
-Тесты: `OrganizationOrdersTest`, `DeliveryAddressTest`, `ProfileTest`, `FormatsTest`.
+Тесты: `AccountTest`, `ReorderTest`, `OrderInvoiceTest`, `OrganizationOrdersTest`, `DeliveryAddressTest`, `ProfileTest`, `Auth/PasswordUpdateTest`, `FormatsTest`.
 
 ---
 

@@ -1,8 +1,8 @@
-@extends('layouts.app')
+@extends('layouts.account')
 
 @section('title', 'Адреса доставки')
 
-@section('content')
+@section('account')
 
 <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
 
