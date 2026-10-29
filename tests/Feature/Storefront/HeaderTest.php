@@ -46,7 +46,7 @@ class HeaderTest extends TestCase
             ->assertDontSee('Войти')
             ->assertSee('Иван Клиентов')
             ->assertSee('ООО Сантехторг')
-            ->assertSeeInOrder(['Кабинет', 'Мои заказы', 'Профиль', 'Выход']);
+            ->assertSeeInOrder(['Личный кабинет', 'Мои заказы', 'Организация', 'Пользователи организации', 'Адреса доставки', 'Профиль', 'Смена пароля', 'Выход']);
     }
 
     public function test_admin_sees_admin_panel_link(): void

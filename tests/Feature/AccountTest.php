@@ -56,15 +56,39 @@ class AccountTest extends TestCase
         }
     }
 
+    public function test_cabinet_menu_is_in_header_dropdown_and_mobile_panel(): void
+    {
+        $html = $this->actingAs($this->client)->get('/account/users')->assertOk()->getContent();
+
+        // Шапка (десктоп): меню пользователя — те же 6 разделов, текущий подсвечен
+        $this->assertSame(6, substr_count($html, 'data-user-menu-item'));
+        $this->assertMatchesRegularExpression('#href="/account/users"[^>]*aria-current="page"[^>]*data-user-menu-item#s', $html);
+
+        // Панель ☰ (телефон) — тоже 6
+        $this->assertSame(6, substr_count($html, 'data-mobile-account-item'));
+
+        // Главное меню витрины остаётся над кабинетом
+        $this->assertStringContainsString('data-main-menu', $html);
+
+        // Вне кабинета ни один раздел не подсвечен
+        $home = $this->actingAs($this->client)->get('/')->getContent();
+        $this->assertDoesNotMatchRegularExpression('#aria-current="page"[^>]*data-user-menu-item#s', $home);
+    }
+
     public function test_admin_has_only_profile_and_password_sections(): void
     {
         $admin = User::factory()->admin()->create();
 
-        $this->actingAs($admin)->get('/profile')
+        $html = $this->actingAs($admin)->get('/profile')
             ->assertOk()
             ->assertDontSee('href="/account/organization"', false)
             ->assertDontSee('href="/addresses"', false)
-            ->assertSee('href="/account/password"', false);
+            ->assertSee('href="/account/password"', false)
+            ->getContent();
+
+        // Заказов и корзины у администратора нет (BR-121): в меню — только профиль и пароль
+        $this->assertSame(2, substr_count($html, 'data-account-item'));
+        $this->assertSame(2, substr_count($html, 'data-user-menu-item'));
 
         $this->actingAs($admin)->get('/account/organization')->assertForbidden();
         $this->actingAs($admin)->get('/account/users')->assertForbidden();

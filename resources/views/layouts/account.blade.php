@@ -1,23 +1,15 @@
 {{--
     Личный кабинет (SRS «4. Личный кабинет», §8): меню разделов слева на десктопе,
     вкладками с прокруткой сверху на телефоне; содержимое — @section('account').
-    Пункты организации (реквизиты, пользователи, адреса) — только клиенту с организацией.
+    Пункты — App\Support\AccountMenu (тот же список — в меню пользователя в шапке и в панели ☰).
     Страница: @extends('layouts.account') + @section('title') + @section('account').
 --}}
 @extends('layouts.app')
 
 @php
     $user = auth()->user();
-    $hasOrganization = $user->isClient() && $user->organization_id;
 
-    $accountMenu = array_values(array_filter([
-        ['label' => 'Мои заказы', 'url' => '/orders', 'icon' => 'heroicon-o-clipboard-document-list', 'active' => request()->is('orders') || request()->is('order/*')],
-        $hasOrganization ? ['label' => 'Организация', 'url' => '/account/organization', 'icon' => 'heroicon-o-building-office-2', 'active' => request()->is('account/organization')] : null,
-        $hasOrganization ? ['label' => 'Пользователи организации', 'url' => '/account/users', 'icon' => 'heroicon-o-users', 'active' => request()->is('account/users')] : null,
-        $user->isClient() ? ['label' => 'Адреса доставки', 'url' => '/addresses', 'icon' => 'heroicon-o-map-pin', 'active' => request()->is('addresses*')] : null,
-        ['label' => 'Профиль', 'url' => '/profile', 'icon' => 'heroicon-o-user', 'active' => request()->is('profile')],
-        ['label' => 'Смена пароля', 'url' => '/account/password', 'icon' => 'heroicon-o-key', 'active' => request()->is('account/password')],
-    ]));
+    $accountMenu = \App\Support\AccountMenu::items($user);
 @endphp
 
 @section('content')

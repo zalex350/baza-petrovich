@@ -11,7 +11,9 @@
     // Активный раздел (BR-008)
     $isCatalog = request()->is('catalog*') || request()->is('product/*');
     $isCart    = request()->is('order');
-    $isCabinet = request()->is('orders*') || request()->is('profile*') || request()->is('addresses*');
+    // Разделы кабинета — один список с меню кабинета (App\Support\AccountMenu)
+    $accountMenu = $user ? \App\Support\AccountMenu::items($user) : [];
+    $isCabinet = $user && \App\Support\AccountMenu::isActive($user);
 
     // Главное меню: подпись, адрес, когда активен
     $mainMenu = [
@@ -151,16 +153,22 @@
                         x-show="open"
                         x-transition.origin.top.right
                         x-cloak
-                        class="absolute right-0 mt-2 w-56 bg-surface border border-line rounded-panel shadow-lg py-2 text-sm z-50"
+                        class="absolute right-0 mt-2 w-64 bg-surface border border-line rounded-panel shadow-lg py-2 text-sm z-50"
                         role="menu"
                     >
                         <div class="px-4 pb-2 mb-1 border-b border-line text-xs text-ink-muted">Личный кабинет</div>
-                        <a href="/orders" class="block px-4 py-2 hover:bg-canvas" role="menuitem">Кабинет</a>
-                        <a href="/orders" class="block px-4 py-2 hover:bg-canvas" role="menuitem">Мои заказы</a>
-                        @if($user->isClient())
-                            <a href="/addresses" class="block px-4 py-2 hover:bg-canvas" role="menuitem">Адреса доставки</a>
-                        @endif
-                        <a href="{{ route('profile.edit') }}" class="block px-4 py-2 hover:bg-canvas" role="menuitem">Профиль</a>
+                        @foreach($accountMenu as $item)
+                            <a
+                                href="{{ $item['url'] }}"
+                                @class(['flex items-center gap-2.5 px-4 py-2', 'bg-chip text-link font-medium' => $item['active'], 'hover:bg-canvas' => ! $item['active']])
+                                role="menuitem"
+                                @if($item['active']) aria-current="page" @endif
+                                data-user-menu-item
+                            >
+                                @svg($item['icon'], 'h-4 w-4 shrink-0 text-ink-muted')
+                                {{ $item['label'] }}
+                            </a>
+                        @endforeach
                         <form method="POST" action="{{ route('logout') }}" class="border-t border-line mt-1 pt-1">
                             @csrf
                             <button type="submit" class="w-full text-left px-4 py-2 text-danger hover:bg-canvas" role="menuitem">Выход</button>
