@@ -94,6 +94,11 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         [AdminOrderController::class, 'rejectCancel']
     );
 
+    // Счёт на оплату (SRS §8.10): загрузка PDF, удаление, проверка
+    Route::post('/admin/order/{id}/invoice', [AdminOrderController::class, 'uploadInvoice']);
+    Route::post('/admin/order/{id}/invoice/delete', [AdminOrderController::class, 'deleteInvoice']);
+    Route::get('/admin/order/{id}/invoice', [AdminOrderController::class, 'downloadInvoice']);
+
     Route::get(
         '/admin/products',
         [AdminProductController::class, 'index']

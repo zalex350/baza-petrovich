@@ -34,6 +34,12 @@ Route::middleware('auth')->group(function () {
         [OrderController::class, 'requestCancel']
     );
 
+    // Счёт на оплату (SRS §8.10, UC-035)
+    Route::get(
+        '/order/{id}/invoice',
+        [OrderController::class, 'invoice']
+    );
+
     Route::post(
         '/order/{id}/reorder',
         [OrderController::class, 'reorder']

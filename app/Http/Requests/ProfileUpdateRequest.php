@@ -2,35 +2,32 @@
 
 namespace App\Http\Requests;
 
-use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
+/**
+ * Профиль (SRS §8.12, BR-116): пользователь меняет только свои ФИО и телефон.
+ * Email (логин), роль и организация здесь не принимаются — их ведёт администратор.
+ */
 class ProfileUpdateRequest extends FormRequest
 {
     /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => [
-                'required',
-                'string',
-                'lowercase',
-                'email',
-                'max:255',
-                Rule::unique(User::class)->ignore($this->user()->id),
-            ],
+            'phone' => ['nullable', 'string', 'max:50', 'regex:/^[\d\s()+\-]*$/'],
         ];
     }
 
-    public function attributes(): array
+    public function messages(): array
     {
-        return ['name' => 'Имя'];
+        return [
+            'name.required' => 'Укажите ФИО',
+            'phone.regex' => 'Телефон — цифры, пробелы, скобки, «+» и «-»',
+            'phone.max' => 'Телефон — не длиннее 50 символов',
+        ];
     }
 }

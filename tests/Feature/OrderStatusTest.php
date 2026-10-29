@@ -451,7 +451,7 @@ class OrderStatusTest extends TestCase
             $this->actingAs($this->client)->get($url)
                 ->assertOk()
                 ->assertSee('Передан в 1С')
-                ->assertDontSee('sent_to_1c');
+                ->assertDontSeeText('sent_to_1c');
         }
 
         $this->actingAs($this->admin)->get('/admin/orders')

@@ -59,6 +59,14 @@ class Order extends Model
         'cancel_requested_at' => 'datetime',
     ];
 
+    /**
+     * Счёт на оплату (один на заказ) или null — «Счёт ещё не сформирован» (ERR-024).
+     */
+    public function invoice()
+    {
+        return $this->hasOne(OrderInvoice::class);
+    }
+
     public function items()
     {
         return $this->hasMany(\App\Models\OrderItem::class, 'order_id');

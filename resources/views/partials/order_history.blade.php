@@ -16,6 +16,8 @@
 
     @else
 
+        {{-- На телефоне таблица прокручивается внутри карточки --}}
+        <div class="-mx-6 overflow-x-auto px-6">
         <table class="w-full text-left">
 
             <thead class="border-b border-slate-200">
@@ -100,6 +102,7 @@
             </tbody>
 
         </table>
+        </div>
 
     @endif
 

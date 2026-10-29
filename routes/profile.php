@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\DeliveryAddressController;
 use App\Http\Controllers\ProfileController;
 
@@ -20,6 +21,9 @@ Route::middleware('auth')->group(function () {
 
     // Удаления своей учётной записи нет: B2B-учётки блокирует администратор
 
+    // Смена пароля (SRS §8.13): форма; сохраняет PUT /password (Auth\PasswordController)
+    Route::get('/account/password', [AccountController::class, 'password']);
+
 });
 
 /*
@@ -29,6 +33,10 @@ Route::middleware('auth')->group(function () {
 */
 
 Route::middleware(['auth', 'role:client'])->group(function () {
+
+    // Организация и её пользователи — только просмотр (SRS §8.5, UC-031)
+    Route::get('/account/organization', [AccountController::class, 'organization']);
+    Route::get('/account/users', [AccountController::class, 'users']);
 
     Route::get('/addresses', [DeliveryAddressController::class, 'index']);
 

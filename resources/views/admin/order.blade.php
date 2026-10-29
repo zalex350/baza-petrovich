@@ -260,6 +260,51 @@
 
 </div>
 
+
+{{-- Счёт на оплату (SRS §8.10, UC-035): PDF; позже — из 1С (OrderInvoice::source) --}}
+<div class="bg-white rounded-card border border-slate-200 p-card mb-6 space-y-4" data-admin-invoice>
+
+    <h2 class="text-xl font-semibold">Счёт на оплату</h2>
+
+    @if($order->invoice)
+        <div class="flex flex-wrap items-center gap-3 text-sm">
+            @svg('heroicon-o-document-text', 'h-6 w-6 text-ink-muted')
+            <a href="/admin/order/{{ $order->id }}/invoice" class="font-medium text-link hover:underline">{{ $order->invoice->original_name }}</a>
+            <span class="text-ink-muted">
+                {{ number_format($order->invoice->size / 1024, 0, ',', ' ') }} КБ ·
+                {{ $order->invoice->source->label() }}@if($order->invoice->uploader), {{ $order->invoice->uploader->name }}@endif ·
+                {{ date_ru($order->invoice->updated_at, time: true) }}
+            </span>
+            <x-confirm
+                :action="'/admin/order/'.$order->id.'/invoice/delete'"
+                label="Удалить"
+                title="Удалить счёт?"
+                confirm-label="Удалить"
+                variant="danger"
+                trigger-variant="link"
+                trigger-size="sm"
+            >
+                Клиент больше не сможет скачать счёт по заказу {{ $order->number }}.
+            </x-confirm>
+        </div>
+    @else
+        <p class="text-sm text-ink-muted" data-invoice-missing>Счёт не загружен — клиент видит «Счёт ещё не сформирован».</p>
+    @endif
+
+    <form method="POST" action="/admin/order/{{ $order->id }}/invoice" enctype="multipart/form-data" class="flex flex-wrap items-end gap-3">
+        @csrf
+        <x-file
+            name="invoice"
+            :label="$order->invoice ? 'Заменить счёт' : 'Загрузить счёт'"
+            accept="application/pdf"
+            hint="PDF до {{ intdiv(\App\Models\OrderInvoice::MAX_KB, 1024) }} МБ."
+            class="max-w-md"
+        />
+        <x-button>{{ $order->invoice ? 'Заменить' : 'Загрузить' }}</x-button>
+    </form>
+
+</div>
+
 @include('partials.order_history', ['order' => $order, 'showAuthor' => true])
 
 @include('partials.order_items', ['order' => $order, 'admin' => true])
