@@ -88,10 +88,18 @@ class AdminImportedProductSaveTest extends TestCase
     {
         $html = $this->actingAs($this->admin)->get("/admin/product/{$this->imported->id}")->getContent();
 
+        // Форма без цены сохраняется
         $this->actingAs($this->admin)
-            ->post("/admin/product/{$this->imported->id}", $this->browserFields($html, ['is_hit', 'is_promo']) + ['action' => 'draft'])
+            ->post("/admin/product/{$this->imported->id}", $this->browserFields($html) + ['action' => 'draft'])
             ->assertSessionHasNoErrors()
             ->assertSessionHas('success');
+
+        // Бейджи — сразу по галочке, независимо от цены
+        foreach (['is_hit', 'is_promo'] as $field) {
+            $this->actingAs($this->admin)
+                ->postJson("/admin/product/{$this->imported->id}/badge", ['field' => $field, 'value' => true])
+                ->assertOk();
+        }
 
         $product = $this->imported->fresh();
         $this->assertTrue($product->is_hit);

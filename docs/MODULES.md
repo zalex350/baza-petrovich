@@ -241,18 +241,20 @@
 
 | | |
 |---|---|
-| Маршруты | `GET /admin/products` (поиск `?q=` по артикулу, названию, бренду — вместе с фильтрами `?category=none`, `?name=none`, `?description=unapproved`, сохраняется в пагинации), `GET /admin/product/create`, `POST /admin/product`, `GET/POST /admin/product/{id}`, `POST …/draft`, `…/draft/delete`, `…/publish`, `GET …/preview`, `POST …/approve-description`, `…/toggle-visibility`, `…/delete`, `…/images*`, `…/documents*` |
+| Маршруты | `GET /admin/products` (поиск `?q=` по артикулу, названию, бренду — вместе с фильтрами `?category=none`, `?name=none`, `?description=unapproved`, сохраняется в пагинации), `GET /admin/product/create`, `POST /admin/product`, `GET/POST /admin/product/{id}`, `POST …/draft`, `…/draft/delete`, `…/publish`, `GET …/preview`, `POST …/approve-description`, `…/badge` (JSON), `…/toggle-visibility`, `…/delete`, `…/images*`, `…/documents*` |
 | Контроллеры | `AdminProductController`, `AdminProductImageController` (+ трейт `UploadsProductImages`) |
 | Сервисы | `ProductAttributes`, `Images\ProductImageService`, `Vat\VatCalculator` |
 | Модели | `Product`, `ProductDraft`, `ProductImage`, `ProductAttributeValue`, `ProductDocument` |
 | Шаблоны | `admin/products`, `admin/product_form`, `partials/admin_product_attributes`, `partials/admin_product_attribute_row`, `partials/admin_product_images`, `partials/admin_product_documents`, `partials/image_queue`, `partials/vat_rate_select`; предпросмотр — витринный `product` |
-| JS | `adminImages`, `imageQueue`, `attributeRows` |
+| JS | `adminImages`, `imageQueue`, `attributeRows`, `productBadges` |
 
 | Правило | Суть |
 |---|---|
-| Три группы полей | Поля 1С (`ERP_FIELDS`) сохраняются сразу; категория, slug, ХИТ, НОВИНКА — сразу; тексты сайта (`DRAFT_FIELDS`) — в черновик, на сайт после «Опубликовать» |
+| Три группы полей | Любая кнопка формы («Сохранить черновик», «Сохранить и предпросмотр», «Опубликовать») сохраняет всю форму: поля 1С (`ERP_FIELDS`), категорию и slug — сразу; тексты сайта (`DRAFT_FIELDS`) и характеристики — в черновик, на сайт после «Опубликовать» |
+| Бейджи | ХИТ, НОВИНКА, Акция у существующего товара — сразу по галочке (`POST …/badge`, `productBadges`): «Сохранено» или откат галочки с ошибкой; в форму товара не входят. У нового товара — вместе с товаром |
+| Проверка формы | Только серверная (`novalidate`): ошибки — у полей (кит), сверху alert «Проверьте выделенные поля»; ошибки фото — в блоке фото, характеристик — в блоке характеристик |
 | `manual_products` | При `false` поля 1С только для чтения, создание товара — 403 |
-| Цена | Обязательна у нового товара и у товара с ценой (стереть нельзя). У товара без цены (из импорта, цена придёт из 1С) поле может остаться пустым — форма сохраняет флаги, категорию и тексты; на витрине «Цена уточняется» |
+| Цена | У нового товара обязательна и больше 0 при любой кнопке (поле пустое, 0 не подставляется). У товара с ценой стереть нельзя. У товара без цены (из импорта, цена придёт из 1С) поле может остаться пустым — форма сохраняет флаги, категорию и тексты; на витрине «Цена уточняется» |
 | `is_new_locked` | «Новинка», заданная в админке, фиксируется, и импорт её не меняет |
 | Видимость | «Скрыть/показать» переключает `is_active`; удаление мягкое |
 | Описание | Сгенерированное импортом показывается на сайте после «Одобрить» (`description_generated = false`) |

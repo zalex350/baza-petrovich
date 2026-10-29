@@ -2,7 +2,9 @@
     Единая форма товара — создание и редактирование (SRS §10.4).
     «Данные учётной системы (1С)» — сохраняются сразу; при shop.catalog.manual_products = false
     только для просмотра, сервер их не принимает. «Данные сайта» — тексты идут в черновик
-    и попадают на сайт после публикации, фото применяются сразу.
+    и попадают на сайт после публикации, фото применяются сразу. Бейджи у существующего товара —
+    сразу по галочке (fetch, admin-product-badges.js), в форму не входят; у нового — с товаром.
+    Проверка — только серверная (novalidate): ошибки у полей, сверху alert «Проверьте выделенные поля».
     Поля связаны с <form id="product-form"> атрибутом form — поэтому формы блока фото
     (порядок, замена, удаление) стоят рядом, а не вложены.
     Данные: $product (новый — не сохранён), $categories, $draft (null у нового).
@@ -16,14 +18,12 @@
 
     // Тексты сайта: введённое → черновик → опубликованное
     $site = fn (string $field) => old($field, $draft?->data[$field] ?? $product->{$field});
-
-    // Ошибки фото показываются в блоке фото
-    $formErrors = collect($errors->getMessages())->except('images')->flatten();
-
-    $input = 'w-full border rounded px-3 py-2 disabled:bg-slate-50 disabled:text-slate-500';
 @endphp
 
 @section('title', $isNew ? 'Новый товар' : 'Редактирование товара')
+
+{{-- Ошибки — у полей (кит), характеристик и фото — в их блоках; сверху один alert (F-7) --}}
+@section('flash-validation', 'summary')
 
 @section('content')
 
@@ -38,23 +38,13 @@
     {{ $isNew ? 'Новый товар' : 'Редактирование товара' }}
 </h1>
 
-@if($formErrors->isNotEmpty())
-
-    <div class="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6">
-        <ul class="list-disc list-inside text-red-700 space-y-1">
-            @foreach($formErrors as $error)
-                <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    </div>
-
-@endif
-
+{{-- novalidate: проверку делает сервер, ошибки — текстом у полей, без подсказок браузера (F-7) --}}
 <form
     id="{{ $form }}"
     method="POST"
     action="{{ $isNew ? '/admin/product' : "/admin/product/{$product->id}" }}"
     enctype="multipart/form-data"
+    novalidate
 >
     @csrf
 </form>
@@ -70,56 +60,43 @@
         @if($locked)
             Приходят из 1С и здесь не редактируются.
         @else
-            Сохраняются сразу, без черновика. После подключения обмена с 1С будут приходить оттуда.
+            Сохраняются любой кнопкой внизу сразу, без черновика. После подключения обмена с 1С будут приходить оттуда.
         @endif
     </p>
 
     <div class="grid gap-6 md:grid-cols-2">
 
-        <div class="md:col-span-2">
-            <label for="f-name" class="block mb-2 font-semibold">Название (системное)</label>
-            <input id="f-name" type="text" name="name" form="{{ $form }}" value="{{ old('name', $product->name) }}" class="{{ $input }}" @disabled($locked) @unless($locked) required @endunless>
-        </div>
+        <x-input name="name" label="Название (системное)" :value="$product->name" :form="$form" :disabled="$locked" :required="! $locked" class="md:col-span-2" />
 
-        <div>
-            <label for="f-sku" class="block mb-2 font-semibold">Артикул (SKU)</label>
-            <input id="f-sku" type="text" name="sku" form="{{ $form }}" value="{{ old('sku', $product->sku) }}" class="{{ $input }}" @disabled($locked) @unless($locked) required @endunless>
-        </div>
+        <x-input name="sku" label="Артикул (SKU)" :value="$product->sku" :form="$form" :disabled="$locked" :required="! $locked" />
 
-        <div>
-            <label for="f-brand" class="block mb-2 font-semibold">Бренд</label>
-            <input id="f-brand" type="text" name="brand" form="{{ $form }}" value="{{ old('brand', $product->brand) }}" class="{{ $input }}" @disabled($locked)>
-        </div>
+        <x-input name="brand" label="Бренд" :value="$product->brand" :form="$form" :disabled="$locked" />
 
-        <div>
-            <label for="f-price" class="block mb-2 font-semibold">Цена без НДС, BYN</label>
-            {{-- У товара без цены (из импорта, цена придёт из 1С) поле не обязательно — иначе браузер
-                 не отправит форму и не сохранятся ни флаги, ни тексты (AdminProductController::erpRules) --}}
-            @php
-                $priceOptional = ! $isNew && $product->price === null;
-            @endphp
-            <input id="f-price" type="number" step="0.01" min="0" name="price" form="{{ $form }}" value="{{ old('price', $product->price) }}" class="{{ $input }}" @disabled($locked) @if(! $locked && ! $priceOptional) required @endif @if($priceOptional) aria-describedby="f-price-hint" @endif>
-            @if($priceOptional)
-                <p id="f-price-hint" class="text-sm text-slate-500 mt-1" data-price-optional>Цены нет — на сайте «Цена уточняется», заказать товар нельзя. Можно сохранить без цены.</p>
-            @endif
-        </div>
+        {{-- Цена нового товара — обязательна и больше 0 при любой кнопке (F-6). У товара без цены
+             (из импорта, цена придёт из 1С) поле не обязательно (AdminProductController::erpRules) --}}
+        @php
+            $priceOptional = ! $isNew && $product->price === null;
+        @endphp
+        <x-input
+            name="price"
+            type="number"
+            step="0.01"
+            :min="$isNew ? '0.01' : '0'"
+            label="Цена без НДС, BYN"
+            :value="$product->price"
+            :hint="$priceOptional ? 'Цены нет — на сайте «Цена уточняется», заказать товар нельзя. Можно сохранить без цены.' : ($isNew ? 'Обязательна, больше 0.' : null)"
+            :form="$form"
+            :disabled="$locked"
+            :required="! $locked && ! $priceOptional"
+        />
 
-        <div>
-            <label for="f-vat" class="block mb-2 font-semibold">Ставка НДС, %</label>
+        <x-field id="f-vat" label="Ставка НДС, %" error="vat_rate" :required="! $locked">
             @include('partials.vat_rate_select', ['current' => old('vat_rate', $product->vat_rate), 'form' => $form, 'disabled' => $locked, 'id' => 'f-vat'])
-            @error('vat_rate')
-                <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
-            @enderror
-        </div>
+        </x-field>
 
-        <div>
-            <label for="f-stock" class="block mb-2 font-semibold">Остаток</label>
-            <input id="f-stock" type="number" min="0" name="stock" form="{{ $form }}" value="{{ old('stock', $product->stock) }}" class="{{ $input }}" @disabled($locked) @unless($locked) required @endunless>
-            <label class="flex items-center gap-2 mt-2 text-sm">
-                <input type="hidden" name="on_order" value="0" form="{{ $form }}" @disabled($locked)>
-                <input type="checkbox" name="on_order" value="1" form="{{ $form }}" @checked(old('on_order', $product->on_order)) @disabled($locked)>
-                Под заказ, когда остатка нет
-            </label>
+        <div class="space-y-2">
+            <x-input name="stock" type="number" min="0" step="1" label="Остаток" :value="$product->stock" :form="$form" :disabled="$locked" :required="! $locked" />
+            <x-checkbox name="on_order" label="Под заказ, когда остатка нет" :checked="$product->on_order" :form="$form" :disabled="$locked" />
         </div>
 
         {{-- Кратность заказа: поле количества на витрине (x-qty) начинается с default_qty и шагает от min_qty на qty_step --}}
@@ -144,7 +121,8 @@
         @if($isNew)
             Новый товар сохраняется как черновик и не отображается на сайте до публикации.
         @else
-            Тексты сохраняются в черновик и попадают на сайт после публикации. Категория и адрес страницы — сразу.
+            Тексты и характеристики сохраняются кнопками внизу в черновик и попадают на сайт после публикации.
+            Категория и адрес страницы — теми же кнопками, сразу. Бейджи — сразу по галочке.
         @endif
     </p>
 
@@ -156,45 +134,53 @@
 
     <div class="space-y-6">
 
+        <x-select
+            name="category_id"
+            id="f-category"
+            label="Категория"
+            :options="$categories->pluck('name', 'id')"
+            :value="$product->category_id"
+            placeholder="— не выбрана —"
+            hint="Раздел каталога на сайте — задаётся здесь, из 1С не приходит. Сохраняется кнопками внизу, без черновика."
+            :form="$form"
+        />
+
+        {{-- Бейджи: у нового товара — вместе с товаром (кнопки внизу); у существующего — сразу
+             по галочке (admin-product-badges.js), в форму товара не входят --}}
+        @if($isNew)
+            <fieldset data-product-badges>
+                <legend class="mb-2 font-semibold">Бейджи на витрине</legend>
+                <p class="text-sm text-slate-500 mb-3">Сохраняются вместе с товаром.</p>
+                <div class="flex flex-wrap gap-6">
+                    <x-checkbox name="is_hit" label="ХИТ" :form="$form" />
+                    <x-checkbox name="is_new" label="НОВИНКА" :form="$form" />
+                    <x-checkbox name="is_promo" label="Акция (бейдж «%», страница «Акции»)" :form="$form" />
+                </div>
+            </fieldset>
+        @else
+            <fieldset
+                data-product-badges
+                x-data="productBadges('/admin/product/{{ $product->id }}/badge')"
+                data-csrf="{{ csrf_token() }}"
+            >
+                <legend class="mb-2 font-semibold">Бейджи на витрине</legend>
+                <p class="text-sm text-slate-500 mb-3">
+                    Сохраняются сразу при отметке галочки — кнопки внизу для них не нужны.
+                    <span x-show="status" x-cloak x-text="status" :class="statusError ? 'text-red-600' : 'text-green-700'" class="ml-2 font-medium" role="status" data-badges-status></span>
+                </p>
+                <div class="flex flex-wrap gap-6">
+                    <x-checkbox name="is_hit" label="ХИТ" :checked="$product->is_hit" :unchecked="false" x-on:change="save($event.target)" />
+                    <x-checkbox name="is_new" label="НОВИНКА" :checked="$product->is_new" :unchecked="false" x-on:change="save($event.target)" />
+                    <x-checkbox name="is_promo" label="Акция (бейдж «%», страница «Акции»)" :checked="$product->is_promo" :unchecked="false" x-on:change="save($event.target)" />
+                </div>
+            </fieldset>
+        @endif
+
+        <x-input name="display_name" label="Отображаемое название" hint="Если задано — показывается на сайте вместо системного." :value="$site('display_name')" :form="$form" />
+
+        <x-input name="slug" label="Адрес страницы (slug)" hint="Сохраняется кнопками внизу, без черновика." :value="$product->slug" :form="$form" />
+
         <div>
-            <label for="f-category" class="block mb-2 font-semibold">Категория</label>
-            <select id="f-category" name="category_id" form="{{ $form }}" class="{{ $input }}">
-                <option value="">— не выбрана —</option>
-                @foreach($categories as $category)
-                    <option value="{{ $category->id }}" @selected(old('category_id', $product->category_id) == $category->id)>
-                        {{ $category->name }}
-                    </option>
-                @endforeach
-            </select>
-            <p class="text-sm text-slate-500 mt-1">Раздел каталога на сайте — задаётся здесь, из 1С не приходит.</p>
-        </div>
-
-        <fieldset data-product-badges>
-            <legend class="mb-2 font-semibold">Бейджи на витрине</legend>
-            <p class="text-sm text-slate-500 mb-3">Сохраняются сразу, без черновика.</p>
-            <div class="flex flex-wrap gap-6">
-                <x-checkbox name="is_hit" label="ХИТ" :checked="$product->is_hit" :form="$form" />
-                <x-checkbox name="is_new" label="НОВИНКА" :checked="$product->is_new" :form="$form" />
-                <x-checkbox name="is_promo" label="Акция (бейдж «%», страница «Акции»)" :checked="$product->is_promo" :form="$form" />
-            </div>
-        </fieldset>
-
-        <div>
-            <label for="f-display-name" class="block mb-2 font-semibold">
-                Отображаемое название
-                <span class="text-slate-400 font-normal text-sm">(если задано — показывается на сайте вместо системного)</span>
-            </label>
-            <input id="f-display-name" type="text" name="display_name" form="{{ $form }}" value="{{ $site('display_name') }}" class="{{ $input }}">
-        </div>
-
-        <div>
-            <label for="f-slug" class="block mb-2 font-semibold">Адрес страницы (slug)</label>
-            <input id="f-slug" type="text" name="slug" form="{{ $form }}" value="{{ old('slug', $product->slug) }}" class="{{ $input }}">
-        </div>
-
-        <div>
-            <label for="f-description" class="block mb-2 font-semibold">Описание</label>
-
             {{-- Сгенерированное (импорт каталога): на сайте не показывается, пока не одобрено --}}
             @if($product->description_generated)
                 <div class="mb-2 flex flex-wrap items-center gap-3" data-description-generated>
@@ -206,16 +192,10 @@
                 </div>
             @endif
 
-            <textarea id="f-description" name="description" form="{{ $form }}" rows="5" class="{{ $input }}">{{ $site('description') }}</textarea>
+            <x-textarea name="description" label="Описание" rows="5" :value="$site('description')" :form="$form" />
         </div>
 
-        <div>
-            <label for="f-specifications" class="block mb-2 font-semibold">
-                Дополнительная информация
-                <span class="text-slate-400 font-normal text-sm">(свободный текст под таблицей характеристик)</span>
-            </label>
-            <textarea id="f-specifications" name="specifications" form="{{ $form }}" rows="5" class="{{ $input }}">{{ $site('specifications') }}</textarea>
-        </div>
+        <x-textarea name="specifications" label="Дополнительная информация" hint="Свободный текст под таблицей характеристик." rows="5" :value="$site('specifications')" :form="$form" />
 
         <div>
             @php
@@ -223,8 +203,7 @@
                 $packageField = trim((string) $site('package_contents'));
                 $packageAttribute = trim((string) (collect($attributeRows)->first(fn ($row) => \App\Models\Product::isPackageAttribute($row['name'] ?? ''))['value'] ?? ''));
             @endphp
-            <label for="f-package" class="block mb-2 font-semibold">Комплектация</label>
-            <textarea id="f-package" name="package_contents" form="{{ $form }}" rows="5" class="{{ $input }}">{{ $site('package_contents') }}</textarea>
+            <x-textarea name="package_contents" id="f-package" label="Комплектация" rows="5" :value="$site('package_contents')" :form="$form" />
 
             <div class="mt-2 text-sm text-slate-500" data-package-source="{{ $packageField !== '' ? 'field' : ($packageAttribute !== '' ? 'attribute' : 'none') }}">
                 @if($packageField !== '')
@@ -243,10 +222,7 @@
 
         @if($isNew)
 
-            <label class="flex items-center gap-3">
-                <input type="checkbox" name="is_active" value="1" form="{{ $form }}" @checked(old('is_active', true))>
-                Показывать на сайте после публикации
-            </label>
+            <x-checkbox name="is_active" label="Показывать на сайте после публикации" :checked="true" :form="$form" />
 
             <div>
                 <h3 class="font-semibold mb-1">Фото</h3>
@@ -276,9 +252,20 @@
 {{-- Сохранение и публикация --}}
 <div class="bg-white rounded-2xl border border-slate-200 p-6 mb-6" data-product-actions>
 
-    <h2 class="text-lg font-semibold mb-4">
+    <h2 class="text-lg font-semibold mb-1">
         Публикация
     </h2>
+
+    {{-- Что сохраняет каждая кнопка — AdminProductController::store / update / afterSave --}}
+    <p class="text-sm text-slate-500 mb-4" data-actions-hint>
+        @if($isNew)
+            Любая кнопка создаёт товар со всеми полями формы. «Сохранить черновик» — на сайте не виден,
+            «Опубликовать» — сразу на сайте.
+        @else
+            Каждая кнопка сохраняет всю форму: данные 1С, категорию и адрес — сразу, тексты и характеристики — в черновик,
+            фото из очереди — загружает. «Опубликовать» дополнительно переносит черновик на сайт.
+        @endif
+    </p>
 
     <div class="flex flex-wrap items-center gap-3 mb-4">
 

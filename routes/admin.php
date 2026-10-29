@@ -162,6 +162,12 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         [AdminProductController::class, 'approveDescription']
     );
 
+    // Бейджи ХИТ / НОВИНКА / Акция — сразу по галочке (JSON)
+    Route::post(
+        '/admin/product/{id}/badge',
+        [AdminProductController::class, 'badge']
+    );
+
     Route::post(
         '/admin/product/{id}/toggle-visibility',
         [AdminProductController::class, 'toggleVisibility']

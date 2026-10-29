@@ -10,8 +10,8 @@ use Tests\TestCase;
 
 /**
  * A-6: снятая в админке «Новинка» пропадает с карточки товара и не возвращается импортом
- * каталога (is_new_locked). Форма отправляется так, как её отправил бы браузер: все поля
- * с form="product-form", снятые галочки не уходят.
+ * каталога (is_new_locked). Бейдж сохраняется сразу по галочке (POST …/badge); форма
+ * отправляется так, как её отправил бы браузер: все поля с form="product-form", снятые галочки не уходят.
  */
 class AdminProductBadgeFlowTest extends TestCase
 {
@@ -62,14 +62,22 @@ class AdminProductBadgeFlowTest extends TestCase
 
         $this->get("/product/{$product->id}")->assertSee('data-product-badge="new"', false);
 
-        $html = $this->actingAs($admin)->get("/admin/product/{$product->id}")->assertOk()->getContent();
-        $this->actingAs($admin)->post("/admin/product/{$product->id}", $this->browserFields($html, ['is_new']) + ['action' => 'publish'])
-            ->assertSessionHasNoErrors();
+        // Галочку сняли — сохраняется сразу, без кнопок формы
+        $this->actingAs($admin)->get("/admin/product/{$product->id}")->assertOk();
+        $this->actingAs($admin)->postJson("/admin/product/{$product->id}/badge", ['field' => 'is_new', 'value' => false])
+            ->assertOk()
+            ->assertExactJson(['message' => 'Сохранено', 'value' => false]);
 
         $this->assertFalse($product->fresh()->is_new);
         // Решение админа: импорт каталога «Новинку» больше не вернёт
         $this->assertTrue($product->fresh()->is_new_locked);
         $this->get("/product/{$product->id}")->assertDontSee('data-product-badge="new"', false);
+
+        // Последующее сохранение формы любой кнопкой бейдж не возвращает
+        $html = $this->actingAs($admin)->get("/admin/product/{$product->id}")->getContent();
+        $this->actingAs($admin)->post("/admin/product/{$product->id}", $this->browserFields($html, []) + ['action' => 'publish'])
+            ->assertSessionHasNoErrors();
+        $this->assertFalse($product->fresh()->is_new);
     }
 
     public function test_save_without_badge_change_does_not_lock_it(): void
