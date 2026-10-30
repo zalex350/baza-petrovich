@@ -231,18 +231,28 @@
 
         {{-- Контакты внизу --}}
         <div class="border-t border-line px-4 py-4 text-sm text-ink-muted space-y-2 shrink-0">
-            <a href="tel:{{ preg_replace('/[^+\d]/', '', config('shop.phone')) }}" class="flex items-center gap-2">
-                @svg('heroicon-o-phone', 'w-4 h-4')
-                {{ config('shop.phone') }}
-            </a>
-            <a href="mailto:{{ config('shop.email') }}" class="flex items-center gap-2">
-                @svg('heroicon-o-envelope', 'w-4 h-4')
-                {{ config('shop.email') }}
-            </a>
-            <div class="flex items-center gap-2">
-                @svg('heroicon-o-clock', 'w-4 h-4')
-                {{ config('shop.working_hours') }}
-            </div>
+            {{-- Контакты — «Настройки» в админке; незаполненное не выводится --}}
+            @foreach(\App\Models\Setting::phones() as $phone)
+                <a href="tel:{{ $phone['tel'] }}" class="flex items-center gap-2">
+                    @svg('heroicon-o-phone', 'w-4 h-4')
+                    {{ $phone['number'] }}
+                    @if($phone['label'])
+                        <span class="text-meta">· {{ $phone['label'] }}</span>
+                    @endif
+                </a>
+            @endforeach
+            @if($email = \App\Models\Setting::value('contact_email'))
+                <a href="mailto:{{ $email }}" class="flex items-center gap-2">
+                    @svg('heroicon-o-envelope', 'w-4 h-4')
+                    {{ $email }}
+                </a>
+            @endif
+            @if($hours = \App\Models\Setting::value('contact_hours'))
+                <div class="flex items-center gap-2">
+                    @svg('heroicon-o-clock', 'w-4 h-4')
+                    {{ $hours }}
+                </div>
+            @endif
         </div>
 
     </aside>
