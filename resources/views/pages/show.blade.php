@@ -1,6 +1,7 @@
 {{--
     Информационная страница (PageController): заголовок и текст из редактора админки
     (очищенный HTML — Page::safeBody()). SEO — seo_title / seo_description, иначе заголовок.
+    На странице «Контакты» под текстом — блоки контактов и реквизитов (partials/contacts_page).
 --}}
 @extends('layouts.app')
 
@@ -24,6 +25,11 @@
     <h1 class="mb-4 text-3xl font-bold tracking-tight">{{ $page->title }}</h1>
 
     <div class="prose-page text-ink" data-page-body>{!! $page->safeBody() !!}</div>
+
+    {{-- «Контакты»: контакты и реквизиты — из «Настроек» --}}
+    @if($page->slug === 'contacts')
+        @include('partials.contacts_page')
+    @endif
 </article>
 
 @endsection

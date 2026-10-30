@@ -36,17 +36,30 @@
 
             <div class="flex items-center gap-6">
 
-                <a href="tel:{{ preg_replace('/[^+\d]/', '', config('shop.phone')) }}" class="hover:text-white">
-                    {{ config('shop.phone') }}
-                </a>
+                {{-- Контакты — «Настройки» в админке; в полосе — первый телефон, незаполненное не выводится --}}
+                @php
+                    $topPhone = \App\Models\Setting::phones()[0] ?? null;
+                    $topEmail = \App\Models\Setting::value('contact_email');
+                    $topHours = \App\Models\Setting::value('contact_hours');
+                @endphp
 
-                <a href="mailto:{{ config('shop.email') }}" class="hover:text-white">
-                    {{ config('shop.email') }}
-                </a>
+                @if($topPhone)
+                    <a href="tel:{{ $topPhone['tel'] }}" class="hover:text-white" @if($topPhone['label']) title="{{ $topPhone['label'] }}" @endif>
+                        {{ $topPhone['number'] }}
+                    </a>
+                @endif
 
-                <span>
-                    {{ config('shop.working_hours') }}
-                </span>
+                @if($topEmail)
+                    <a href="mailto:{{ $topEmail }}" class="hover:text-white">
+                        {{ $topEmail }}
+                    </a>
+                @endif
+
+                @if($topHours)
+                    <span>
+                        {{ $topHours }}
+                    </span>
+                @endif
 
             </div>
 

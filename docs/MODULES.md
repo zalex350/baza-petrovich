@@ -307,16 +307,20 @@
 | Контроллеры | `AdminBannerController`, `AdminPageController`, `AdminSettingsController`; витрина — `PageController` (`/delivery`, `/about`, `/contacts`, `/page/{slug}`) |
 | Модели | `Banner`, `Page`, `Setting` (ключ — значение, кэш) |
 | Сервисы | `Images\WebpImage` (картинки баннеров и категорий), `Support\Html` (очистка HTML страниц) |
-| Шаблоны | `admin/banners`, `admin/banner_form`, `admin/pages`, `admin/page_form`, `admin/settings`, `pages/show`, `partials/footer`, компонент `x-file` |
+| Шаблоны | `admin/banners`, `admin/banner_form`, `admin/pages`, `admin/page_form`, `admin/settings`, `pages/show`, `partials/contacts_page`, `partials/footer`, `vendor/notifications/email` (подпись писем), компонент `x-file` |
+| Правила валидации | `RulesNP` (9 цифр + контрольная: веса 29, 23, 19, 17, 13, 7, 5, 3, MOD 11), `RULESIBAN` (BY, 28 символов, MOD 97), `RULESBIC` (8 или 11 символов) |
 | JS | `editor.js` — Trix, отдельная точка входа Vite только на форме страницы |
 
 | Правило | Суть |
 |---|---|
 | Баннер | Картинка для десктопа обязательна (33:10), для телефона — нет (3:2, иначе десктопная); ссылка — `/…` или `https://…`; порядок; вкл/выкл. Старые файлы удаляются при замене и удалении |
 | Страницы | Текст — HTML из Trix, на сайте очищается (`Html::clean`: абзацы, заголовки, списки, ссылки http/https/mailto/tel/`/`). Страницы меню (`Page::MENU`) не удаляются, адрес не меняется. Неопубликованная — 404, администратору видна с пометкой |
-| Подвал | Три колонки (о компании, доставка + ссылка, контакты) и реквизиты продавца — из `Setting`; пусто — `[ЗАПОЛНИТЬ]` |
+| Настройки | Контакты: телефоны с подписями (`contact_phones`, JSON, до 10), email, режим работы, адрес склада/самовывоза. Реквизиты: краткое и полное наименование, УНП, юр. и почтовый адрес, гос. регистрация, торговый реестр, IBAN, банк, BIC, руководитель. Тексты подвала. Контакты в `config/shop.php` — только начальные значения для миграции переноса |
+| Где выводится | Тёмная полоса шапки — первый телефон, email, режим; мобильное меню, подвал, «Контакты» — все телефоны с подписями; подпись всех писем — `Setting::mailSignature()`. Пустые контакты не выводятся |
+| Подвал | Три колонки (о компании, доставка + ссылка, контакты) и реквизиты кратко (`Setting::FOOTER_REQUISITES`: наименование, УНП, юр. адрес, торговый реестр); пустой текст или реквизит — `[ЗАПОЛНИТЬ]` |
+| «Контакты» | Под текстом страницы — блоки «Как с нами связаться» и «Реквизиты» целиком (`Setting::REQUISITES`) |
 
-Тесты: `AdminBannerCategoryTest`, `PagesAndFooterTest`, `Storefront/HomePageTest`.
+Тесты: `AdminBannerCategoryTest`, `PagesAndFooterTest`, `SettingsExtTest`, `Storefront/HomePageTest`.
 
 ### 8.8. Заявки «Стать партнёром»
 
