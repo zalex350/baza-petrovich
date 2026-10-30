@@ -26,17 +26,24 @@
         JPG, PNG или WebP, до {{ $maxMb }} МБ на файл. Основное фото показывается в каталоге, поиске и корзине.
     </p>
 
-    @error('images')
+    {{-- Все ошибки фото — здесь: загрузка (images, images.N), замена (image); вверху страницы — только общий alert --}}
+    @php
+        $imageErrors = collect($errors->getMessages())
+            ->filter(fn ($messages, $key) => in_array($key, ['images', 'image'], true) || str_starts_with($key, 'images.'))
+            ->flatten();
+    @endphp
+
+    @if($imageErrors->isNotEmpty())
 
         <div class="bg-red-50 border border-red-200 rounded-xl p-3 mb-4" data-images-errors>
             <ul class="list-disc list-inside text-red-700 text-sm space-y-1">
-                @foreach($errors->get('images') as $message)
+                @foreach($imageErrors as $message)
                     <li>{{ $message }}</li>
                 @endforeach
             </ul>
         </div>
 
-    @enderror
+    @endif
 
     {{-- Очередь — часть формы товара: фото из неё загружаются и при сохранении товара,
          и сразу кнопкой «Загрузить» (та же форма, другой адрес) --}}

@@ -60,10 +60,14 @@ class AdminProductQtyBadgesTest extends TestCase
             $this->assertMatchesRegularExpression('#<input[^>]*name="'.$field.'"[^>]*form="product-form"#s', $erp, $field);
         }
 
-        foreach (['is_hit' => 'ХИТ', 'is_new' => 'НОВИНКА'] as $field => $label) {
+        // Бейджи сохраняются сразу по галочке (POST …/badge), в форму товара не входят
+        $this->assertStringContainsString("productBadges('/admin/product/{$this->product->id}/badge')", $site);
+        $this->assertStringContainsString('Сохраняются сразу при отметке галочки', $site);
+
+        foreach (['is_hit' => 'ХИТ', 'is_new' => 'НОВИНКА', 'is_promo' => 'Акция'] as $field => $label) {
             $this->assertStringContainsString($label, $site);
-            // Скрытое «0» тоже относится к форме товара — снятая галочка сохраняется
-            $this->assertStringContainsString('<input type="hidden" name="'.$field.'" value="0" form="product-form">', $site);
+            $this->assertMatchesRegularExpression('#<input\s+type="checkbox"[^>]*name="'.$field.'"#', $site);
+            $this->assertDoesNotMatchRegularExpression('#<input[^>]*name="'.$field.'"[^>]*form="product-form"#', $site);
         }
     }
 
@@ -121,7 +125,7 @@ class AdminProductQtyBadgesTest extends TestCase
         $html = $this->actingAs($this->admin)->get("/admin/product/{$this->product->id}")->getContent();
 
         $this->assertMatchesRegularExpression('#<input[^>]*name="min_qty"[^>]*\sdisabled[\s>=]#s', $html);
-        $this->assertDoesNotMatchRegularExpression('#<input type="checkbox"[^>]*name="is_hit"[^>]*\sdisabled[\s>]#s', $html);
+        $this->assertDoesNotMatchRegularExpression('#<input\s+type="checkbox"[^>]*name="is_hit"[^>]*\sdisabled[\s>=]#s', $html);
 
         $this->actingAs($this->admin)->post("/admin/product/{$this->product->id}", [
             'action' => 'draft', 'min_qty' => 10, 'qty_step' => 10, 'default_qty' => 10, 'is_hit' => 1,
