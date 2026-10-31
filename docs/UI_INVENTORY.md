@@ -45,12 +45,13 @@
 | URL | Контроллер | Шаблон | Действия (POST) |
 |---|---|---|---|
 | `/admin/products` | `AdminProductController@index` | `admin/products` | `product/{id}/toggle-visibility`, `product/{id}/delete` |
-| `/admin/product/create`, `/admin/product/{id}` | `…@create`, `…@show` | `admin/product_form` (+ `vat_rate_select`, `admin_product_attributes`, `admin_product_images`, `image_queue`) | `product`, `product/{id}`, `draft`, `draft/delete`, `publish`, `badge` (JSON), `images…` (store/reorder/main/move/replace/delete), `documents…` (store/reorder/update/delete) |
+| `/admin/product/create`, `/admin/product/{id}` | `…@create`, `…@show` | `admin/product_form` (+ `vat_rate_select`, `admin_product_attributes`, `admin_product_images`, `admin_product_documents`, `admin_product_client_codes`, `image_queue`) | `product`, `product/{id}`, `draft`, `draft/delete`, `publish`, `badge` (JSON), `images…` (store/reorder/main/move/replace/delete), `documents…` (store/reorder/update/delete), `client-codes…` (store/update/delete) |
 | `/admin/product/{id}/preview` | `…@preview` | `product` (витринный, `$preview`) | — |
 | `/admin/orders` | `AdminOrderController@index` | `admin/orders` | — |
 | `/admin/order/{id}` | `…@show` | `admin/order` (+ `order_items`, `order_delivery`, `order_history`) | `order/{id}`, `status`, `cancel-request/approve`, `cancel-request/reject`, `invoice`, `invoice/delete` (GET `invoice` — скачать) |
 | `/admin/organizations` | `AdminOrganizationController@index` | `admin/organizations` | — |
-| `/admin/organization/{id}` | `…@show` | `admin/organization` (+ `address_list`) | `organization/{id}/delete` |
+| `/admin/organization/{id}` | `…@show` | `admin/organization` (+ `address_list`; вкладка `?tab=codes` — `admin_organization_codes`) | `organization/{id}/delete`, `codes/{code}/delete`, `codes/import` (GET `codes/template` — шаблон .xlsx) |
+| `/admin/organization/{id}/codes/import` | `AdminClientCodeController@preview` | `admin/organization_codes_import` (+ `admin_client_code_errors`) | `codes/import/apply`, `codes/import/cancel` |
 | `/admin/organization/create`, `…/{id}/edit` | `…@create`, `…@edit` | `admin/organization_form` | `organization`, `organization/{id}` |
 | `/admin/organization/{org}/address/create`, `…/{id}/edit` | `AdminDeliveryAddressController` | `admin/address_form` (+ `address_fields`) | `address`, `address/{id}`, `default`, `delete` |
 | `/admin/users` | `AdminUserController@index` | `admin/users` | — |

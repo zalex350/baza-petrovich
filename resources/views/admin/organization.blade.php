@@ -2,6 +2,9 @@
 
 @section('title', 'Клиент — '.$organization->name)
 
+{{-- Вкладка «Коды товаров» — на ките: ошибки у полей, сверху одна сводка --}}
+@section('flash-validation', $tab === 'codes' ? 'summary' : 'list')
+
 @section('content')
 
 <a
@@ -25,6 +28,17 @@
     </a>
 
 </div>
+
+<x-tabs label="Разделы клиента" :active="$tab" :tabs="[
+    'main' => ['label' => 'Клиент', 'url' => '/admin/organization/'.$organization->id],
+    'codes' => ['label' => 'Коды товаров', 'url' => '/admin/organization/'.$organization->id.'?tab=codes', 'count' => $organization->product_codes_count],
+]" />
+
+@if($tab === 'codes')
+
+    @include('partials.admin_organization_codes', ['organization' => $organization, 'codes' => $codes, 'search' => $search])
+
+@else
 
 {{-- Реквизиты --}}
 <div class="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
@@ -178,5 +192,7 @@
     </p>
 
 </div>
+
+@endif
 
 @endsection
