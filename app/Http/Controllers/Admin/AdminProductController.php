@@ -18,6 +18,7 @@ use Illuminate\Validation\Rule;
  * Товары в админке. Создание и редактирование — одна форма (admin/product_form):
  * «Данные учётной системы (1С)» сохраняются сразу, тексты «Данных сайта» — в черновик,
  * на сайт после публикации. Кнопки формы — action: draft | preview | publish.
+ * Бейджи (ХИТ, НОВИНКА, Акция) у существующего товара — сразу по галочке: badge().
  */
 class AdminProductController extends Controller
 {
@@ -30,6 +31,9 @@ class AdminProductController extends Controller
 
     /** Поля учётной системы: при shop.catalog.manual_products = false приходят только из 1С */
     private const ERP_FIELDS = ['name', 'sku', 'brand', 'price', 'vat_rate', 'stock', 'on_order', 'min_qty', 'qty_step', 'default_qty'];
+
+    /** Бейджи витрины: у существующего товара сохраняются сразу по галочке (badge) */
+    private const BADGE_FIELDS = ['is_hit', 'is_new', 'is_promo'];
 
     /** Данные сайта, которые применяются сразу, без черновика (SRS §11.3: категория — сайта, не 1С) */
     private const DIRECT_SITE_FIELDS = ['slug', 'category_id', 'is_hit', 'is_new', 'is_promo'];
@@ -83,7 +87,8 @@ class AdminProductController extends Controller
         $this->ensureManualProducts();
 
         return view('admin.product_form', [
-            'product' => new Product(['vat_rate' => 20.00, 'price' => 0, 'stock' => 0]),
+            // Цена пустая: её обязательно ввести, 0 не подставляется (F-6)
+            'product' => new Product(['vat_rate' => 20.00, 'stock' => 0]),
             'categories' => Category::all(),
             'draft' => null,
             'attributeRows' => $this->attributeRows(collect()),
@@ -190,16 +195,28 @@ class AdminProductController extends Controller
             }
         }
 
-        // «Новинку» изменили вручную — импорт каталога её больше не трогает (A-6)
-        if (array_key_exists('is_new', $direct) && (bool) $direct['is_new'] !== $product->is_new) {
-            $direct['is_new_locked'] = true;
-        }
-
-        $product->update($direct);
+        $product->update($this->lockNewBadge($product, $direct));
 
         $this->saveDraftFields($product, $data);
 
         return $this->afterSave($product, 'Товар сохранён');
+    }
+
+    /**
+     * Бейдж (ХИТ, НОВИНКА, Акция) — сразу по галочке, без кнопок формы (admin-product-badges.js).
+     */
+    public function badge($id)
+    {
+        $product = Product::findOrFail($id);
+
+        $data = request()->validate([
+            'field' => ['required', Rule::in(self::BADGE_FIELDS)],
+            'value' => 'required|boolean',
+        ]);
+
+        $product->update($this->lockNewBadge($product, [$data['field'] => (bool) $data['value']]));
+
+        return response()->json(['message' => 'Сохранено', 'value' => (bool) $product->{$data['field']}]);
     }
 
     /**
@@ -280,16 +297,30 @@ class AdminProductController extends Controller
         return in_array(request('action'), ['draft', 'preview', 'publish'], true) ? request('action') : 'draft';
     }
 
+    /**
+     * «Новинку» изменили вручную — импорт каталога её больше не трогает (A-6).
+     */
+    private function lockNewBadge(Product $product, array $changes): array
+    {
+        if (array_key_exists('is_new', $changes) && (bool) $changes['is_new'] !== $product->is_new) {
+            $changes['is_new_locked'] = true;
+        }
+
+        return $changes;
+    }
+
     private function erpRules(?Product $product = null): array
     {
         return [
             'name' => 'required|string|max:255',
             'sku' => ['required', 'string', 'max:100', Rule::unique('products', 'sku')->ignore($product?->id)],
             'brand' => 'nullable|string|max:255',
-            // Цена обязательна у нового товара и у товара с ценой (стереть её нельзя). У товара без
-            // цены (из импорта каталога — цена придёт из 1С) поле может остаться пустым: иначе
-            // форма не сохраняла ничего — ни флаги, ни категорию, ни тексты
-            'price' => [$product && $product->price === null ? 'nullable' : 'required', 'numeric', 'min:0'],
+            // Цена нового товара обязательна и больше 0 при любой кнопке (F-6). У товара с ценой
+            // стереть её нельзя. У товара без цены (из импорта каталога — цена придёт из 1С) поле
+            // может остаться пустым: иначе форма не сохраняла ничего — ни категорию, ни тексты
+            'price' => $product
+                ? [$product->price === null ? 'nullable' : 'required', 'numeric', 'min:0']
+                : ['required', 'numeric', 'gt:0'],
             'vat_rate' => ['sometimes', 'required', VatCalculator::rateRule()],
             'stock' => 'required|integer|min:0',
             'on_order' => 'boolean',

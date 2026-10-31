@@ -241,20 +241,21 @@
 
 | | |
 |---|---|
-| Маршруты | `GET /admin/products` (поиск `?q=` по артикулу, названию, бренду — вместе с фильтрами `?category=none`, `?name=none`, `?description=unapproved`, сохраняется в пагинации), `GET /admin/product/create`, `POST /admin/product`, `GET/POST /admin/product/{id}`, `POST …/draft`, `…/draft/delete`, `…/publish`, `GET …/preview`, `POST …/approve-description`, `…/toggle-visibility`, `…/delete`, `…/images*`, `…/documents*` |
+| Маршруты | `GET /admin/products` (поиск `?q=` по артикулу, названию, бренду — вместе с фильтрами `?category=none`, `?name=none`, `?description=unapproved`, сохраняется в пагинации), `GET /admin/product/create`, `POST /admin/product`, `GET/POST /admin/product/{id}`, `POST …/draft`, `…/draft/delete`, `…/publish`, `GET …/preview`, `POST …/approve-description`, `…/badge` (JSON), `…/toggle-visibility`, `…/delete`, `…/images*`, `…/documents*` |
 | Контроллеры | `AdminProductController`, `AdminProductImageController` (+ трейт `UploadsProductImages`) |
 | Сервисы | `ProductAttributes`, `Images\ProductImageService`, `Vat\VatCalculator` |
 | Модели | `Product`, `ProductDraft`, `ProductImage`, `ProductAttributeValue`, `ProductDocument` |
 | Шаблоны | `admin/products`, `admin/product_form`, `partials/admin_product_attributes`, `partials/admin_product_attribute_row`, `partials/admin_product_images`, `partials/admin_product_documents`, `partials/image_queue`, `partials/vat_rate_select`; предпросмотр — витринный `product` |
-| JS | `adminImages`, `imageQueue`, `attributeRows` |
+| JS | `adminImages`, `imageQueue`, `attributeRows`, `productBadges` |
 
 | Правило | Суть |
 |---|---|
-| Три группы полей | Поля 1С (`ERP_FIELDS`) сохраняются сразу; категория, slug, ХИТ, НОВИНКА — сразу; тексты сайта (`DRAFT_FIELDS`) — в черновик, на сайт после «Опубликовать» |
-| Черновик | Создаётся, только если тексты или характеристики по смыслу отличаются от опубликованных (`ProductDrafts::differs`: переносы `
-` и пробелы по краям — не изменение); черновик, совпавший с опубликованным, удаляется. Накопленные пустые черновики чистит миграция `prune_unchanged_product_drafts` (идемпотентна) |
+| Три группы полей | Любая кнопка формы («Сохранить черновик», «Сохранить и предпросмотр», «Опубликовать») сохраняет всю форму: поля 1С (`ERP_FIELDS`), категорию и slug — сразу; тексты сайта (`DRAFT_FIELDS`) и характеристики — в черновик, на сайт после «Опубликовать» |
+| Черновик | Создаётся, только если тексты или характеристики по смыслу отличаются от опубликованных (`ProductDrafts::differs`: переносы `\r\n` и пробелы по краям — не изменение); черновик, совпавший с опубликованным, удаляется. Накопленные пустые черновики чистит миграция `prune_unchanged_product_drafts` (идемпотентна) |
+| Бейджи | ХИТ, НОВИНКА, Акция у существующего товара — сразу по галочке (`POST …/badge`, `productBadges`): «Сохранено» или откат галочки с ошибкой; в форму товара не входят. У нового товара — вместе с товаром |
+| Проверка формы | Только серверная (`novalidate`): ошибки — у полей (кит), сверху alert «Проверьте выделенные поля»; ошибки фото — в блоке фото, характеристик — в блоке характеристик |
 | `manual_products` | При `false` поля 1С только для чтения, создание товара — 403 |
-| Цена | Обязательна у нового товара и у товара с ценой (стереть нельзя). У товара без цены (из импорта, цена придёт из 1С) поле может остаться пустым — форма сохраняет флаги, категорию и тексты; на витрине «Цена уточняется» |
+| Цена | У нового товара обязательна и больше 0 при любой кнопке (поле пустое, 0 не подставляется). У товара с ценой стереть нельзя. У товара без цены (из импорта, цена придёт из 1С) поле может остаться пустым — форма сохраняет флаги, категорию и тексты; на витрине «Цена уточняется» |
 | `is_new_locked` | «Новинка», заданная в админке, фиксируется, и импорт её не меняет |
 | Видимость | «Скрыть/показать» переключает `is_active`; удаление мягкое |
 | Описание | Сгенерированное импортом показывается на сайте после «Одобрить» (`description_generated = false`) |
@@ -309,16 +310,20 @@
 | Контроллеры | `AdminBannerController`, `AdminPageController`, `AdminSettingsController`; витрина — `PageController` (`/delivery`, `/about`, `/contacts`, `/page/{slug}`) |
 | Модели | `Banner`, `Page`, `Setting` (ключ — значение, кэш) |
 | Сервисы | `Images\WebpImage` (картинки баннеров и категорий), `Support\Html` (очистка HTML страниц) |
-| Шаблоны | `admin/banners`, `admin/banner_form`, `admin/pages`, `admin/page_form`, `admin/settings`, `pages/show`, `partials/footer`, компонент `x-file` |
+| Шаблоны | `admin/banners`, `admin/banner_form`, `admin/pages`, `admin/page_form`, `admin/settings`, `pages/show`, `partials/contacts_page`, `partials/footer`, `vendor/notifications/email` (подпись писем), компонент `x-file` |
+| Правила валидации | `RulesNP` (9 цифр + контрольная: веса 29, 23, 19, 17, 13, 7, 5, 3, MOD 11), `RULESIBAN` (BY, 28 символов, MOD 97), `RULESBIC` (8 или 11 символов) |
 | JS | `editor.js` — Trix, отдельная точка входа Vite только на форме страницы |
 
 | Правило | Суть |
 |---|---|
 | Баннер | Картинка для десктопа обязательна (33:10), для телефона — нет (3:2, иначе десктопная); ссылка — `/…` или `https://…`; порядок; вкл/выкл. Старые файлы удаляются при замене и удалении |
 | Страницы | Текст — HTML из Trix, на сайте очищается (`Html::clean`: абзацы, заголовки, списки, ссылки http/https/mailto/tel/`/`). Страницы меню (`Page::MENU`) не удаляются, адрес не меняется. Неопубликованная — 404, администратору видна с пометкой |
-| Подвал | Три колонки (о компании, доставка + ссылка, контакты) и реквизиты продавца — из `Setting`; пусто — `[ЗАПОЛНИТЬ]` |
+| Настройки | Контакты: телефоны с подписями (`contact_phones`, JSON, до 10), email, режим работы, адрес склада/самовывоза. Реквизиты: краткое и полное наименование, УНП, юр. и почтовый адрес, гос. регистрация, торговый реестр, IBAN, банк, BIC, руководитель. Тексты подвала. Контакты в `config/shop.php` — только начальные значения для миграции переноса |
+| Где выводится | Тёмная полоса шапки — первый телефон, email, режим; мобильное меню, подвал, «Контакты» — все телефоны с подписями; подпись всех писем — `Setting::mailSignature()`. Пустые контакты не выводятся |
+| Подвал | Три колонки (о компании, доставка + ссылка, контакты) и реквизиты кратко (`Setting::FOOTER_REQUISITES`: наименование, УНП, юр. адрес, торговый реестр); пустой текст или реквизит — `[ЗАПОЛНИТЬ]` |
+| «Контакты» | Под текстом страницы — блоки «Как с нами связаться» и «Реквизиты» целиком (`Setting::REQUISITES`) |
 
-Тесты: `AdminBannerCategoryTest`, `PagesAndFooterTest`, `Storefront/HomePageTest`.
+Тесты: `AdminBannerCategoryTest`, `PagesAndFooterTest`, `SettingsExtTest`, `Storefront/HomePageTest`.
 
 ### 8.8. Заявки «Стать партнёром»
 

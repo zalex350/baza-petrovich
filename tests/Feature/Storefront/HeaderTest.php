@@ -83,10 +83,11 @@ class HeaderTest extends TestCase
 
     public function test_header_has_contacts_and_info_links(): void
     {
-        config([
-            'shop.phone' => '+375 (17) 123-45-67',
-            'shop.email' => 'sales@smesitel.by',
-            'shop.working_hours' => 'Пн–Сб 10:00–19:00',
+        // Контакты — «Настройки» в админке
+        \App\Models\Setting::put([
+            'contact_phones' => json_encode([['label' => 'Отдел продаж', 'number' => '+375 (17) 123-45-67']]),
+            'contact_email' => 'sales@smesitel.by',
+            'contact_hours' => 'Пн–Сб 10:00–19:00',
         ]);
 
         $this->get('/')

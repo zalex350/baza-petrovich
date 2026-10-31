@@ -58,7 +58,7 @@ Auth на основе Breeze (`laravel/breeze` в dev). Самостоятел�
 | `app/View/Composers` | Данные шапки: корзина и меню каталога |
 | `app/Support` | `Money`, `Plural`, `CategoryName`, `helpers.php` (`money()`, `date_ru()`) |
 | `app/Console/Commands` | `catalog:import-db`, `user:create`, `demo:clear`, `attributes:from-specifications` и др. |
-| `config/shop.php` | Настройки магазина: контакты, фото, пороги наличия, режимы 1С |
+| `config/shop.php` | Настройки магазина: фото, пороги наличия, режимы 1С; контакты — только начальные значения (на сайте — `Setting`) |
 | `database/migrations` | Схема и миграции данных |
 | `database/data/catalog/*.php` | Маппинги импорта (бренды, категории, характеристики, фильтры, чистка) |
 | `database/seeders` | `DemoSeeder` (только `APP_ENV=staging`), демо-каталог, бенчмарк |
@@ -322,7 +322,7 @@ erDiagram
 | `categories.image` | Картинка категории (webp) — плитки подкатегорий; в дереве меню (`CatalogMenu`) — поле `image` |
 | `banners` | Слайдер главной: `image_desktop`, `image_mobile`, `url`, `sort_order`, `is_active` |
 | `pages` | Информационные страницы: `slug`, `body` (HTML из Trix, при выводе очищается), SEO, `is_published`. Три страницы меню создаёт миграция с `[ЗАПОЛНИТЬ]` |
-| `settings` | Ключ — значение: реквизиты продавца и тексты подвала (`Setting::FIELDS`), кэш `settings.all` |
+| `settings` | Ключ — значение: контакты (`contact_*`, телефоны — JSON), реквизиты продавца (`seller_*`) и тексты подвала (`Setting::FIELDS`), кэш `settings.all` |
 | `partner_requests` | Заявки «Стать партнёром»: реквизиты, контакт, `consent_at`, `status`, `ip` |
 
 ## 9. Владение данными: 1С и сайт

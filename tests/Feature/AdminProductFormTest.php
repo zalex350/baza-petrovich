@@ -315,8 +315,9 @@ class AdminProductFormTest extends TestCase
             ->assertSee('Приходят из 1С и здесь не редактируются')
             ->getContent();
 
+        // Поля кита пишут disabled="disabled"
         foreach (['name', 'sku', 'brand', 'price', 'stock'] as $field) {
-            $this->assertMatchesRegularExpression('#<input[^>]*name="' . $field . '"[^>]*\sdisabled[\s>]#s', $html, $field);
+            $this->assertMatchesRegularExpression('#<input[^>]*name="' . $field . '"[^>]*\sdisabled[\s>=]#s', $html, $field);
         }
 
         $this->assertMatchesRegularExpression('#<select[^>]*name="vat_rate"[^>]*\sdisabled[\s>]#s', $html);

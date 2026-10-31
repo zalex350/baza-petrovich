@@ -10,6 +10,8 @@ return [
 
     'name' => env('SHOP_NAME', 'SMESITEL.BY'),
 
+    // Контакты на сайте — «Настройки» в админке (App\Models\Setting). Эти значения — только
+    // начальные для переноса миграцией 2026_10_30_100000_move_contacts_to_settings
     'phone' => env('SHOP_PHONE', '+375 (29) 000-00-00'),
 
     'email' => env('SHOP_EMAIL', 'info@smesitel.by'),

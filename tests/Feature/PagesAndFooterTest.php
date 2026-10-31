@@ -117,7 +117,9 @@ class PagesAndFooterTest extends TestCase
         $this->assertStringContainsString('data-footer-delivery', $html);
         $this->assertStringContainsString('data-footer-contacts', $html);
         $this->assertStringContainsString('href="/delivery"', $html);
-        $this->assertStringContainsString(config('shop.phone'), $html);
+        // Контакты не заполнены — не выводятся (ни заглушки, ни номера из config)
+        $this->assertStringNotContainsString(config('shop.phone'), $html);
+        $this->assertStringNotContainsString('href="tel:', $html);
 
         $seller = substr($html, strpos($html, 'data-seller'));
         $this->assertSame(4, substr_count(substr($seller, 0, strpos($seller, '</dl>')), Setting::PLACEHOLDER));
@@ -127,7 +129,7 @@ class PagesAndFooterTest extends TestCase
     {
         $this->actingAs($this->admin)->post('/admin/settings', [
             'seller_name' => 'ООО «Тест»',
-            'seller_unp' => '123456789',
+            'seller_unp' => '800013732',
             'seller_address' => 'г. Минск, ул. Тестовая, 1',
             'seller_registry' => '№ 000 от 01.01.2026',
             'footer_about' => 'Кратко о нас',
@@ -136,7 +138,7 @@ class PagesAndFooterTest extends TestCase
 
         $this->get('/')
             ->assertSee('ООО «Тест»')
-            ->assertSee('123456789')
+            ->assertSee('800013732')
             ->assertSee('г. Минск, ул. Тестовая, 1')
             ->assertSee('№ 000 от 01.01.2026')
             ->assertSee('Кратко о нас');
