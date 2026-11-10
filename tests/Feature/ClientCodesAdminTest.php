@@ -6,10 +6,12 @@ use App\Models\Organization;
 use App\Models\Product;
 use App\Models\ProductClientCode;
 use App\Models\User;
-use App\Support\Spreadsheet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use OpenSpout\Reader\XLSX\Reader as XlsxReader;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
+use ZipArchive;
 
 /**
  * Коды товаров клиентов в админке: блок «Коды клиентов» в карточке товара и вкладка
@@ -220,12 +222,28 @@ class ClientCodesAdminTest extends TestCase
         $this->assertStringContainsString('spreadsheetml', $response->headers->get('Content-Type'));
         $this->assertStringContainsString('client-codes-template.xlsx', $response->headers->get('Content-Disposition'));
 
-        $path = tempnam(sys_get_temp_dir(), 'tpl');
-        file_put_contents($path, $response->getContent());
+        $path = $response->baseResponse->getFile()->getPathname();
 
-        $this->assertSame([['Наш артикул', 'Код клиента']], Spreadsheet::rows($path, 'xlsx'));
-        // Столбцы — текст (формат «@», numFmtId 49), чтобы коды 00123 не стали числами
-        $this->assertStringContainsString('numFmtId="49"', $this->unzipEntry($response->getContent(), 'xl/styles.xml'));
+        $reader = new XlsxReader;
+        $reader->open($path);
+        foreach ($reader->getSheetIterator() as $sheet) {
+            foreach ($sheet->getRowIterator() as $row) {
+                $this->assertSame(['Наш артикул', 'Код клиента'], $row->toArray());
+                break;
+            }
+        }
+        $reader->close();
+
+        // Ячейки — текст (формат «@», numFmtId 49), чтобы введённые коды 00123 не стали числами
+        $zip = new ZipArchive;
+        $zip->open($path);
+        $styles = $zip->getFromName('xl/styles.xml');
+        $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $zip->close();
+        unlink($path);
+
+        $this->assertMatchesRegularExpression('/<xf[^>]*numFmtId="49"/', $styles);
+        $this->assertStringContainsString('<c r="B1000"', $sheet);
     }
 
     public function test_preview_shows_add_update_and_row_errors_without_changing_db(): void
@@ -408,6 +426,54 @@ class ClientCodesAdminTest extends TestCase
         $this->assertSame([$this->a->id => '00777', $numeric->id => '5'], $this->codes());
     }
 
+    /**
+     * Файлы из LibreOffice 7.4 (сконвертированы из source.fods) и в виде экспорта Google Sheets
+     * (make-google-sheets.php) — tests/Fixtures/client-codes/README.md. Одни данные: заголовок
+     * в 3-й строке, текстовый код с ведущими нулями, числа, формула, пустая строка, пробелы
+     * вокруг артикула, второй лист (не читается).
+     */
+    public static function savedFiles(): array
+    {
+        return [
+            'LibreOffice .xlsx' => ['libreoffice.xlsx'],
+            'LibreOffice .csv (UTF-8, «,»)' => ['libreoffice.csv'],
+            'LibreOffice .csv (cp1251, «;»)' => ['libreoffice-cp1251.csv'],
+            'Google Sheets .xlsx' => ['google-sheets.xlsx'],
+            'Google Sheets .csv' => ['google-sheets.csv'],
+        ];
+    }
+
+    #[DataProvider('savedFiles')]
+    public function test_files_saved_in_libreoffice_and_google_sheets(string $file): void
+    {
+        $numeric = $this->product('12345', 'Сифон');
+        $path = base_path('tests/Fixtures/client-codes/'.$file);
+
+        $this->upload(new UploadedFile($path, $file, null, null, true))
+            ->assertRedirect("/admin/organization/{$this->org->id}/codes/import");
+
+        // Номера строк — как в файле; числа без «.0»; формула — значение; второй лист не читается
+        $this->assertSame([
+            ['row' => 4, 'sku' => 'GR-001', 'code' => '00777'],
+            ['row' => 5, 'sku' => '12345', 'code' => '5'],
+            ['row' => 7, 'sku' => 'HG-002', 'code' => 'HG-B1'],
+            ['row' => 8, 'sku' => 'OR-003', 'code' => 'Код-Ё'],
+        ], session("client_codes_import.{$this->org->id}.rows"));
+
+        $this->actingAs($this->admin)->get("/admin/organization/{$this->org->id}/codes/import")
+            ->assertOk()
+            ->assertDontSee('ВТОРОЙ-ЛИСТ');
+
+        $this->actingAs($this->admin)->post("/admin/organization/{$this->org->id}/codes/import/apply");
+
+        $this->assertSame([
+            $this->a->id => '00777',
+            $this->b->id => 'HG-B1',
+            $this->c->id => 'Код-Ё',
+            $numeric->id => '5',
+        ], $this->codes());
+    }
+
     public function test_cp1251_csv_is_read(): void
     {
         $csv = mb_convert_encoding("Наш артикул;Код клиента\nGR-001;Код-1\n", 'Windows-1251', 'UTF-8');
@@ -467,9 +533,21 @@ class ClientCodesAdminTest extends TestCase
         $main = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
         $shared = '<sst xmlns="'.$main.'">'.implode('', array_map(fn ($s) => '<si><t>'.htmlspecialchars($s).'</t></si>', $strings)).'</sst>';
 
+        $rel = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+        $ct = 'application/vnd.openxmlformats-officedocument.spreadsheetml';
+
         $files = [
-            'xl/workbook.xml' => '<workbook xmlns="'.$main.'" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Коды" sheetId="1" r:id="rId3"/></sheets></workbook>',
-            'xl/_rels/workbook.xml.rels' => '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId3" Type="worksheet" Target="worksheets/data.xml"/></Relationships>',
+            '[Content_Types].xml' => '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+                .'<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'
+                .'<Override PartName="/xl/workbook.xml" ContentType="'.$ct.'.sheet.main+xml"/>'
+                .'<Override PartName="/xl/worksheets/data.xml" ContentType="'.$ct.'.worksheet+xml"/>'
+                .'<Override PartName="/xl/sharedStrings.xml" ContentType="'.$ct.'.sharedStrings+xml"/></Types>',
+            '_rels/.rels' => '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="'.$rel.'/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+            'xl/workbook.xml' => '<workbook xmlns="'.$main.'" xmlns:r="'.$rel.'"><sheets><sheet name="Коды" sheetId="1" r:id="rId3"/></sheets></workbook>',
+            // Лист — не sheet1.xml: путь берётся из связей книги
+            'xl/_rels/workbook.xml.rels' => '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                .'<Relationship Id="rId3" Type="'.$rel.'/worksheet" Target="worksheets/data.xml"/>'
+                .'<Relationship Id="rId4" Type="'.$rel.'/sharedStrings" Target="sharedStrings.xml"/></Relationships>',
             'xl/sharedStrings.xml' => $shared,
             'xl/worksheets/data.xml' => '<worksheet xmlns="'.$main.'"><sheetData>'.$rows.'</sheetData></worksheet>',
         ];
@@ -485,13 +563,5 @@ class ClientCodesAdminTest extends TestCase
         }
 
         return $body.$directory."PK\x05\x06".pack('vvvvVVv', 0, 0, count($files), count($files), strlen($directory), strlen($body), 0);
-    }
-
-    private function unzipEntry(string $zip, string $name): string
-    {
-        // Шаблон пишется без сжатия: содержимое файла лежит в архиве как есть
-        $start = strpos($zip, $name.'<?xml') + strlen($name);
-
-        return substr($zip, $start, strpos($zip, 'PK', $start) - $start);
     }
 }

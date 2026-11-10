@@ -5,13 +5,26 @@ namespace App\Services;
 use App\Models\Organization;
 use App\Models\Product;
 use App\Models\ProductClientCode;
-use App\Support\Spreadsheet;
+use DateInterval;
+use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
+use OpenSpout\Common\Entity\Cell;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Common\Entity\Style\Style;
+use OpenSpout\Reader\CSV\Options as CsvOptions;
+use OpenSpout\Reader\CSV\Reader as CsvReader;
+use OpenSpout\Reader\XLSX\Options as XlsxOptions;
+use OpenSpout\Reader\XLSX\Reader as XlsxReader;
+use OpenSpout\Writer\XLSX\Options as WriterOptions;
+use OpenSpout\Writer\XLSX\Writer as XlsxWriter;
 use RuntimeException;
+use Throwable;
 
 /**
  * Загрузка кодов товаров клиента из Excel / CSV: столбцы «Наш артикул» и «Код клиента»
- * (строка заголовков — любая из первых 10, порядок столбцов любой).
+ * (строка заголовков — любая из первых 10, порядок столбцов любой). Файлы читает и шаблон
+ * пишет openspout/openspout (нужно расширение zip): .xlsx — первый лист, формулы — их
+ * вычисленное значение; CSV — UTF-8 (с BOM или без) или cp1251, разделитель «;», «,» или Tab.
  *
  * Режимы: add — добавить новые и обновить изменённые, остальные коды не трогать;
  * replace — после загрузки у организации ровно коды из файла, остальные удаляются.
@@ -42,6 +55,9 @@ class ClientCodeImport
 
     public const MAX_KB = 5120;
 
+    /** Строк с текстовым форматом в шаблоне */
+    public const TEMPLATE_ROWS = 1000;
+
     /**
      * Строки файла: [['row' => номер строки в файле, 'sku' => …, 'code' => …], …], без строки
      * заголовков и полностью пустых строк.
@@ -52,7 +68,7 @@ class ClientCodeImport
      */
     public function read(string $path, string $extension): array
     {
-        $rows = Spreadsheet::rows($path, $extension);
+        $rows = $this->rows($path, $extension);
 
         [$headerIndex, $skuColumn, $codeColumn] = $this->columns($rows);
 
@@ -78,6 +94,37 @@ class ClientCodeImport
         }
 
         return $result;
+    }
+
+    /**
+     * Шаблон для загрузки: .xlsx с заголовками (жирным) и текстовым форматом «@» в первых
+     * TEMPLATE_ROWS строках — чтобы Excel не превращал введённые коды вроде 00123 в число 123.
+     *
+     * @return string путь к временному файлу — удалить после отправки
+     */
+    public function template(): string
+    {
+        $path = tempnam(sys_get_temp_dir(), 'codes-template');
+
+        $options = new WriterOptions;
+        $options->setColumnWidth(24, 1, 2);
+
+        $writer = new XlsxWriter($options);
+        $writer->openToFile($path);
+        $writer->getCurrentSheet()->setName('Коды');
+        $writer->addRow(Row::fromValues([self::SKU_HEADER, self::CODE_HEADER], (new Style)->setFormat('@')->setFontBold()));
+
+        // Формат хранится в ячейке, а пустые ячейки и строки openspout не записывает —
+        // поэтому ячейки с пустым текстом
+        $text = (new Style)->setFormat('@');
+
+        for ($i = 0; $i < self::TEMPLATE_ROWS; $i++) {
+            $writer->addRow(new Row([new Cell\StringCell('', $text), new Cell\StringCell('', $text)]));
+        }
+
+        $writer->close();
+
+        return $path;
     }
 
     /**
@@ -287,6 +334,98 @@ class ClientCodeImport
         }
 
         throw new RuntimeException('В файле нет столбцов «'.self::SKU_HEADER.'» и «'.self::CODE_HEADER.'» — скачайте шаблон и заполните его.');
+    }
+
+    /**
+     * Строки первого листа как массивы строк (пустые ячейки — ''); номер строки в файле —
+     * индекс + 1 (пустые строки сохраняются).
+     *
+     * @return list<list<string>>
+     *
+     * @throws RuntimeException файл не читается — текст для пользователя
+     */
+    private function rows(string $path, string $extension): array
+    {
+        $extension = strtolower($extension);
+
+        if ($extension === 'xls') {
+            throw new RuntimeException('Формат .xls не поддерживается — сохраните файл в Excel как .xlsx или .csv.');
+        }
+
+        $head = (string) @file_get_contents($path, false, null, 0, 65536);
+        $isXlsx = $extension === 'xlsx' || str_starts_with($head, "PK\x03\x04");
+
+        if ($isXlsx) {
+            $options = new XlsxOptions;
+            $options->SHOULD_PRESERVE_EMPTY_ROWS = true;
+            $reader = new XlsxReader($options);
+        } else {
+            $reader = new CsvReader($this->csvOptions($path, $head));
+        }
+
+        $rows = [];
+
+        try {
+            $reader->open($path);
+
+            foreach ($reader->getSheetIterator() as $sheet) {
+                foreach ($sheet->getRowIterator() as $row) {
+                    $rows[] = array_map(fn (Cell $cell) => $this->cellText($cell), $row->getCells());
+
+                    // Лишнее не читается: read() всё равно откажет при числе строк > MAX_ROWS
+                    if (count($rows) > self::MAX_ROWS + 10) {
+                        break;
+                    }
+                }
+
+                break; // только первый лист
+            }
+        } catch (Throwable) {
+            throw new RuntimeException($isXlsx
+                ? 'Файл Excel повреждён или это не .xlsx — сохраните его в Excel заново как .xlsx или .csv.'
+                : 'Файл CSV не читается — сохраните его заново как .csv или .xlsx.');
+        } finally {
+            $reader->close();
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Кодировка и разделитель CSV: без BOM и не UTF-8 — cp1251 (так сохраняет Excel в русской
+     * Windows); разделитель — тот, которого больше всего в первой строке.
+     */
+    private function csvOptions(string $path, string $head): CsvOptions
+    {
+        $options = new CsvOptions;
+        $options->SHOULD_PRESERVE_EMPTY_ROWS = true;
+
+        $bom = "\xEF\xBB\xBF";
+
+        if (! str_starts_with($head, $bom) && ! mb_check_encoding((string) file_get_contents($path), 'UTF-8')) {
+            $options->ENCODING = 'Windows-1251';
+        }
+
+        $first = (string) strtok(str_starts_with($head, $bom) ? substr($head, 3) : $head, "\n");
+        $counts = [';' => substr_count($first, ';'), ',' => substr_count($first, ','), "\t" => substr_count($first, "\t")];
+        $options->FIELD_DELIMITER = max($counts) > 0 ? (string) array_search(max($counts), $counts, true) : ';';
+
+        return $options;
+    }
+
+    /** Значение ячейки текстом: целые числа без «.0» и экспоненты (12345.0 → 12345), даты — дд.мм.гггг */
+    private function cellText(Cell $cell): string
+    {
+        $value = $cell instanceof Cell\FormulaCell ? $cell->getComputedValue() : $cell->getValue();
+
+        return trim(match (true) {
+            $value === null => '',
+            is_bool($value) => $value ? 'TRUE' : 'FALSE',
+            is_float($value) && floor($value) === $value && abs($value) < 1e15 => number_format($value, 0, '.', ''),
+            $value instanceof DateTimeInterface => $value->format('d.m.Y'),
+            $value instanceof DateInterval => $value->format('%h:%I:%S'),
+            default => (string) $value,
+        });
     }
 
     /**

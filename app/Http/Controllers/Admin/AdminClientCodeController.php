@@ -7,7 +7,6 @@ use App\Models\Organization;
 use App\Models\Product;
 use App\Models\ProductClientCode;
 use App\Services\ClientCodeImport;
-use App\Support\Spreadsheet;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
@@ -101,10 +100,9 @@ class AdminClientCodeController extends Controller
 
     public function template()
     {
-        return response(Spreadsheet::write([[ClientCodeImport::SKU_HEADER, ClientCodeImport::CODE_HEADER]], [24, 24], 'Коды'), 200, [
+        return response()->download($this->import->template(), 'client-codes-template.xlsx', [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="client-codes-template.xlsx"',
-        ]);
+        ])->deleteFileAfterSend();
     }
 
     /**
