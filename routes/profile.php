@@ -1,9 +1,9 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\DeliveryAddressController;
 use App\Http\Controllers\ProfileController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -37,6 +37,10 @@ Route::middleware(['auth', 'role:client'])->group(function () {
     // Организация и её пользователи — только просмотр (SRS §8.5, UC-031)
     Route::get('/account/organization', [AccountController::class, 'organization']);
     Route::get('/account/users', [AccountController::class, 'users']);
+
+    // Выгрузка ассортимента в .xlsx — только у организации с кодами товаров (docs/MODULES.md §11)
+    Route::get('/account/assortment', [AccountController::class, 'assortment']);
+    Route::get('/account/assortment/download', [AccountController::class, 'assortmentDownload']);
 
     Route::get('/addresses', [DeliveryAddressController::class, 'index']);
 

@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Services\CartSummary;
 use App\Services\Catalog\KeyAttributes;
+use App\Services\ClientCodes;
 
 /**
  * Главная: слайдер баннеров (без баннеров — прежний первый экран), карусели «Акции»,
@@ -38,6 +39,9 @@ class HomeController extends Controller
 
         // Строки товаров (x-product-row): характеристики — из фильтров категории каждого товара
         $keyAttributes->load($featuredProducts);
+
+        // «Ваш код» в каруселях и строках — коды организации клиента одной выборкой
+        app(ClientCodes::class)->load(collect($carousels)->pluck('products')->flatten(1)->concat($featuredProducts));
 
         return view('home', [
             'banners' => Banner::shown()->get(),

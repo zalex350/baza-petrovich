@@ -10,6 +10,7 @@ use App\Models\DeliveryAddress;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\ProductClientCode;
 use App\Models\User;
 use App\Services\Vat\VatCalculator;
 use Illuminate\Support\Facades\DB;
@@ -129,6 +130,14 @@ class CheckoutService
                 'checkout_token' => $token,
             ]);
 
+            // Снимок кодов клиента: код товара у организации на момент оформления
+            // (дальнейшие правки кодов заказ не меняют); одна выборка на заказ
+            $clientCodes = $user->organization_id
+                ? ProductClientCode::where('organization_id', $user->organization_id)
+                    ->whereIn('product_id', $items->pluck('product_id'))
+                    ->pluck('code', 'product_id')
+                : collect();
+
             foreach ($items as $item) {
                 $product = $products->get($item->product_id);
 
@@ -137,6 +146,7 @@ class CheckoutService
                     'product_id' => $product->id,
                     'product_name' => $product->title(),
                     'product_sku' => $product->sku,
+                    'client_code' => $clientCodes->get($product->id),
                     'quantity' => $item->quantity,
                     'price' => $item->price_at_add,
                     'vat_rate' => $product->vat_rate,

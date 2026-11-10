@@ -18,6 +18,8 @@
     $shortage = $validation->shortage($item);
     $priceChange = $validation->priceChange($item);
     $line = $item->vatLine();
+    // «Ваш код» — код организации клиента (коды позиций загружает CartController::index)
+    $clientCode = client_code($product);
 
     $min = (int) ($product?->min_qty ?? 1);
     $step = (int) ($product?->qty_step ?? 1);
@@ -72,6 +74,9 @@
                 <div class="mt-0.5 text-meta text-ink-muted">
                     {{ $product?->sku }}@if($product && ! $unavailable) · <x-price :amount="$item->price_at_add" vat="net" />/шт.@endif
                 </div>
+                @if($clientCode)
+                    <div class="text-meta text-ink" data-client-code>Ваш код: <span class="font-semibold">{{ $clientCode }}</span></div>
+                @endif
                 <div class="mt-0.5 text-meta" data-refresh="{{ $key }}-stock">
                     @if($unavailable)
                         <span class="text-tone-danger-text">{{ $problems[0]->title() }}</span>
@@ -119,6 +124,9 @@
                     <span class="font-semibold text-ink-muted">{{ $item->title() }}</span>
                 @endif
                 <div class="mt-0.5 text-meta text-ink-muted">{{ $product?->sku }}@if($product?->brand) · {{ $product->brand }}@endif</div>
+                @if($clientCode)
+                    <div class="text-meta text-ink" data-client-code>Ваш код: <span class="font-semibold">{{ $clientCode }}</span></div>
+                @endif
                 @if($pack)
                     <div class="mt-0.5 text-meta text-ink-muted">{{ $pack }}</div>
                 @endif

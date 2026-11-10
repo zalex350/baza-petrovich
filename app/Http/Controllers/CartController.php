@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Services\CartSummary;
 use App\Services\CartValidator;
 use App\Services\CheckoutService;
+use App\Services\ClientCodes;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -21,6 +22,7 @@ class CartController extends Controller
     public function __construct(
         private readonly CartValidator $validator,
         private readonly CartSummary $summary,
+        private readonly ClientCodes $codes,
     ) {}
 
     /**
@@ -32,6 +34,9 @@ class CartController extends Controller
     {
         $cart = auth()->user()->cart()->with('items.product.mainImage')->first();
         $items = $cart?->items ?? collect();
+
+        // «Ваш код» в позициях — коды организации одной выборкой
+        $this->codes->load($items->pluck('product'));
 
         // Все позиции — для строк (причины, «Доступно N шт.»)
         $validation = $this->validator->validateItems($items);
@@ -61,7 +66,10 @@ class CartController extends Controller
 
         $continueUrl = CatalogController::continueUrl();
 
-        return view('order', compact('cart', 'items', 'validation', 'order', 'shortages', 'checkoutToken', 'addresses', 'continueUrl'));
+        // «Добавить по вашему коду» — если у организации есть коды, иначе «по артикулу»
+        $byCode = $this->codes->has();
+
+        return view('order', compact('cart', 'items', 'validation', 'order', 'shortages', 'checkoutToken', 'addresses', 'continueUrl', 'byCode'));
     }
 
     /**
@@ -161,14 +169,18 @@ class CartController extends Controller
         $data = $validator->validated();
         $sku = trim($data['sku']);
 
-        $product = Product::query()
-            ->whereRaw('LOWER(sku) = ?', [mb_strtolower($sku)])
-            ->where('is_active', true)
-            ->where('is_published', true)
-            ->first();
+        // «Добавить по вашему коду»: сначала код организации клиента (без учёта регистра),
+        // затем наш артикул
+        $shown = fn () => Product::query()->where('is_active', true)->where('is_published', true);
+        $codeProductId = $this->codes->productIdByCode($sku);
+
+        $product = ($codeProductId ? $shown()->find($codeProductId) : null)
+            ?? $shown()->whereRaw('LOWER(sku) = ?', [mb_strtolower($sku)])->first();
 
         if (! $product) {
-            return $this->quickAddResult(['sku' => "Товар с артикулом «{$sku}» не найден"]);
+            return $this->quickAddResult(['sku' => $this->codes->has()
+                ? "Товар с кодом или артикулом «{$sku}» не найден"
+                : "Товар с артикулом «{$sku}» не найден"]);
         }
 
         $error = $this->addProduct($product, (int) ($data['qty'] ?? $product->default_qty ?? 1));
@@ -304,6 +316,9 @@ class CartController extends Controller
     {
         $cart = auth()->user()->cart()->with('items.product')->first();
         $items = $cart?->items ?? collect();
+
+        // «Ваш код» в позициях — коды организации одной выборкой
+        $this->codes->load($items->pluck('product'));
         $selected = request()->boolean('selected');
 
         if (! $selected) {

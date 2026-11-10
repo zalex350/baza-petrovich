@@ -31,7 +31,14 @@ function render(data, query) {
             // Нет фото — заглушка с сервера; файл не загрузился — та же заглушка
             html += `<img src="${escapeHtml(prod.image)}" alt="${escapeHtml(prod.name)}" width="48" height="48" loading="lazy" class="w-12 h-12 object-contain rounded border border-slate-200 bg-white" onerror="this.onerror=null;this.src='${escapeHtml(prod.placeholder)}'">`;
             html += '<div class="flex-1 min-w-0">';
-            html += `<div class="text-sm text-slate-800 truncate">${escapeHtml(prod.name)}</div>`;
+            // Код товара у организации клиента (только своей): «Ваш код · артикул · название»
+            if (prod.client_code) {
+                // Две строки — на телефоне в одну не помещается: «Ваш код X», ниже «артикул · название»
+                html += `<div class="text-sm font-semibold text-slate-800 truncate" data-client-code>Ваш код ${escapeHtml(prod.client_code)}</div>`;
+                html += `<div class="text-xs text-slate-600 truncate">${escapeHtml(prod.sku)} · ${escapeHtml(prod.name)}</div>`;
+            } else {
+                html += `<div class="text-sm text-slate-800 truncate">${escapeHtml(prod.name)}</div>`;
+            }
             // Гостю цена не приходит — как в каталоге, «после входа»
             if (prod.price) {
                 html += `<div class="text-xs text-slate-500">${escapeHtml(prod.price)} BYN</div>`;

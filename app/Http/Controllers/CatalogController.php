@@ -8,6 +8,7 @@ use App\Services\Catalog\CatalogFilters;
 use App\Services\Catalog\CatalogListing;
 use App\Services\Catalog\KeyAttributes;
 use App\Services\CatalogMenu;
+use App\Services\ClientCodes;
 
 class CatalogController extends Controller
 {
@@ -119,6 +120,8 @@ class CatalogController extends Controller
         $products = $listing->products();
 
         $keyAttributes->load($products->getCollection(), $attributeIds);
+        // «Ваш код» в строках и плитках — коды организации клиента одной выборкой
+        app(ClientCodes::class)->load($products->getCollection());
 
         return view('catalog', $data + [
             'listing' => $listing,

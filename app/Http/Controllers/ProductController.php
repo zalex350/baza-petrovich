@@ -10,6 +10,7 @@ use App\Services\CartSummary;
 use App\Services\Catalog\CatalogFilters;
 use App\Services\Catalog\KeyAttributes;
 use App\Services\CatalogMenu;
+use App\Services\ClientCodes;
 use Illuminate\Support\Collection;
 
 /**
@@ -35,6 +36,9 @@ class ProductController extends Controller
             fn () => $product->load('attributeValues.attribute'),
             fn () => $product->setRelation('attributeValues', collect())
         );
+
+        // «Ваш код» рядом с артикулом
+        app(ClientCodes::class)->load([$product]);
 
         return view('product', self::cardData($product));
     }

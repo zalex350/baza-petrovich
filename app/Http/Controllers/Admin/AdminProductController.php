@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\Concerns\UploadsProductImages;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\ProductController;
 use App\Models\Category;
+use App\Models\Organization;
 use App\Models\Product;
 use App\Models\ProductAttribute;
 use App\Models\ProductDraft;
@@ -163,7 +164,27 @@ class AdminProductController extends Controller
             'categories' => Category::all(),
             'draft' => $draft,
             'attributeRows' => $this->attributeRows($values),
+            ...$this->clientCodes($product),
         ]);
+    }
+
+    /**
+     * Блок «Коды клиентов»: коды товара и клиенты, у которых кода этого товара ещё нет.
+     */
+    private function clientCodes(Product $product): array
+    {
+        $clientCodes = $product->clientCodes()
+            ->with('organization:id,name')
+            ->get()
+            ->sortBy(fn ($code) => mb_strtolower((string) $code->organization?->name))
+            ->values();
+
+        return [
+            'clientCodes' => $clientCodes,
+            'codeOrganizations' => Organization::whereNotIn('id', $clientCodes->pluck('organization_id'))
+                ->orderBy('name')
+                ->pluck('name', 'id'),
+        ];
     }
 
     /**

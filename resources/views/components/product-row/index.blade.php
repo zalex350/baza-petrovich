@@ -2,7 +2,8 @@
     Строка товара в списках каталога и поиска (макет docs/design/Catalog).
     <x-product-row :product="$product" :in-cart="$cartItems[$product->id] ?? null" />
     product — с mainImage; ключевые характеристики — связь keyAttributes (App\Services\Catalog\KeyAttributes),
-    без неё строка характеристик не выводится. in-cart — CartItem этого товара в корзине клиента или null.
+    без неё строка характеристик не выводится. «Ваш код: …» рядом с артикулом — client_code()
+    (коды страницы загружает контроллер: ClientCodes::load). in-cart — CartItem этого товара в корзине клиента или null.
     Ниже md — карточка: фото и название, под ними наличие и цена, внизу покупка; с md — колонки
     фиксированной ширины под фото и названием, с xl — одна строка.
     Покупка — x-product-row.buy (его же отдаёт CartController::add после «В корзину» без перезагрузки).
@@ -12,6 +13,7 @@
 @php
     $name = $product->title();
     $url = route('product.show', $product->id);
+    $clientCode = client_code($product);
     $keyAttributes = $product->relationLoaded('keyAttributes')
         ? $product->getRelation('keyAttributes')->map->displayValue()->join(' · ')
         : '';
@@ -38,6 +40,10 @@
         <div class="mt-0.5 text-meta text-ink-muted">
             Арт. {{ $product->sku }}@if($product->brand) · {{ $product->brand }}@endif
         </div>
+
+        @if($clientCode)
+            <div class="text-meta text-ink" data-client-code>Ваш код: <span class="font-semibold">{{ $clientCode }}</span></div>
+        @endif
 
         @if($keyAttributes !== '')
             <div class="mt-0.5 text-meta text-ink-muted" data-key-attributes>{{ $keyAttributes }}</div>

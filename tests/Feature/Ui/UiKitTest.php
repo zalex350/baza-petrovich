@@ -293,6 +293,23 @@ class UiKitTest extends TestCase
             ->assertSee('name="_method" value="DELETE"', false);
     }
 
+    // --- x-tabs ---
+
+    public function test_tabs_mark_current_and_show_count(): void
+    {
+        $tabs = [
+            'main' => ['label' => 'Клиент', 'url' => '/a'],
+            'codes' => ['label' => 'Коды', 'url' => '/a?tab=codes', 'count' => 7],
+        ];
+
+        $html = (string) $this->blade('<x-tabs label="Разделы" :tabs="$tabs" active="codes" />', ['tabs' => $tabs]);
+
+        $this->assertStringContainsString('<nav aria-label="Разделы"', $html);
+        $this->assertMatchesRegularExpression('#href="/a\?tab=codes"[^>]*aria-current="page"[^>]*data-tab="codes"#s', $html);
+        $this->assertDoesNotMatchRegularExpression('#href="/a"[^>]*aria-current#s', $html);
+        $this->assertStringContainsString('>7</span>', $html);
+    }
+
     // --- x-price ---
 
     public function test_price_formats_amount_and_vat_label(): void

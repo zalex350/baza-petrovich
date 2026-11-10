@@ -208,11 +208,11 @@
 | | |
 |---|---|
 | Маршруты (auth) | `GET /orders`, `GET /order/{id}`, `GET /order/{id}/invoice`, `POST /order/{id}/cancel-request`, `POST /order/{id}/reorder`, `GET/PATCH /profile`, `GET /account/password`, `PUT /password`, `/account` (→ `/orders`) |
-| Маршруты (auth + `role:client`) | `GET /account/organization`, `GET /account/users`; `GET /addresses`, `/addresses/create`, `/addresses/{id}/edit`; `POST /addresses`, `/addresses/{id}`, `/addresses/{id}/default`, `/addresses/{id}/delete` |
+| Маршруты (auth + `role:client`) | `GET /account/organization`, `GET /account/users`, `GET /account/assortment` (+ `/download`, §11); `GET /addresses`, `/addresses/create`, `/addresses/{id}/edit`; `POST /addresses`, `/addresses/{id}`, `/addresses/{id}/default`, `/addresses/{id}/delete` |
 | Контроллеры | `OrderController`, `AccountController`, `DeliveryAddressController`, `ProfileController`, `Auth\PasswordController` |
 | Сервисы | `ReorderService` (повтор через `CartValidator`), `UserInvitations` (статус «приглашён») |
 | Модели | `Order` (`visibleTo`), `OrderInvoice`, `DeliveryAddress` (`createFor`, правила полей общие с админкой) |
-| Шаблоны | `layouts/account`, `orders` (+ `partials/orders_table`: активные и архив), `order_show`, `account/organization`, `account/users`, `account/password`, `addresses`, `address_form`, `partials/address_list`, `partials/address_fields`, `profile/edit` |
+| Шаблоны | `layouts/account`, `orders` (+ `partials/orders_table`: активные и архив), `order_show`, `account/organization`, `account/users`, `account/assortment`, `account/password`, `addresses`, `address_form`, `partials/address_list`, `partials/address_fields`, `profile/edit` |
 
 Ключевые правила:
 
@@ -444,20 +444,33 @@
 
 ## 11. Коды клиентов
 
-**Назначение.** Собственные артикулы организации для наших товаров. Сейчас есть только структура данных; интерфейса нет, задачи — в `docs/BACKLOG.md`.
+**Назначение.** Собственные артикулы организации для наших товаров. Ведёт администратор: в карточке товара и в карточке клиента (вкладка «Коды товаров», загрузка из Excel / CSV). Клиент видит коды своей организации на витрине: «Ваш код» рядом с артикулом, поиск и «Добавить по вашему коду» в корзине, код в заказе, выгрузка ассортимента в кабинете.
 
 | | |
 |---|---|
-| Таблица | `product_client_codes` (`product_id`, `organization_id`, `code`); снимок в заказе — `order_items.client_code` (пока не заполняется) |
+| Таблица | `product_client_codes` (`product_id`, `organization_id`, `code`, `code_key` — код в нижнем регистре без пробелов по краям, для поиска; заполняет модель и импорт); снимок в заказе — `order_items.client_code` |
 | Модель | `ProductClientCode`; связи `Product::clientCodes()`, `Organization::productCodes()` |
-| API | `Product::codeFor($organization)`; для списков без N+1 — `Product::query()->withClientCodeFor($org)`, `Product::loadClientCodesFor($products, $org)` |
-| Маршруты, шаблоны | Нет |
+| API | `Product::codeFor($organization)`; для списков без N+1 — `Product::query()->withClientCodeFor($org)`, `Product::loadClientCodesFor($products, $org)`. Витрина — `App\Services\ClientCodes` (scoped): `load($products)` — коды организации текущего пользователя для товаров страницы одной выборкой, `codeFor($product)`, `has()` — есть ли коды, `whereCodeContains()` / `productIdByCode()` — поиск по `code_key`; в шаблонах — `client_code($product)` |
+| Маршруты | Товар: `POST /admin/product/{id}/client-codes`, `…/client-codes/{code}`, `…/client-codes/{code}/delete`. Клиент: `GET /admin/organization/{id}?tab=codes`, `POST /admin/organization/{id}/codes/{code}/delete`, `GET …/codes/template`, `POST …/codes/import` (файл → сессия), `GET …/codes/import` (предпросмотр), `POST …/codes/import/apply`, `…/codes/import/cancel` |
+| Контроллер, сервис | `AdminClientCodeController`; `ClientCodeImport` (чтение файла, предпросмотр, применение); файлы читает и шаблон пишет библиотека `openspout/openspout` (потоково, без загрузки всей книги в память; нужно PHP-расширение `zip` — есть в `docker/php/Dockerfile` и `docker/staging/Dockerfile`; локально после обновления — `docker-compose build php queue && docker-compose up -d php queue`) |
+| Шаблоны | `partials/admin_product_client_codes` (блок в `admin/product_form`), `partials/admin_organization_codes` (вкладка в `admin/organization`, вкладки — `x-tabs`), `admin/organization_codes_import` (предпросмотр), `partials/admin_client_code_errors` |
 
 | Правило | Суть |
 |---|---|
+| Карточка товара | Таблица «клиент — код»: изменить (поле + «Сохранить»), удалить (`x-confirm`), добавить (клиент из тех, у кого кода этого товара нет). Сразу, без черновика. Ошибки — под полем: «Код «…» у этого клиента уже занят товаром АРТИКУЛ — название», «У этого клиента уже есть код этого товара» |
+| Вкладка «Коды товаров» | Наш артикул, название (ссылка на товар), код; поиск по артикулу, названию, коду; удаление с `x-confirm`; по 50 на странице |
+| Файл | .xlsx или .ods (первый лист) или CSV (разделитель `;` / `,` / табуляция, UTF-8 или cp1251), до 5 МБ и 10 000 строк. Столбцы «Наш артикул» и «Код клиента» — заголовок в одной из первых 10 строк, порядок любой. Числа из Excel без «.0»; формулы — вычисленное значение; коды с ведущими нулями — текстом (в шаблоне первые 1000 строк — текстовый формат «@»). Шаблон — `client-codes-template.xlsx`. Проверено на файлах из Excel, LibreOffice и Google Sheets — `tests/Fixtures/client-codes/` |
+| Режимы | «Добавить и обновить» (по умолчанию) — остальные коды клиента не меняются; «Заменить полностью» — коды товаров, которых нет в файле, удаляются |
+| Предпросмотр | Добавить / обновить (было → стало) / удалить (режим «Заменить») / без изменений / ошибки по строкам: пустое поле, артикул не найден, артикул у нескольких товаров, код длиннее 100, код или товар повторяется в файле (ошибка у всех таких строк), код занят товаром, код которого файл не меняет. База не меняется |
+| Применение | В транзакции, с повторной проверкой по текущей базе. Строки с ошибками пропускаются; в режиме «Заменить» при ошибках применить нельзя (иначе удалились бы коды товаров из ошибочных строк). Обмен кодами между товарами в одном файле работает (сначала удаление, потом вставка). После — отчёт на вкладке: добавлено, обновлено, удалено, без изменений, пропущенные строки |
 | Уникальность | Один код на товар у организации `(organization_id, product_id)`; код не повторяется у организации `(organization_id, code)` |
 | Удаление | Каскадно вместе с товаром или организацией |
-| Регистр | В MySQL `(organization_id, code)` не различает регистр, в SQLite различает — при импорте и в формах сравнивать без учёта регистра |
-| В планах | Поиск по коду, «Ваш код» в списках, карточке, корзине и заказе, снимок при оформлении, блок в админке товара, загрузка из Excel |
+| Регистр | В MySQL `(organization_id, code)` не различает регистр, в SQLite различает — при импорте и в формах сравнивать без учёта регистра. Поиск по коду — по `code_key` (не `LOWER(code)`: SQLite не приводит кириллицу к нижнему регистру) — одинаково в обеих базах |
+| Кто видит | Только пользователь организации и только её коды. Гость, администратор, пользователь без организации — ни кодов, ни запросов к ним |
+| «Ваш код» | Под артикулом: строка товара (`x-product-row`), плитка (`x-product-card`), карточка товара (с «копировать»), позиция корзины (`x-cart-row`). Нет кода — только наш артикул. Коды страницы загружают контроллеры (`CatalogController`, `HomeController`, `SearchController`, `ProductController`, `CartController::index`) — `ClientCodes::load` |
+| Поиск | `/search` и `/search/suggest`: каждое слово запроса — в артикуле, названии, бренде (описании) или в коде своей организации; точное совпадение с кодом — первым, затем с артикулом. Подсказка в шапке — «Ваш код X · артикул · название»; в JSON подсказок — `client_code` |
+| Корзина | Если у организации есть коды — полоса «Добавить по вашему коду» (`x-cart-quick-add by-code`): подсказки «ваш код · артикул», выбор подставляет код; `quickAdd` ищет сначала код организации, затем артикул. Иначе — «Добавить по артикулу» |
+| Заказ | `CheckoutService` пишет в позицию `client_code` — код на момент оформления (позже не меняется). Показ: заказ в кабинете («Ваш код»), админка заказа («Код клиента») — `partials/order_items`; письмо о новом заказе — список позиций «артикул (код клиента: X) — название × N шт.» |
+| Выгрузка ассортимента | Кабинет → «Выгрузка ассортимента» (`/account/assortment`, пункт меню — только у организации с кодами, иначе 404). Файл `.xlsx` (`App\Services\AssortmentExport`, openspout, потоково): ваш код, наш артикул, название, цена без НДС, цена с НДС (по ставке товара; нет цены — «Цена уточняется»), остаток — точным числом до `shop.export_stock_cap` (20, `SHOP_EXPORT_STOCK_CAP`), больше — «более 20». Товары — опубликованные (`is_active`, `is_published`) с кодом своей организации, по артикулу; галочка «Включить товары без кода» — после них все остальные опубликованные с пустым кодом. Код и артикул — текстом (ведущие нули сохраняются) |
 
-Тесты: `ProductClientCodeTest`.
+Тесты: `ProductClientCodeTest`, `ClientCodesAdminTest`.

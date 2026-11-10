@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\AssortmentExport;
+use App\Services\ClientCodes;
 use App\Services\UserInvitations;
 
 /**
@@ -40,6 +42,41 @@ class AccountController extends Controller
     public function password()
     {
         return view('account.password');
+    }
+
+    /**
+     * «Выгрузка ассортимента» (docs/MODULES.md §11): только у организации с кодами товаров,
+     * иначе — 404 (раздела нет).
+     */
+    public function assortment(ClientCodes $codes)
+    {
+        $organization = $this->organizationWithCodesOrFail($codes);
+
+        return view('account.assortment', [
+            'organization' => $organization,
+            'codesCount' => $organization->productCodes()->count(),
+            'stockCap' => (int) config('shop.export_stock_cap'),
+        ]);
+    }
+
+    public function assortmentDownload(ClientCodes $codes, AssortmentExport $export)
+    {
+        $organization = $this->organizationWithCodesOrFail($codes);
+
+        $path = $export->write($organization, request()->boolean('without_code'));
+
+        return response()->download($path, 'assortment-'.now()->format('Y-m-d').'.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend();
+    }
+
+    private function organizationWithCodesOrFail(ClientCodes $codes)
+    {
+        $organization = $this->organizationOrFail();
+
+        abort_unless($codes->has(), 404);
+
+        return $organization;
     }
 
     /**

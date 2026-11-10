@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminAttributeController;
 use App\Http\Controllers\Admin\AdminBannerController;
 use App\Http\Controllers\Admin\AdminCatalogFilterController;
 use App\Http\Controllers\Admin\AdminCategoryController;
+use App\Http\Controllers\Admin\AdminClientCodeController;
 use App\Http\Controllers\Admin\AdminDeliveryAddressController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminOrganizationController;
@@ -43,6 +44,11 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post('/admin/product/{id}/documents/reorder', [AdminProductDocumentController::class, 'reorder']);
     Route::post('/admin/product/{id}/documents/{document}', [AdminProductDocumentController::class, 'update']);
     Route::post('/admin/product/{id}/documents/{document}/delete', [AdminProductDocumentController::class, 'destroy']);
+
+    // Коды товара у клиентов (product_client_codes): добавить, изменить, удалить
+    Route::post('/admin/product/{id}/client-codes', [AdminClientCodeController::class, 'store']);
+    Route::post('/admin/product/{id}/client-codes/{code}', [AdminClientCodeController::class, 'update']);
+    Route::post('/admin/product/{id}/client-codes/{code}/delete', [AdminClientCodeController::class, 'destroy']);
 
     // Фото товара (SRS §10.4.8): загрузка, порядок, основное, замена, удаление
     Route::post(
@@ -242,6 +248,14 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         '/admin/organization/{organization}/address/{id}/delete',
         [AdminDeliveryAddressController::class, 'destroy']
     );
+
+    // Коды товаров клиента (вкладка «Коды товаров»): удаление, загрузка из Excel / CSV с предпросмотром
+    Route::get('/admin/organization/{id}/codes/template', [AdminClientCodeController::class, 'template']);
+    Route::post('/admin/organization/{id}/codes/import', [AdminClientCodeController::class, 'upload']);
+    Route::get('/admin/organization/{id}/codes/import', [AdminClientCodeController::class, 'preview']);
+    Route::post('/admin/organization/{id}/codes/import/apply', [AdminClientCodeController::class, 'apply']);
+    Route::post('/admin/organization/{id}/codes/import/cancel', [AdminClientCodeController::class, 'cancel']);
+    Route::post('/admin/organization/{id}/codes/{code}/delete', [AdminClientCodeController::class, 'destroyForOrganization']);
 
     Route::get(
         '/admin/users',

@@ -3,11 +3,12 @@
 namespace App\Support;
 
 use App\Models\User;
+use App\Services\ClientCodes;
 
 /**
  * Разделы личного кабинета (SRS §8) — один список для меню кабинета (layouts/account),
  * меню пользователя в шапке и панели ☰ на телефоне. Разделы организации — только клиенту
- * с организацией, адреса — только клиенту; администратору — профиль и пароль
+ * с организацией («Выгрузка ассортимента» — если у организации есть коды товаров), адреса — только клиенту; администратору — профиль и пароль
  * (заказов и корзины у него нет, BR-121).
  */
 class AccountMenu
@@ -24,6 +25,8 @@ class AccountMenu
             $client ? ['label' => 'Мои заказы', 'url' => '/orders', 'icon' => 'heroicon-o-clipboard-document-list', 'active' => request()->is('orders') || request()->is('order/*')] : null,
             $organization ? ['label' => 'Организация', 'url' => '/account/organization', 'icon' => 'heroicon-o-building-office-2', 'active' => request()->is('account/organization')] : null,
             $organization ? ['label' => 'Пользователи организации', 'url' => '/account/users', 'icon' => 'heroicon-o-users', 'active' => request()->is('account/users')] : null,
+            // Только у организации с кодами товаров
+            $organization && app(ClientCodes::class)->has($user) ? ['label' => 'Выгрузка ассортимента', 'url' => '/account/assortment', 'icon' => 'heroicon-o-arrow-down-tray', 'active' => request()->is('account/assortment*')] : null,
             $client ? ['label' => 'Адреса доставки', 'url' => '/addresses', 'icon' => 'heroicon-o-map-pin', 'active' => request()->is('addresses*')] : null,
             ['label' => 'Профиль', 'url' => '/profile', 'icon' => 'heroicon-o-user', 'active' => request()->is('profile')],
             ['label' => 'Смена пароля', 'url' => '/account/password', 'icon' => 'heroicon-o-key', 'active' => request()->is('account/password')],

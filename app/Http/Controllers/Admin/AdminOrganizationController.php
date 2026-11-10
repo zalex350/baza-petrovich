@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Organization;
+use App\Models\ProductClientCode;
 use Illuminate\Validation\Rule;
 
 /**
@@ -50,9 +51,40 @@ class AdminOrganizationController extends Controller
     public function show($id)
     {
         $organization = Organization::with(['users' => fn ($q) => $q->orderBy('name')])
+            ->withCount('productCodes')
             ->findOrFail($id);
 
-        return view('admin.organization', compact('organization'));
+        $tab = request('tab') === 'codes' ? 'codes' : 'main';
+        $search = trim((string) request('q', ''));
+        $codes = $tab === 'codes' ? $this->codes($organization, $search) : null;
+
+        return view('admin.organization', compact('organization', 'tab', 'search', 'codes'));
+    }
+
+    /**
+     * Вкладка «Коды товаров»: поиск по нашему артикулу, названию и коду клиента; сортировка — по артикулу.
+     */
+    private function codes(Organization $organization, string $search)
+    {
+        return ProductClientCode::query()
+            ->select('product_client_codes.*')
+            ->with('product:id,sku,name,display_name')
+            ->leftJoin('products', 'products.id', '=', 'product_client_codes.product_id')
+            ->where('product_client_codes.organization_id', $organization->id)
+            ->when($search !== '', function ($query) use ($search) {
+                $like = '%'.$search.'%';
+
+                $query->where(function ($q) use ($like) {
+                    $q->where('product_client_codes.code', 'like', $like)
+                        ->orWhere('products.sku', 'like', $like)
+                        ->orWhere('products.name', 'like', $like)
+                        ->orWhere('products.display_name', 'like', $like);
+                });
+            })
+            ->orderBy('products.sku')
+            ->orderBy('product_client_codes.id')
+            ->paginate(50)
+            ->withQueryString();
     }
 
     public function edit($id)
@@ -75,7 +107,7 @@ class AdminOrganizationController extends Controller
     public function destroy($id)
     {
         $organization = Organization::withCount('users')->findOrFail($id);
-        $ordersCount  = Order::where('organization_id', $organization->id)->count();
+        $ordersCount = Order::where('organization_id', $organization->id)->count();
 
         if ($organization->users_count > 0 || $ordersCount > 0) {
             return back()->with(
@@ -96,17 +128,17 @@ class AdminOrganizationController extends Controller
     private function validated(?Organization $organization = null): array
     {
         return request()->validate([
-            'name'       => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'legal_name' => ['nullable', 'string', 'max:255'],
-            'unp'        => [
+            'unp' => [
                 'nullable',
                 'digits:9',
                 Rule::unique('organizations', 'unp')->ignore($organization?->id),
             ],
-            'address'    => ['nullable', 'string', 'max:255'],
-            'phone'      => ['nullable', 'string', 'max:50'],
-            'email'      => ['nullable', 'email', 'max:255'],
-            'comment'    => ['nullable', 'string'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'comment' => ['nullable', 'string'],
         ], [
             'unp.digits' => 'УНП должен состоять ровно из 9 цифр.',
             'unp.unique' => 'Клиент с таким УНП уже существует.',

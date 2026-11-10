@@ -9,3 +9,9 @@
 /.github export-ignore
 CHANGELOG.md export-ignore
 .styleci.yml export-ignore
+
+# Файлы-образцы для тестов — байт в байт (CRLF, cp1251), без нормализации строк
+/tests/Fixtures/client-codes/*.csv -text
+/tests/Fixtures/client-codes/*.xlsx -text
+/tests/Fixtures/client-codes/*.fods -text
+/tests/Fixtures/client-codes/*.ods -text
