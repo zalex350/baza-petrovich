@@ -113,12 +113,12 @@ class AdminClientCodeController extends Controller
         $organization = Organization::findOrFail($id);
 
         request()->validate([
-            'file' => ['required', 'file', 'max:'.ClientCodeImport::MAX_KB, 'extensions:xlsx,csv,txt'],
+            'file' => ['required', 'file', 'max:'.ClientCodeImport::MAX_KB, 'extensions:xlsx,ods,csv,txt'],
             'mode' => ['required', Rule::in(array_keys(ClientCodeImport::MODES))],
         ], [
             'file.required' => 'Выберите файл.',
             'file.max' => 'Файл — не больше '.intdiv(ClientCodeImport::MAX_KB, 1024).' МБ.',
-            'file.extensions' => 'Нужен файл Excel (.xlsx) или CSV.',
+            'file.extensions' => 'Нужен файл Excel (.xlsx), LibreOffice (.ods) или CSV.',
             'file.uploaded' => 'Файл не загрузился — попробуйте ещё раз.',
         ]);
 

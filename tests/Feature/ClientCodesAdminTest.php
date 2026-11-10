@@ -436,6 +436,7 @@ class ClientCodesAdminTest extends TestCase
     {
         return [
             'LibreOffice .xlsx' => ['libreoffice.xlsx'],
+            'LibreOffice .ods' => ['libreoffice.ods'],
             'LibreOffice .csv (UTF-8, «,»)' => ['libreoffice.csv'],
             'LibreOffice .csv (cp1251, «;»)' => ['libreoffice-cp1251.csv'],
             'Google Sheets .xlsx' => ['google-sheets.xlsx'],
@@ -491,7 +492,7 @@ class ClientCodesAdminTest extends TestCase
             ->assertSessionHasErrors(['file' => 'В файле нет столбцов «Наш артикул» и «Код клиента» — скачайте шаблон и заполните его.']);
 
         $this->upload($this->csv("Наш артикул;Код клиента\n"))->assertSessionHasErrors('file');
-        $this->upload($this->csv('x', 'codes.xls'))->assertSessionHasErrors(['file' => 'Нужен файл Excel (.xlsx) или CSV.']);
+        $this->upload($this->csv('x', 'codes.xls'))->assertSessionHasErrors(['file' => 'Нужен файл Excel (.xlsx), LibreOffice (.ods) или CSV.']);
         $this->upload($this->csv('not a zip', 'codes.xlsx'))->assertSessionHasErrors('file');
 
         $this->actingAs($this->admin)->post("/admin/organization/{$this->org->id}/codes/import", ['mode' => 'add'])

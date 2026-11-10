@@ -8,6 +8,7 @@
 | Файл | Откуда |
 |---|---|
 | `source.fods` | Исходная таблица (Flat ODS) |
+| `libreoffice.ods` | LibreOffice: `soffice --headless --convert-to ods source.fods` |
 | `libreoffice.xlsx` | LibreOffice 7.4.7: `soffice --headless --convert-to xlsx:"Calc MS Excel 2007 XML" source.fods` |
 | `libreoffice.csv` | LibreOffice: `--convert-to "csv:Text - txt - csv (StarCalc):44,34,76,1"` — UTF-8, «,» |
 | `libreoffice-cp1251.csv` | LibreOffice: `--convert-to "csv:Text - txt - csv (StarCalc):59,34,34,1"` — Windows-1251, «;» |

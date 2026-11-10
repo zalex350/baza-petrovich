@@ -13,6 +13,8 @@ use OpenSpout\Common\Entity\Row;
 use OpenSpout\Common\Entity\Style\Style;
 use OpenSpout\Reader\CSV\Options as CsvOptions;
 use OpenSpout\Reader\CSV\Reader as CsvReader;
+use OpenSpout\Reader\ODS\Options as OdsOptions;
+use OpenSpout\Reader\ODS\Reader as OdsReader;
 use OpenSpout\Reader\XLSX\Options as XlsxOptions;
 use OpenSpout\Reader\XLSX\Reader as XlsxReader;
 use OpenSpout\Writer\XLSX\Options as WriterOptions;
@@ -23,8 +25,8 @@ use Throwable;
 /**
  * Загрузка кодов товаров клиента из Excel / CSV: столбцы «Наш артикул» и «Код клиента»
  * (строка заголовков — любая из первых 10, порядок столбцов любой). Файлы читает и шаблон
- * пишет openspout/openspout (нужно расширение zip): .xlsx — первый лист, формулы — их
- * вычисленное значение; CSV — UTF-8 (с BOM или без) или cp1251, разделитель «;», «,» или Tab.
+ * пишет openspout/openspout (нужно расширение zip): .xlsx и .ods (LibreOffice) — первый
+ * лист, формулы — их вычисленное значение; CSV — UTF-8 (с BOM или без) или cp1251, разделитель «;», «,» или Tab.
  *
  * Режимы: add — добавить новые и обновить изменённые, остальные коды не трогать;
  * replace — после загрузки у организации ровно коды из файла, остальные удаляются.
@@ -353,9 +355,20 @@ class ClientCodeImport
         }
 
         $head = (string) @file_get_contents($path, false, null, 0, 65536);
-        $isXlsx = $extension === 'xlsx' || str_starts_with($head, "PK\x03\x04");
 
-        if ($isXlsx) {
+        // По содержимому, а не только по расширению: .ods — zip, первый файл которого
+        // mimetype «application/vnd.oasis.opendocument.spreadsheet»
+        $kind = match (true) {
+            $extension === 'ods' || (str_starts_with($head, "PK\x03\x04") && str_contains(substr($head, 0, 100), 'opendocument.spreadsheet')) => 'ods',
+            $extension === 'xlsx' || str_starts_with($head, "PK\x03\x04") => 'xlsx',
+            default => 'csv',
+        };
+
+        if ($kind === 'ods') {
+            $options = new OdsOptions;
+            $options->SHOULD_PRESERVE_EMPTY_ROWS = true;
+            $reader = new OdsReader($options);
+        } elseif ($kind === 'xlsx') {
             $options = new XlsxOptions;
             $options->SHOULD_PRESERVE_EMPTY_ROWS = true;
             $reader = new XlsxReader($options);
@@ -381,9 +394,11 @@ class ClientCodeImport
                 break; // только первый лист
             }
         } catch (Throwable) {
-            throw new RuntimeException($isXlsx
-                ? 'Файл Excel повреждён или это не .xlsx — сохраните его в Excel заново как .xlsx или .csv.'
-                : 'Файл CSV не читается — сохраните его заново как .csv или .xlsx.');
+            throw new RuntimeException(match ($kind) {
+                'xlsx' => 'Файл Excel повреждён или это не .xlsx — сохраните его в Excel заново как .xlsx или .csv.',
+                'ods' => 'Файл .ods повреждён — сохраните его заново как .ods, .xlsx или .csv.',
+                default => 'Файл CSV не читается — сохраните его заново как .csv или .xlsx.',
+            });
         } finally {
             $reader->close();
         }

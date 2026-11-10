@@ -14,3 +14,4 @@ CHANGELOG.md export-ignore
 /tests/Fixtures/client-codes/*.csv -text
 /tests/Fixtures/client-codes/*.xlsx -text
 /tests/Fixtures/client-codes/*.fods -text
+/tests/Fixtures/client-codes/*.ods -text

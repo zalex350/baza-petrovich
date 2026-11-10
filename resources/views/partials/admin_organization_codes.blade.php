@@ -43,7 +43,7 @@
 
     <form method="POST" action="{{ $base }}/codes/import" enctype="multipart/form-data" novalidate class="grid gap-4 md:grid-cols-2" data-codes-upload>
         @csrf
-        <x-file name="file" label="Файл" accept=".xlsx,.csv,text/csv" required hint="Excel (.xlsx) или CSV, до {{ $maxMb }} МБ." />
+        <x-file name="file" label="Файл" accept=".xlsx,.ods,.csv,text/csv" required hint="Excel (.xlsx), LibreOffice (.ods) или CSV, до {{ $maxMb }} МБ." />
         <x-select
             name="mode"
             label="Режим"
