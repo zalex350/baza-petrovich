@@ -88,6 +88,12 @@
                         Артикул: <x-copy :text="$product->sku" label="Скопировать артикул" />
                     </span>
 
+                    @if($clientCode = client_code($product))
+                        <span class="text-ink" data-client-code>
+                            Ваш код: <x-copy :text="$clientCode" label="Скопировать ваш код" />
+                        </span>
+                    @endif
+
                     @if($product->brand)
                         <span>Производитель: <a href="{{ $brandUrl }}" class="text-link hover:underline" data-brand-link>{{ $product->brand }}</a></span>
                     @endif

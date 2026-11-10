@@ -99,6 +99,12 @@
 
                     <td class="px-4 py-3 text-sm text-slate-400">
                         {{ $item->product_sku }}
+                        {{-- Снимок кода клиента при оформлении: клиенту — «Ваш код», в админке — «Код клиента» --}}
+                        @if($item->client_code)
+                            <div class="text-slate-700 whitespace-nowrap" data-client-code>
+                                {{ $admin ? 'Код клиента' : 'Ваш код' }}: <span class="font-semibold">{{ $item->client_code }}</span>
+                            </div>
+                        @endif
                     </td>
 
                     <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">

@@ -76,9 +76,9 @@
     {{-- Пустая корзина: «Добавить по артикулу» — над пустым состоянием --}}
     @if($client)
         <div class="mb-4 hidden overflow-hidden rounded-card border border-line xl:block">
-            <x-cart-quick-add />
+            <x-cart-quick-add :by-code="$byCode" />
         </div>
-        <x-cart-quick-add layout="card" class="mb-4 xl:hidden" />
+        <x-cart-quick-add :by-code="$byCode" layout="card" class="mb-4 xl:hidden" />
     @endif
 
     <x-empty-state title="Корзина пуста" icon="shopping-cart" data-cart-empty>
@@ -114,7 +114,7 @@
 
                 {{-- Добавить по артикулу — полосой над строкой заголовков --}}
                 @if($client)
-                    <x-cart-quick-add />
+                    <x-cart-quick-add :by-code="$byCode" />
                 @endif
 
                 <div class="grid grid-cols-[1.5rem_minmax(0,1fr)_6rem_8rem_6rem_7rem_2.5rem] items-center gap-x-3 bg-field px-4 py-3 text-meta font-medium text-ink-muted">
@@ -153,7 +153,7 @@
             {{-- Карточки (уже xl, макет CartMobile) --}}
             <div class="flex flex-col gap-3 xl:hidden">
                 @if($client)
-                    <x-cart-quick-add layout="card" />
+                    <x-cart-quick-add :by-code="$byCode" layout="card" />
                 @endif
 
                 <label class="flex items-center gap-3 px-1 text-sm text-ink-muted">

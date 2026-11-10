@@ -4,13 +4,18 @@
     количество (пусто — default_qty товара), «Добавить». Enter — добавить.
     <x-cart-quick-add />                      — полоса над строкой заголовков таблицы (xl и шире)
     <x-cart-quick-add layout="card" />        — над карточками (уже xl): поля в две строки
+    by-code — у организации клиента есть коды товаров (ClientCodes::has): «Добавить по вашему коду»,
+    подсказки — ваш код · артикул · название, выбор подставляет ваш код; наш артикул тоже принимается
+    (CartController::quickAdd ищет сначала код организации, затем артикул).
     Без перезагрузки — cart-page.js (форма [data-quick-add]); без JS — обычная форма, ошибки у полей.
 --}}
-@props(['layout' => 'strip'])
+@props(['layout' => 'strip', 'byCode' => false])
 
 @php
     $card = $layout === 'card';
     $suffix = $card ? '-m' : '';
+    $label = $byCode ? 'Добавить по вашему коду' : 'Добавить по артикулу';
+    $placeholder = $byCode ? 'Ваш код или артикул' : 'Артикул';
 @endphp
 
 <form
@@ -22,17 +27,18 @@
         $card ? 'flex flex-col gap-2 rounded-card border border-line p-3.5' : 'flex items-start gap-3 border-b border-line-soft px-4 py-3',
     ]) }}
     data-quick-add
+    @if($byCode) data-by-code @endif
 >
     @csrf
 
-    <span @class(['text-sm font-medium text-ink-muted', 'shrink-0 pt-2.5' => ! $card])>Добавить по артикулу</span>
+    <span @class(['text-sm font-medium text-ink-muted', 'shrink-0 pt-2.5' => ! $card])>{{ $label }}</span>
 
     <div @class(['relative min-w-0', 'flex-1 max-w-sm' => ! $card])>
         <x-input
             name="sku"
             :id="'quick-sku'.$suffix"
-            placeholder="Артикул"
-            aria-label="Артикул"
+            :placeholder="$placeholder"
+            :aria-label="$placeholder"
             autocomplete="off"
             role="combobox"
             aria-autocomplete="list"
@@ -48,7 +54,7 @@
         />
         <p class="mt-1 hidden text-sm text-tone-danger-text" data-quick-error="sku"></p>
 
-        {{-- Подсказки: артикул + название --}}
+        {{-- Подсказки: артикул + название; с кодом организации — «ваш код · артикул», ниже название --}}
         <ul
             id="quick-sku-list{{ $suffix }}"
             x-show="open"
@@ -65,7 +71,12 @@
                     :class="index === active ? 'bg-canvas' : ''"
                     class="cursor-pointer px-3 py-2 text-sm"
                 >
-                    <span class="font-medium text-ink" x-text="item.sku"></span>
+                    <template x-if="item.code">
+                        <span><span class="font-medium text-ink" x-text="item.code"></span> <span class="text-meta text-ink-muted" x-text="'· ' + item.sku"></span></span>
+                    </template>
+                    <template x-if="! item.code">
+                        <span class="font-medium text-ink" x-text="item.sku"></span>
+                    </template>
                     <span class="block truncate text-meta text-ink-muted" x-text="item.name"></span>
                 </li>
             </template>

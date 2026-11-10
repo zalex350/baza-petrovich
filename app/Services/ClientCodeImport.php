@@ -295,6 +295,7 @@ class ClientCodeImport
                     'organization_id' => $organization->id,
                     'product_id' => $row['product']->id,
                     'code' => $row['code'],
+                    'code_key' => ProductClientCode::key($row['code']),
                     'created_at' => $now,
                     'updated_at' => $now,
                 ], $chunk));
@@ -307,7 +308,7 @@ class ClientCodeImport
     /** Ключ сравнения: без регистра и пробелов по краям */
     public static function key(string $value): string
     {
-        return mb_strtolower(trim($value));
+        return ProductClientCode::key($value);
     }
 
     public function productLabel(?Product $product): string

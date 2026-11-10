@@ -444,13 +444,13 @@
 
 ## 11. Коды клиентов
 
-**Назначение.** Собственные артикулы организации для наших товаров. Ведёт администратор: в карточке товара и в карточке клиента (вкладка «Коды товаров», загрузка из Excel / CSV). Клиенту коды пока не показываются — задачи в `docs/BACKLOG.md`.
+**Назначение.** Собственные артикулы организации для наших товаров. Ведёт администратор: в карточке товара и в карточке клиента (вкладка «Коды товаров», загрузка из Excel / CSV). Клиент видит коды своей организации на витрине: «Ваш код» рядом с артикулом, поиск и «Добавить по вашему коду» в корзине, код в заказе.
 
 | | |
 |---|---|
-| Таблица | `product_client_codes` (`product_id`, `organization_id`, `code`); снимок в заказе — `order_items.client_code` (пока не заполняется) |
+| Таблица | `product_client_codes` (`product_id`, `organization_id`, `code`, `code_key` — код в нижнем регистре без пробелов по краям, для поиска; заполняет модель и импорт); снимок в заказе — `order_items.client_code` |
 | Модель | `ProductClientCode`; связи `Product::clientCodes()`, `Organization::productCodes()` |
-| API | `Product::codeFor($organization)`; для списков без N+1 — `Product::query()->withClientCodeFor($org)`, `Product::loadClientCodesFor($products, $org)` |
+| API | `Product::codeFor($organization)`; для списков без N+1 — `Product::query()->withClientCodeFor($org)`, `Product::loadClientCodesFor($products, $org)`. Витрина — `App\Services\ClientCodes` (scoped): `load($products)` — коды организации текущего пользователя для товаров страницы одной выборкой, `codeFor($product)`, `has()` — есть ли коды, `whereCodeContains()` / `productIdByCode()` — поиск по `code_key`; в шаблонах — `client_code($product)` |
 | Маршруты | Товар: `POST /admin/product/{id}/client-codes`, `…/client-codes/{code}`, `…/client-codes/{code}/delete`. Клиент: `GET /admin/organization/{id}?tab=codes`, `POST /admin/organization/{id}/codes/{code}/delete`, `GET …/codes/template`, `POST …/codes/import` (файл → сессия), `GET …/codes/import` (предпросмотр), `POST …/codes/import/apply`, `…/codes/import/cancel` |
 | Контроллер, сервис | `AdminClientCodeController`; `ClientCodeImport` (чтение файла, предпросмотр, применение); файлы читает и шаблон пишет библиотека `openspout/openspout` (потоково, без загрузки всей книги в память; нужно PHP-расширение `zip` — есть в `docker/php/Dockerfile` и `docker/staging/Dockerfile`; локально после обновления — `docker-compose build php queue && docker-compose up -d php queue`) |
 | Шаблоны | `partials/admin_product_client_codes` (блок в `admin/product_form`), `partials/admin_organization_codes` (вкладка в `admin/organization`, вкладки — `x-tabs`), `admin/organization_codes_import` (предпросмотр), `partials/admin_client_code_errors` |
@@ -465,7 +465,11 @@
 | Применение | В транзакции, с повторной проверкой по текущей базе. Строки с ошибками пропускаются; в режиме «Заменить» при ошибках применить нельзя (иначе удалились бы коды товаров из ошибочных строк). Обмен кодами между товарами в одном файле работает (сначала удаление, потом вставка). После — отчёт на вкладке: добавлено, обновлено, удалено, без изменений, пропущенные строки |
 | Уникальность | Один код на товар у организации `(organization_id, product_id)`; код не повторяется у организации `(organization_id, code)` |
 | Удаление | Каскадно вместе с товаром или организацией |
-| Регистр | В MySQL `(organization_id, code)` не различает регистр, в SQLite различает — при импорте и в формах сравнивать без учёта регистра |
-| В планах | Поиск по коду, «Ваш код» в списках, карточке, корзине и заказе, снимок при оформлении |
+| Регистр | В MySQL `(organization_id, code)` не различает регистр, в SQLite различает — при импорте и в формах сравнивать без учёта регистра. Поиск по коду — по `code_key` (не `LOWER(code)`: SQLite не приводит кириллицу к нижнему регистру) — одинаково в обеих базах |
+| Кто видит | Только пользователь организации и только её коды. Гость, администратор, пользователь без организации — ни кодов, ни запросов к ним |
+| «Ваш код» | Под артикулом: строка товара (`x-product-row`), плитка (`x-product-card`), карточка товара (с «копировать»), позиция корзины (`x-cart-row`). Нет кода — только наш артикул. Коды страницы загружают контроллеры (`CatalogController`, `HomeController`, `SearchController`, `ProductController`, `CartController::index`) — `ClientCodes::load` |
+| Поиск | `/search` и `/search/suggest`: каждое слово запроса — в артикуле, названии, бренде (описании) или в коде своей организации; точное совпадение с кодом — первым, затем с артикулом. Подсказка в шапке — «Ваш код X · артикул · название»; в JSON подсказок — `client_code` |
+| Корзина | Если у организации есть коды — полоса «Добавить по вашему коду» (`x-cart-quick-add by-code`): подсказки «ваш код · артикул», выбор подставляет код; `quickAdd` ищет сначала код организации, затем артикул. Иначе — «Добавить по артикулу» |
+| Заказ | `CheckoutService` пишет в позицию `client_code` — код на момент оформления (позже не меняется). Показ: заказ в кабинете («Ваш код»), админка заказа («Код клиента») — `partials/order_items`; письмо о новом заказе — список позиций «артикул (код клиента: X) — название × N шт.» |
 
 Тесты: `ProductClientCodeTest`, `ClientCodesAdminTest`.
