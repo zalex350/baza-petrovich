@@ -34,6 +34,7 @@
 | `/order/{id}/invoice` | `OrderController@invoice` | файл PDF (нет — назад с ERR-024) | — |
 | `/account/organization` | `AccountController@organization` | `account/organization` | — |
 | `/account/users` | `AccountController@users` | `account/users` | — |
+| `/account/assortment` | `AccountController@assortment` (файл — `@assortmentDownload`, `GET /account/assortment/download`) | `account/assortment` | только у организации с кодами |
 | `/account/password` | `AccountController@password` | `account/password` | `PUT password` |
 | `/addresses` | `DeliveryAddressController@index` | `addresses` (+ `partials/address_list`) | `addresses/{id}/default`, `addresses/{id}/delete` |
 | `/addresses/create`, `/addresses/{id}/edit` | `…@create`, `…@edit` | `address_form` (+ `partials/address_fields`) | `addresses`, `addresses/{id}` |

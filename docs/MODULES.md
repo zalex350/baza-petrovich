@@ -208,11 +208,11 @@
 | | |
 |---|---|
 | Маршруты (auth) | `GET /orders`, `GET /order/{id}`, `GET /order/{id}/invoice`, `POST /order/{id}/cancel-request`, `POST /order/{id}/reorder`, `GET/PATCH /profile`, `GET /account/password`, `PUT /password`, `/account` (→ `/orders`) |
-| Маршруты (auth + `role:client`) | `GET /account/organization`, `GET /account/users`; `GET /addresses`, `/addresses/create`, `/addresses/{id}/edit`; `POST /addresses`, `/addresses/{id}`, `/addresses/{id}/default`, `/addresses/{id}/delete` |
+| Маршруты (auth + `role:client`) | `GET /account/organization`, `GET /account/users`, `GET /account/assortment` (+ `/download`, §11); `GET /addresses`, `/addresses/create`, `/addresses/{id}/edit`; `POST /addresses`, `/addresses/{id}`, `/addresses/{id}/default`, `/addresses/{id}/delete` |
 | Контроллеры | `OrderController`, `AccountController`, `DeliveryAddressController`, `ProfileController`, `Auth\PasswordController` |
 | Сервисы | `ReorderService` (повтор через `CartValidator`), `UserInvitations` (статус «приглашён») |
 | Модели | `Order` (`visibleTo`), `OrderInvoice`, `DeliveryAddress` (`createFor`, правила полей общие с админкой) |
-| Шаблоны | `layouts/account`, `orders` (+ `partials/orders_table`: активные и архив), `order_show`, `account/organization`, `account/users`, `account/password`, `addresses`, `address_form`, `partials/address_list`, `partials/address_fields`, `profile/edit` |
+| Шаблоны | `layouts/account`, `orders` (+ `partials/orders_table`: активные и архив), `order_show`, `account/organization`, `account/users`, `account/assortment`, `account/password`, `addresses`, `address_form`, `partials/address_list`, `partials/address_fields`, `profile/edit` |
 
 Ключевые правила:
 
@@ -444,7 +444,7 @@
 
 ## 11. Коды клиентов
 
-**Назначение.** Собственные артикулы организации для наших товаров. Ведёт администратор: в карточке товара и в карточке клиента (вкладка «Коды товаров», загрузка из Excel / CSV). Клиент видит коды своей организации на витрине: «Ваш код» рядом с артикулом, поиск и «Добавить по вашему коду» в корзине, код в заказе.
+**Назначение.** Собственные артикулы организации для наших товаров. Ведёт администратор: в карточке товара и в карточке клиента (вкладка «Коды товаров», загрузка из Excel / CSV). Клиент видит коды своей организации на витрине: «Ваш код» рядом с артикулом, поиск и «Добавить по вашему коду» в корзине, код в заказе, выгрузка ассортимента в кабинете.
 
 | | |
 |---|---|
@@ -471,5 +471,6 @@
 | Поиск | `/search` и `/search/suggest`: каждое слово запроса — в артикуле, названии, бренде (описании) или в коде своей организации; точное совпадение с кодом — первым, затем с артикулом. Подсказка в шапке — «Ваш код X · артикул · название»; в JSON подсказок — `client_code` |
 | Корзина | Если у организации есть коды — полоса «Добавить по вашему коду» (`x-cart-quick-add by-code`): подсказки «ваш код · артикул», выбор подставляет код; `quickAdd` ищет сначала код организации, затем артикул. Иначе — «Добавить по артикулу» |
 | Заказ | `CheckoutService` пишет в позицию `client_code` — код на момент оформления (позже не меняется). Показ: заказ в кабинете («Ваш код»), админка заказа («Код клиента») — `partials/order_items`; письмо о новом заказе — список позиций «артикул (код клиента: X) — название × N шт.» |
+| Выгрузка ассортимента | Кабинет → «Выгрузка ассортимента» (`/account/assortment`, пункт меню — только у организации с кодами, иначе 404). Файл `.xlsx` (`App\Services\AssortmentExport`, openspout, потоково): ваш код, наш артикул, название, цена без НДС, цена с НДС (по ставке товара; нет цены — «Цена уточняется»), остаток — точным числом до `shop.export_stock_cap` (20, `SHOP_EXPORT_STOCK_CAP`), больше — «более 20». Товары — опубликованные (`is_active`, `is_published`) с кодом своей организации, по артикулу; галочка «Включить товары без кода» — после них все остальные опубликованные с пустым кодом. Код и артикул — текстом (ведущие нули сохраняются) |
 
 Тесты: `ProductClientCodeTest`, `ClientCodesAdminTest`.

@@ -33,7 +33,9 @@ function render(data, query) {
             html += '<div class="flex-1 min-w-0">';
             // Код товара у организации клиента (только своей): «Ваш код · артикул · название»
             if (prod.client_code) {
-                html += `<div class="text-sm text-slate-800 truncate" data-client-code><span class="font-semibold">Ваш код ${escapeHtml(prod.client_code)}</span> · ${escapeHtml(prod.sku)} · ${escapeHtml(prod.name)}</div>`;
+                // Две строки — на телефоне в одну не помещается: «Ваш код X», ниже «артикул · название»
+                html += `<div class="text-sm font-semibold text-slate-800 truncate" data-client-code>Ваш код ${escapeHtml(prod.client_code)}</div>`;
+                html += `<div class="text-xs text-slate-600 truncate">${escapeHtml(prod.sku)} · ${escapeHtml(prod.name)}</div>`;
             } else {
                 html += `<div class="text-sm text-slate-800 truncate">${escapeHtml(prod.name)}</div>`;
             }
