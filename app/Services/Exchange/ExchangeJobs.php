@@ -10,6 +10,7 @@ use App\Jobs\ProcessExchangeJob;
 use App\Models\ExchangeJob;
 use App\Models\ExchangeJobError;
 use App\Models\ExchangeToken;
+use App\Models\User;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -50,15 +51,27 @@ class ExchangeJobs
     }
 
     /**
-     * Принятый файл ($upload из ExchangeUpload) — в архив и в очередь.
+     * Принятый файл ($upload из ExchangeUpload или ручной загрузки) — в архив и в очередь;
+     * $user — ручная загрузка из админки: source = manual, обработка сразу, без очереди.
      *
      * @param  array{path: string, size: int, content_type: string, gzip: bool, extension: string}  $upload
      */
-    public function accept(array $upload, ExchangeJobType $type, ?string $mode, ?string $exchangeId, ?ExchangeToken $token, ?string $ip): ExchangeJob
-    {
+    public function accept(
+        array $upload,
+        ExchangeJobType $type,
+        ?string $mode,
+        ?string $exchangeId,
+        ?ExchangeToken $token,
+        ?string $ip,
+        ?User $user = null,
+    ): ExchangeJob {
+        $manual = $user !== null;
+
         $job = new ExchangeJob([
             'type' => $type,
             'direction' => $type->direction(),
+            'source' => $manual ? ExchangeJob::SOURCE_MANUAL : ExchangeJob::SOURCE_API,
+            'user_id' => $user?->id,
             'mode' => $mode,
             'status' => ExchangeJobStatus::Queued,
             'exchange_id' => $exchangeId,
@@ -85,6 +98,13 @@ class ExchangeJobs
             $disk->delete($job->file_path);
 
             return $this->existing($exchangeId, $type) ?? throw $e;
+        }
+
+        // Ручная загрузка — сразу, администратор ждёт результат; от 1С — в очереди
+        if ($manual) {
+            $this->process($job);
+
+            return $job->fresh();
         }
 
         ProcessExchangeJob::dispatch($job->id);

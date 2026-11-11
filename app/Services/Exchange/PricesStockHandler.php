@@ -2,31 +2,38 @@
 
 namespace App\Services\Exchange;
 
+use App\Enums\ExchangeJobType;
 use App\Exceptions\ExchangeJobFailedException;
 use App\Models\ExchangeJob;
 use App\Services\StockReserve;
 use App\Support\BulkUpdate;
 use App\Support\ExchangeSettings;
 use App\Support\ExchangeTime;
+use DateInterval;
+use DateTimeInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use OpenSpout\Common\Entity\Cell;
-use OpenSpout\Reader\CSV\Options;
-use OpenSpout\Reader\CSV\Reader;
+use OpenSpout\Reader\CSV\Options as CsvOptions;
+use OpenSpout\Reader\CSV\Reader as CsvReader;
+use OpenSpout\Reader\XLSX\Options as XlsxOptions;
+use OpenSpout\Reader\XLSX\Reader as XlsxReader;
 
 /**
- * Поток 2 — цены и остатки 1С → сайт (docs/1C_EXCHANGE_SPEC.md, раздел 5).
+ * Поток 2 — цены и остатки 1С → сайт (docs/1C_EXCHANGE_SPEC.md, раздел 5); тот же формат —
+ * ручная загрузка из админки (CSV или .xlsx, первый лист).
  *
- * CSV (разделитель «;», колонки по заголовку в любом порядке) читает openspout. Два прохода:
- *  1. разбор и проверка всех строк в памяти: товар — по guid, иначе по sku (артикул или sku
- *     сайта без учёта регистра и пробелов, только у товара без другого GUID); цена (точка,
+ * Файл (колонки по заголовку в любом порядке) читает openspout. plan() — без записи:
+ *  1. разбор и проверка всех строк: товар — по guid, иначе по sku (артикул или sku сайта
+ *     без учёта регистра и пробелов, только у товара без другого GUID); цена (точка,
  *     до 2 знаков, ≥ 0, пусто — «Цена уточняется»), остаток (целое ≥ 0), stock_status,
- *     updated_at (ExchangeTime::parse, любое смещение). Строка старше уже применённого
- *     (отдельно для цены — price_synced_at и остатка — stock_synced_at) — rows_skipped;
+ *     updated_at (ExchangeTime::parse, любое смещение; дата .xlsx без пояса — по Минску).
+ *     Строка старше уже применённого (отдельно для цены — price_synced_at и остатка —
+ *     stock_synced_at) — rows_skipped;
  *  2. mode=full: товары с GUID, которых нет в файле, — stock_1c = 0; предохранитель:
- *     не хватает больше доли из настроек (10 %) — исключение до записи, задание failed;
- *  3. запись пачками по 500 товаров в транзакции: BulkUpdate (stock_1c, price, on_order,
- *     *_synced_at) и пересчёт доступного остатка StockReserve::recalculate.
+ *     не хватает больше доли из настроек (10 %) — ExchangeJobFailedException.
+ * handle() — план и запись пачками по 500 товаров в транзакции: BulkUpdate (stock_1c, price,
+ * on_order, *_synced_at) и пересчёт доступного остатка StockReserve::recalculate.
  * stock_status: on_order — «под заказ», in_stock / none — нет; колонки нет или пусто —
  * признак не меняется.
  */
@@ -43,9 +50,28 @@ class PricesStockHandler implements ExchangeHandler
 
     public function handle(ExchangeJob $job, string $path, ExchangeResult $result): void
     {
+        $plan = $this->plan($path, $job->mode, $result);
+
+        foreach (array_chunk($plan->changes, self::BATCH, true) as $chunk) {
+            DB::transaction(function () use ($chunk) {
+                BulkUpdate::run('products', $chunk);
+                $this->reserve->recalculate(array_keys($chunk));
+            });
+        }
+    }
+
+    /**
+     * План без записи. Формат — по расширению файла: .xlsx — Excel, иначе CSV («;», UTF-8).
+     *
+     * @throws ExchangeJobFailedException нет обязательных колонок; предохранитель mode=full
+     */
+    public function plan(string $path, ?string $mode, ?ExchangeResult $result = null): PricesStockPlan
+    {
+        $plan = new PricesStockPlan($result ?? new ExchangeResult);
+        $result = $plan->result;
+
         [$byGuid, $bySku, $state] = $this->products();
 
-        $changes = [];
         $present = [];
         $snapshot = null;
 
@@ -64,7 +90,7 @@ class PricesStockHandler implements ExchangeHandler
 
             $price = $this->price((string) ($row['price'] ?? ''), $errors);
             $stock = $this->stock((string) ($row['stock'] ?? ''), $errors);
-            $status = trim((string) ($row['stock_status'] ?? ''));
+            $status = strtolower(trim((string) ($row['stock_status'] ?? '')));
 
             if ($status !== '' && ! array_key_exists($status, self::STATUSES)) {
                 $errors[] = "Признак наличия «{$status}»: ожидается in_stock, on_order или none";
@@ -96,52 +122,66 @@ class PricesStockHandler implements ExchangeHandler
                 continue;
             }
 
+            $before = $current['values'];
+
             if ($applyPrice) {
-                $changes[$id]['price'] = $price;
-                $changes[$id]['price_synced_at'] = $updatedAt->format('Y-m-d H:i:s');
+                $plan->changes[$id]['price'] = $price;
+                $plan->changes[$id]['price_synced_at'] = $updatedAt->format('Y-m-d H:i:s');
                 $current['price_synced_at'] = $updatedAt;
+                $current['values']['price'] = $price;
             }
 
             if ($applyStock) {
-                $changes[$id]['stock_1c'] = $stock;
-                $changes[$id]['stock_synced_at'] = $updatedAt->format('Y-m-d H:i:s');
+                $plan->changes[$id]['stock_1c'] = $stock;
+                $plan->changes[$id]['stock_synced_at'] = $updatedAt->format('Y-m-d H:i:s');
                 $current['stock_synced_at'] = $updatedAt;
+                $current['values']['stock_1c'] = $stock;
 
                 if ($status !== '') {
-                    $changes[$id]['on_order'] = (int) self::STATUSES[$status];
+                    $plan->changes[$id]['on_order'] = (int) self::STATUSES[$status];
+                    $current['values']['on_order'] = self::STATUSES[$status];
                 }
+            }
+
+            if ($current['values'] === $before) {
+                $plan->unchanged++;
+            } else {
+                $plan->updated[$id] = ['before' => $plan->updated[$id]['before'] ?? $before, 'after' => $current['values']];
             }
 
             unset($current);
             $result->ok++;
         }
 
-        if ($job->mode === 'full') {
-            $this->zeroMissing($state, $present, $snapshot ?? now()->startOfSecond(), $changes, $result);
+        if ($mode === 'full') {
+            $this->zeroMissing($state, $present, $snapshot ?? now()->startOfSecond(), $plan);
         }
 
-        foreach (array_chunk($changes, self::BATCH, true) as $chunk) {
-            DB::transaction(function () use ($chunk) {
-                BulkUpdate::run('products', $chunk);
-                $this->reserve->recalculate(array_keys($chunk));
-            });
-        }
+        return $plan;
     }
 
     /**
-     * Строки CSV: номер строки файла => [колонка => значение]; пустые строки пропускаются.
+     * Строки файла: номер строки => [колонка => значение]; пустые строки пропускаются,
+     * но номер строки — как в файле (считая заголовок).
      *
      * @return \Generator<int, array<string, string>>
+     *
+     * @throws ExchangeJobFailedException нет обязательных колонок
      */
     private function rows(string $path): \Generator
     {
-        $options = new Options;
-        $options->FIELD_DELIMITER = ';';
-        $options->ENCODING = 'UTF-8';
-        // Пустые строки — тоже строки файла: номер строки в ошибке совпадает с номером в файле
-        $options->SHOULD_PRESERVE_EMPTY_ROWS = true;
+        if (strtolower(pathinfo($path, PATHINFO_EXTENSION)) === 'xlsx') {
+            $options = new XlsxOptions;
+            $options->SHOULD_PRESERVE_EMPTY_ROWS = true;
+            $reader = new XlsxReader($options);
+        } else {
+            $options = new CsvOptions;
+            $options->FIELD_DELIMITER = ';';
+            $options->ENCODING = 'UTF-8';
+            $options->SHOULD_PRESERVE_EMPTY_ROWS = true;
+            $reader = new CsvReader($options);
+        }
 
-        $reader = new Reader($options);
         $reader->open($path);
 
         try {
@@ -151,10 +191,16 @@ class PricesStockHandler implements ExchangeHandler
 
                 foreach ($sheet->getRowIterator() as $row) {
                     $line++;
-                    $cells = array_map(fn (Cell $cell) => trim((string) $cell->getValue()), $row->getCells());
+                    $cells = array_map(fn (Cell $cell) => self::cellText($cell), $row->getCells());
 
                     if ($columns === null) {
                         $columns = array_map(fn ($name) => strtolower(trim($name, " \t\"\u{FEFF}")), $cells);
+                        $missing = array_diff(ExchangeJobType::PricesStock->requiredColumns(), $columns);
+
+                        if ($missing !== []) {
+                            throw new ExchangeJobFailedException('Нет обязательных колонок в первой строке: '.implode(', ', $missing)
+                                .(count($columns) === 1 && str_contains($columns[0], ',') ? ' (разделитель CSV — «;»)' : ''));
+                        }
 
                         continue;
                     }
@@ -179,10 +225,28 @@ class PricesStockHandler implements ExchangeHandler
     }
 
     /**
+     * Ячейка → текст: числа Excel без «.0», дата Excel (без пояса) — ISO без смещения, то есть по Минску.
+     */
+    private static function cellText(Cell $cell): string
+    {
+        $value = $cell instanceof Cell\FormulaCell ? $cell->getComputedValue() : $cell->getValue();
+
+        return trim(match (true) {
+            $value === null => '',
+            is_bool($value) => $value ? '1' : '0',
+            is_float($value) && floor($value) === $value && abs($value) < 1e15 => number_format($value, 0, '.', ''),
+            is_float($value) => (string) round($value, 6),
+            $value instanceof DateTimeInterface => $value->format('Y-m-d\TH:i:s'),
+            $value instanceof DateInterval => '',
+            default => (string) $value,
+        });
+    }
+
+    /**
      * Товары сайта (и удалённые мягко — могут вернуть): по guid, по ключу sku / article,
-     * текущие отметки обмена.
+     * текущие значения и отметки обмена.
      *
-     * @return array{0: array<string, int>, 1: array<string, list<int>>, 2: array<int, array{guid: ?string, deleted: bool, price_synced_at: ?Carbon, stock_synced_at: ?Carbon}>}
+     * @return array{0: array<string, int>, 1: array<string, list<int>>, 2: array<int, array<string, mixed>>}
      */
     private function products(): array
     {
@@ -191,7 +255,7 @@ class PricesStockHandler implements ExchangeHandler
         $state = [];
 
         DB::table('products')->orderBy('id')
-            ->select(['id', 'guid', 'sku', 'article', 'price_synced_at', 'stock_synced_at', 'deleted_at'])
+            ->select(['id', 'guid', 'sku', 'article', 'price', 'stock_1c', 'on_order', 'price_synced_at', 'stock_synced_at', 'deleted_at'])
             ->lazy(2000)
             ->each(function ($p) use (&$byGuid, &$bySku, &$state) {
                 if ($p->guid !== null && $p->guid !== '') {
@@ -207,6 +271,11 @@ class PricesStockHandler implements ExchangeHandler
                     'deleted' => $p->deleted_at !== null,
                     'price_synced_at' => $p->price_synced_at ? Carbon::parse($p->price_synced_at) : null,
                     'stock_synced_at' => $p->stock_synced_at ? Carbon::parse($p->stock_synced_at) : null,
+                    'values' => [
+                        'price' => $p->price === null ? null : number_format((float) $p->price, 2, '.', ''),
+                        'stock_1c' => (int) $p->stock_1c,
+                        'on_order' => (bool) $p->on_order,
+                    ],
                 ];
             });
 
@@ -254,16 +323,18 @@ class PricesStockHandler implements ExchangeHandler
     }
 
     /**
+     * Цена с 2 знаками («832.3» → «832.30») или null — «Цена уточняется».
+     *
      * @param  list<string>  $errors
      */
     private function price(string $value, array &$errors): ?string
     {
         if ($value === '') {
-            return null; // «Цена уточняется»
+            return null;
         }
 
         if (preg_match('/^\d{1,8}(\.\d{1,2})?$/', $value)) {
-            return $value;
+            return number_format((float) $value, 2, '.', '');
         }
 
         $errors[] = match (true) {
@@ -297,9 +368,8 @@ class PricesStockHandler implements ExchangeHandler
      * mode=full: остаток 0 у товаров с GUID, которых нет в файле. Предохранитель — до записи.
      *
      * @param  array<int, true>  $present
-     * @param  array<int, array<string, mixed>>  $changes
      */
-    private function zeroMissing(array $state, array $present, Carbon $snapshot, array &$changes, ExchangeResult $result): void
+    private function zeroMissing(array $state, array $present, Carbon $snapshot, PricesStockPlan $plan): void
     {
         $known = array_keys(array_filter($state, fn ($p) => $p['guid'] !== null && $p['guid'] !== '' && ! $p['deleted']));
         $missing = array_values(array_diff($known, array_keys($present)));
@@ -318,15 +388,13 @@ class PricesStockHandler implements ExchangeHandler
             ));
         }
 
-        $zeroed = 0;
-
         foreach ($missing as $id) {
             if ($state[$id]['stock_synced_at'] === null || $snapshot->gte($state[$id]['stock_synced_at'])) {
-                $changes[$id] = ['stock_1c' => 0, 'stock_synced_at' => $snapshot->format('Y-m-d H:i:s')];
-                $zeroed++;
+                $plan->changes[$id] = ['stock_1c' => 0, 'stock_synced_at' => $snapshot->format('Y-m-d H:i:s')];
+                $plan->zeroed[] = $id;
             }
         }
 
-        $result->message = "mode=full: остаток 0 у {$zeroed} товаров с GUID, которых нет в файле";
+        $plan->result->message = 'mode=full: остаток 0 у '.count($plan->zeroed).' товаров с GUID, которых нет в файле';
     }
 }

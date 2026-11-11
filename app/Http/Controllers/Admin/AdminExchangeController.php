@@ -9,6 +9,7 @@ use App\Models\ExchangeIp;
 use App\Models\ExchangeJob;
 use App\Models\ExchangeToken;
 use App\Models\Setting;
+use App\Services\Exchange\ManualPricesUpload;
 use App\Support\ExchangeSettings;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -17,11 +18,15 @@ use Illuminate\Validation\Rule;
 /**
  * Админка «Обмен с 1С» (docs/1C_EXCHANGE_SPEC.md, разделы 2 и 8): журнал заданий
  * (фильтры, ошибки по строкам, исходный файл), токены API (создать, отозвать; токен
- * показывается один раз), белый список IP, настройки порогов и оповещений.
+ * показывается один раз), белый список IP, настройки порогов и оповещений; ручная загрузка
+ * цен и остатков (CSV / .xlsx → предпросмотр → «Применить», ManualPricesUpload).
  */
 class AdminExchangeController extends Controller
 {
-    private const TABS = ['jobs', 'tokens', 'ips', 'settings'];
+    private const TABS = ['jobs', 'upload', 'tokens', 'ips', 'settings'];
+
+    /** Черновик ручной загрузки цен: [token, mode, name] */
+    private const UPLOAD_SESSION = 'exchange_prices_upload';
 
     public function index()
     {
@@ -32,7 +37,7 @@ class AdminExchangeController extends Controller
 
     public function job(string $id)
     {
-        $job = ExchangeJob::with('token')->findOrFail($id);
+        $job = ExchangeJob::with(['token', 'user'])->findOrFail($id);
 
         return view('admin.exchange_job', [
             'job' => $job,
@@ -49,6 +54,94 @@ class AdminExchangeController extends Controller
         $name = $job->type->value.'_'.$job->received_at->format('Y-m-d_His').'.'.pathinfo($job->file_path, PATHINFO_EXTENSION);
 
         return Storage::disk('exchange')->download($job->file_path, $name);
+    }
+
+    /** Ручная загрузка цен: файл → черновик → предпросмотр */
+    public function uploadPrices(ManualPricesUpload $upload)
+    {
+        $data = request()->validate([
+            'file' => ['required', 'file', 'max:20480', function ($attribute, $value, $fail) {
+                if (! in_array(strtolower($value->getClientOriginalExtension()), ['csv', 'txt', 'xlsx'], true)) {
+                    $fail('Файл .csv или .xlsx');
+                }
+            }],
+            'mode' => ['required', Rule::in(['delta', 'full'])],
+        ], [
+            'file.required' => 'Выберите файл',
+            'file.max' => 'Файл не больше 20 МБ',
+            'file.uploaded' => 'Файл не загрузился — проверьте размер (до 20 МБ)',
+        ]);
+
+        $this->discardDraft($upload);
+
+        session()->put(self::UPLOAD_SESSION, [
+            'token' => $upload->store($data['file']),
+            'mode' => $data['mode'],
+            'name' => $data['file']->getClientOriginalName(),
+        ]);
+
+        return redirect('/admin/exchange/prices/preview');
+    }
+
+    public function previewPrices(ManualPricesUpload $upload)
+    {
+        [$draft, $path] = $this->draft($upload);
+
+        if (! $path) {
+            return redirect('/admin/exchange?tab=upload')->with('error', 'Загрузите файл заново: черновик не найден или устарел');
+        }
+
+        return view('admin.exchange_prices_preview', ['draft' => $draft] + $upload->preview($path, $draft['mode']));
+    }
+
+    public function applyPrices(ManualPricesUpload $upload)
+    {
+        [$draft, $path] = $this->draft($upload);
+
+        if (! $path) {
+            return redirect('/admin/exchange?tab=upload')->with('error', 'Загрузите файл заново: черновик не найден или уже применён');
+        }
+
+        session()->forget(self::UPLOAD_SESSION);
+        $job = $upload->apply($path, $draft['mode'], auth()->user(), request()->ip());
+
+        return redirect("/admin/exchange/job/{$job->id}")->with(
+            $job->status === ExchangeJobStatus::Done ? 'success' : 'error',
+            $job->status === ExchangeJobStatus::Done
+                ? "Загрузка применена: принято {$job->rows_ok}, пропущено {$job->rows_skipped}, с ошибкой {$job->rows_error}"
+                : 'Загрузка не применена: '.$job->message
+        );
+    }
+
+    public function cancelPrices(ManualPricesUpload $upload)
+    {
+        $this->discardDraft($upload);
+
+        return redirect('/admin/exchange?tab=upload')->with('success', 'Загрузка отменена, данные не изменились');
+    }
+
+    public function pricesTemplate(ManualPricesUpload $upload)
+    {
+        return response()->download($upload->template(), 'prices-stock-template.xlsx')->deleteFileAfterSend();
+    }
+
+    /** @return array{0: ?array{token: string, mode: string, name: string}, 1: ?string} */
+    private function draft(ManualPricesUpload $upload): array
+    {
+        $draft = session(self::UPLOAD_SESSION);
+
+        return [$draft, is_array($draft) ? $upload->path((string) $draft['token']) : null];
+    }
+
+    private function discardDraft(ManualPricesUpload $upload): void
+    {
+        [, $path] = $this->draft($upload);
+
+        if ($path) {
+            $upload->discard($path);
+        }
+
+        session()->forget(self::UPLOAD_SESSION);
     }
 
     public function storeToken()
@@ -127,6 +220,7 @@ class AdminExchangeController extends Controller
     {
         return match ($tab) {
             'jobs' => $this->jobsData(),
+            'upload' => [],
             'tokens' => ['tokens' => ExchangeToken::with('creator')->orderByRaw('revoked_at IS NULL DESC')->latest('id')->get()],
             'ips' => ['ips' => ExchangeIp::with('creator')->orderBy('ip')->get(), 'currentIp' => request()->ip()],
             'settings' => ['settings' => collect(ExchangeSettings::FIELDS)->map(fn ($f, $key) => ExchangeSettings::int($key))->all()],
@@ -142,7 +236,7 @@ class AdminExchangeController extends Controller
             'to' => $this->date(request('to')),
         ];
 
-        $jobs = ExchangeJob::with('token')
+        $jobs = ExchangeJob::with(['token', 'user'])
             ->when($filters['type'], fn ($q, $type) => $q->where('type', $type))
             ->when($filters['status'], fn ($q, $status) => $q->where('status', $status))
             ->when($filters['from'], fn ($q, $from) => $q->where('received_at', '>=', Carbon::parse($from)->startOfDay()))

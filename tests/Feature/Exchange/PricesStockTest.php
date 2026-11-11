@@ -109,6 +109,24 @@ class PricesStockTest extends TestCase
         $this->assertSame([20, 17], [$product->fresh()->stock_1c, $product->fresh()->stock]);
     }
 
+    public function test_reserve_of_registered_order_holds_until_newer_stock(): void
+    {
+        $product = $this->product('A-1', 'g-1', ['stock' => 10]);
+        $order = Order::create(['user_id' => User::factory()->create()->id, 'status' => 'sent_to_1c']);
+        $order->forceFill(['exchange_state' => 'sent', 'registered_at' => '2026-11-10 15:40:00'])->save();
+        OrderItem::create(['order_id' => $order->id, 'product_id' => $product->id, 'quantity' => 2, 'price' => 1]);
+
+        // Остаток снят в 18:30 МСК (15:30 UTC) — до регистрации заказа в 1С: резерв держится
+        $this->import(self::HEAD.'g-1;A-1;1.00;10;;2026-11-10T18:30:00+03:00
+');
+        $this->assertSame([10, 8], [$product->fresh()->stock_1c, $product->fresh()->stock]);
+
+        // Снят в 18:45 — после регистрации: 1С уже вычла заказ, резерв снят
+        $this->import(self::HEAD.'g-1;A-1;1.00;8;;2026-11-10T18:45:00+03:00
+');
+        $this->assertSame([8, 8], [$product->fresh()->stock_1c, $product->fresh()->stock]);
+    }
+
     public function test_status_column_absent_keeps_on_order(): void
     {
         $product = $this->product('A-1', 'g-1', ['on_order' => true]);

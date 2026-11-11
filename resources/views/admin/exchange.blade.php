@@ -20,6 +20,7 @@
 
 <x-tabs label="Разделы обмена" :active="$tab" :tabs="[
     'jobs' => ['label' => 'Журнал', 'url' => '/admin/exchange'],
+    'upload' => ['label' => 'Загрузить цены', 'url' => '/admin/exchange?tab=upload'],
     'tokens' => ['label' => 'Токены', 'url' => '/admin/exchange?tab=tokens'],
     'ips' => ['label' => 'IP-адреса', 'url' => '/admin/exchange?tab=ips'],
     'settings' => ['label' => 'Настройки', 'url' => '/admin/exchange?tab=settings'],
@@ -52,7 +53,7 @@
                 <x-table.th>Статус</x-table.th>
                 <x-table.th align="right">Строк</x-table.th>
                 <x-table.th align="right">Ошибок</x-table.th>
-                <x-table.th>Токен, IP</x-table.th>
+                <x-table.th>Источник</x-table.th>
                 <x-table.th><span class="sr-only">Действия</span></x-table.th>
             </x-slot:head>
 
@@ -68,9 +69,14 @@
                     <x-table.td label="Ошибок" align="right" nowrap>
                         @if($job->rows_error > 0)<span class="font-semibold text-tone-danger-text">{{ $job->rows_error }}</span>@else 0 @endif
                     </x-table.td>
-                    <x-table.td label="Токен, IP">
-                        <span class="block">{{ $job->token->name ?? '—' }}</span>
-                        <span class="block text-meta text-ink-muted">{{ $job->ip ?? '—' }}</span>
+                    <x-table.td label="Источник">
+                        @if($job->isManual())
+                            <span class="block">Вручную</span>
+                            <span class="block text-meta text-ink-muted">{{ $job->user->name ?? '—' }}</span>
+                        @else
+                            <span class="block">{{ $job->token->name ?? '—' }}</span>
+                            <span class="block text-meta text-ink-muted">{{ $job->ip ?? '—' }}</span>
+                        @endif
                     </x-table.td>
                     <x-table.td><x-button variant="secondary" size="sm" href="/admin/exchange/job/{{ $job->id }}">Открыть</x-button></x-table.td>
                 </tr>
@@ -81,6 +87,34 @@
             <x-pagination :paginator="$jobs" />
         </div>
     @endif
+
+@elseif($tab === 'upload')
+
+    <div class="max-w-3xl space-y-6">
+        <p class="text-sm text-ink-muted">
+            Тот же формат, что присылает 1С (раздел 5 спецификации): колонки <code>guid</code>, <code>sku</code>, <code>price</code>,
+            <code>stock</code>, <code>stock_status</code>, <code>updated_at</code> в любом порядке. CSV с разделителем «;»
+            (UTF-8 или Windows-1251 из Excel) или .xlsx (первый лист). Сначала — предпросмотр, база меняется только после «Применить».
+            Загрузка попадает в журнал с пометкой «вручную».
+        </p>
+
+        <x-button variant="secondary" href="/admin/exchange/prices/template">Скачать шаблон .xlsx</x-button>
+
+        <form method="POST" action="/admin/exchange/prices" enctype="multipart/form-data" class="space-y-6 rounded-card border border-line bg-surface p-card" data-prices-upload>
+            @csrf
+            <x-file name="file" label="Файл цен и остатков" accept=".csv,.xlsx,text/csv" hint="До 20 МБ." required />
+            <x-select
+                name="mode"
+                label="Режим"
+                :options="[
+                    'delta' => 'delta — только товары из файла',
+                    'full' => 'full — полный файл: товарам с GUID, которых нет в файле, остаток 0',
+                ]"
+                value="delta"
+            />
+            <x-button>Предпросмотр</x-button>
+        </form>
+    </div>
 
 @elseif($tab === 'tokens')
 

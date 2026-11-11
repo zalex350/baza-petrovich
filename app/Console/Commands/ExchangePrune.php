@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\ExchangeJob;
+use App\Services\Exchange\ManualPricesUpload;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
 
@@ -39,7 +40,10 @@ class ExchangePrune extends Command
             }
         }
 
-        $this->info("Удалено файлов: {$count} (старше {$days} дн.)");
+        // Черновики ручной загрузки цен, которые не применили и не отменили, — старше суток
+        $drafts = app(ManualPricesUpload::class)->pruneDrafts();
+
+        $this->info("Удалено файлов: {$count} (старше {$days} дн.), черновиков загрузки: {$drafts}");
 
         return self::SUCCESS;
     }
