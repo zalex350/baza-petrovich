@@ -481,7 +481,7 @@
 
 ## 12. Обмен с 1С: API и журнал
 
-**Назначение.** 1С обращается к сайту по HTTPS (`/api/1c/v1`, `docs/1C_EXCHANGE_SPEC.md`): присылает файлы номенклатуры, цен и остатков, статусов, забирает заказы. Этап 2 — транспорт, задания, журнал и оповещения; обработчики данных — этапы 3–5 (пока заглушка: задание сразу `done`, 0 строк).
+**Назначение.** 1С обращается к сайту по HTTPS (`/api/1c/v1`, `docs/1C_EXCHANGE_SPEC.md`): присылает файлы номенклатуры, цен и остатков, статусов, забирает заказы. Этап 2 — транспорт, задания, журнал и оповещения; этап 3 — цены и остатки (`PricesStockHandler`); остальные обработчики — этапы 4–5 (пока заглушка: задание сразу `done`, 0 строк).
 
 | | |
 |---|---|
@@ -493,6 +493,7 @@
 | Архив | Диск `exchange` (`storage/app/exchange/ГГГГ/ММ/<job_id>.csv`), распакованный файл; `exchange:prune` ежедневно удаляет файлы старше `SHOP_1C_ARCHIVE_DAYS` (90), запись журнала остаётся (`file_pruned_at`) |
 | Оповещения | `Exchange\ExchangeAlerts` → `ExchangeAlertNotification` администраторам с галочкой «Сбои обмена с 1С» (`users.notify_exchange`): задание failed, ошибок больше порога (5 %) — сразу; цены и остатки не приходили дольше N ч (после первой загрузки цен), заказы `pending` дольше N мин (выключено до этапа 5) — `exchange:check` раз в 10 минут. Одного вида — не чаще интервала (60 мин) |
 | Админка | «Обмен с 1С» (`/admin/exchange`, `AdminExchangeController`, вкладки `x-tabs`): журнал (фильтры тип / статус / даты, по 50), задание `/admin/exchange/job/{id}` (сведения, ошибки по строкам, скачать файл), токены (создать — показ один раз без сохранения в сессии, отозвать), IP (добавить адрес / CIDR, удалить, «ваш текущий адрес»), настройки (`App\Support\ExchangeSettings` в `settings`: предохранитель `mode=full` 10 %, порог ошибок 5 %, часы без цен 2, минуты ожидания заказа 30, интервал писем 60, галочка писем о заказах) |
+| Цены и остатки | `Exchange\PricesStockHandler` (поток 2, раздел 5 спецификации): CSV через openspout (колонки по заголовку), два прохода — разбор и проверка всех строк в памяти, затем запись пачками по 500 в транзакции (`App\Support\BulkUpdate` — один UPDATE … CASE на пачку, `StockReserve::recalculate` — тоже пачками). Поиск: `guid`, иначе `sku` по `products.article` / `products.sku` без регистра и пробелов среди товаров без GUID. Пишет `stock_1c`, `price`, `on_order`, `price_synced_at` / `stock_synced_at`; доступный `stock` = `stock_1c` − резерв. Старше отметки — `rows_skipped`. `mode=full` — остаток 0 у отсутствующих товаров с GUID, предохранитель `ExchangeSettings::fullMissingShare()` (10 %) — `ExchangeJobFailedException` до записи. 15 000 строк на локальной MySQL — ~1,5 с, ~100 запросов |
 | Стенд | nginx сервера: `location /api/1c/` без basic auth, `client_max_body_size 50m`; сервис `scheduler` — `docs/STAGING.md`, «API обмена с 1С» |
 
-Тесты: `tests/Feature/Exchange` (`ExchangeApiTest`, `ExchangeJobsTest`, `ExchangeAdminTest`).
+Тесты: `tests/Feature/Exchange` (`ExchangeApiTest`, `ExchangeJobsTest`, `ExchangeAdminTest`, `PricesStockTest`).

@@ -5,6 +5,7 @@ namespace App\Services\Exchange;
 use App\Enums\ExchangeJobStatus;
 use App\Enums\ExchangeJobType;
 use App\Exceptions\ExchangeApiException;
+use App\Exceptions\ExchangeJobFailedException;
 use App\Jobs\ProcessExchangeJob;
 use App\Models\ExchangeJob;
 use App\Models\ExchangeJobError;
@@ -20,8 +21,10 @@ use Throwable;
  */
 class ExchangeJobs
 {
-    /** Обработчики по типу; нет в списке — StubHandler (этапы 3–5 заменят) */
-    private const HANDLERS = [];
+    /** Обработчики по типу; нет в списке — StubHandler (этапы 4–5 заменят) */
+    private const HANDLERS = [
+        'prices-stock' => PricesStockHandler::class,
+    ];
 
     public function __construct(private readonly ExchangeAlerts $alerts) {}
 
@@ -121,11 +124,15 @@ class ExchangeJobs
                     'rows_ok' => $result->ok,
                     'rows_skipped' => $result->skipped,
                     'rows_error' => count($result->errors),
+                    'message' => $result->message,
                     'finished_at' => now(),
                 ]);
             });
         } catch (Throwable $e) {
-            report($e);
+            // Отказ обработчика от файла (предохранитель) — ожидаемый, в лог не пишется
+            if (! $e instanceof ExchangeJobFailedException) {
+                report($e);
+            }
 
             $job->update([
                 'status' => ExchangeJobStatus::Failed,

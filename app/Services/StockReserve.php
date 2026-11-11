@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\OrderExchangeState;
 use App\Enums\OrderStatus;
 use App\Models\Product;
+use App\Support\BulkUpdate;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -103,16 +104,23 @@ class StockReserve
             return;
         }
 
-        $reserved = $this->reserved($ids);
+        $changes = [];
 
-        DB::table('products')->whereIn('id', $ids)->orderBy('id')->get(['id', 'stock', 'stock_1c'])
-            ->each(function ($product) use ($reserved) {
-                $stock = self::available((int) $product->stock_1c, $reserved[$product->id] ?? 0);
+        // Пачками: загрузка остатков 1С пересчитывает тысячи товаров (BulkUpdate — запрос на пачку)
+        foreach ($ids->chunk(1000) as $chunk) {
+            $reserved = $this->reserved($chunk);
 
-                if ($stock !== (int) $product->stock) {
-                    DB::table('products')->where('id', $product->id)->update(['stock' => $stock]);
-                }
-            });
+            DB::table('products')->whereIn('id', $chunk)->get(['id', 'stock', 'stock_1c'])
+                ->each(function ($product) use ($reserved, &$changes) {
+                    $stock = self::available((int) $product->stock_1c, $reserved[$product->id] ?? 0);
+
+                    if ($stock !== (int) $product->stock) {
+                        $changes[$product->id] = ['stock' => $stock];
+                    }
+                });
+        }
+
+        BulkUpdate::run('products', $changes);
     }
 
     /**

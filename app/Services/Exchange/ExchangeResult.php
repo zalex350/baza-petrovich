@@ -13,6 +13,9 @@ class ExchangeResult
 
     public int $skipped = 0;
 
+    /** Итог для журнала и API (поле message), например «остаток 0 у N товаров» */
+    public ?string $message = null;
+
     /** @var list<array{line: ?int, guid: ?string, sku: ?string, message: string}> */
     public array $errors = [];
 
