@@ -453,6 +453,30 @@ class AdminProductFormTest extends TestCase
         $this->assertSame('Новое', $this->product->fresh()->draft->data['description']);
     }
 
+    public function test_managed_fields_come_from_config(): void
+    {
+        $this->linkTo1c();
+        // 1С подтвердила кратность, цену не присылает
+        config(['shop.exchange_1c.managed_fields' => ['name', 'min_qty', 'qty_step']]);
+
+        $html = $this->actingAs($this->admin)->get("/admin/product/{$this->product->id}")->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('/id="f-min_qty-hint"[^>]*>\s*из 1С/u', $html);
+        $this->assertDoesNotMatchRegularExpression('/<input[^>]*id="f-price"[^>]*\sdisabled(?=[\s=>\/])/s', $html);
+        $this->assertStringNotContainsString('id="f-article"', $html);
+
+        $this->actingAs($this->admin)->post("/admin/product/{$this->product->id}", $this->edit([
+            'action' => 'draft', 'name' => 'Подмена', 'price' => 120, 'min_qty' => 3, 'qty_step' => 3, 'default_qty' => 3,
+        ]))->assertSessionHasNoErrors();
+
+        $product = $this->product->fresh();
+        $this->assertSame(['Grohe Start', 120.0, 1, 1], [$product->name, (float) $product->price, $product->min_qty, $product->qty_step]);
+    }
+
+    public function test_default_managed_fields(): void
+    {
+        $this->assertSame(['article', 'name', 'brand', 'unit', 'vat_rate', 'price', 'stock'], config('shop.exchange_1c.managed_fields'));
+    }
+
     public function test_product_without_guid_has_no_1c_hints(): void
     {
         $html = $this->actingAs($this->admin)->get("/admin/product/{$this->product->id}")->assertOk()->getContent();

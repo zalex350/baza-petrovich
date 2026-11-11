@@ -14,6 +14,8 @@ use PDO;
  * Идемпотентна: меняет только расходящиеся строки, повторный прогон — «Изменится: 0».
  * Отчёт (docs/catalog/articles-report.md) пишется всегда: «нестандартные» строки каталога
  * (sku ≠ «БРЕНД-артикул»), товары сайта без пары в каталоге и без ключа, одинаковые ключи.
+ * Группы с одинаковым ключом — ещё и docs/catalog/duplicate-keys.csv для заказчика
+ * (ключ; sku; название; бренд; категория; опубликован), UTF-8 с BOM, разделитель «;».
  */
 class CatalogFillArticles extends Command
 {
@@ -79,9 +81,10 @@ class CatalogFillArticles extends Command
         $dir = $this->option('report-dir') ?: base_path('docs/catalog');
         File::ensureDirectoryExists($dir);
         File::put("{$dir}/articles-report.md", $this->report($path, $catalog, $live, $updates, $nonStandard, $withoutPair, $notOnSite, $duplicates));
+        File::put("{$dir}/duplicate-keys.csv", $this->duplicatesCsv($duplicates));
 
         if ($this->option('dry-run')) {
-            $this->info("Dry-run: база не менялась. Отчёт — {$dir}/articles-report.md");
+            $this->info("Dry-run: база не менялась. Отчёт — {$dir}/articles-report.md, одинаковые ключи — {$dir}/duplicate-keys.csv");
 
             return self::SUCCESS;
         }
@@ -122,6 +125,40 @@ class CatalogFillArticles extends Command
         }
 
         return $rows;
+    }
+
+    /**
+     * Группы с одинаковым ключом: строка на товар, группы — по ключу, внутри — по sku.
+     */
+    private function duplicatesCsv($duplicates): string
+    {
+        $products = Product::with('category.parent')->whereIn('id', $duplicates->flatten(1)->pluck('id'))->get()->keyBy('id');
+
+        $out = fopen('php://temp', 'r+');
+        fwrite($out, "\u{FEFF}");
+        fputcsv($out, ['ключ', 'sku', 'название', 'бренд', 'категория', 'опубликован'], ';');
+
+        foreach ($duplicates->sortKeys() as $key => $group) {
+            foreach ($group->sortBy('sku') as $row) {
+                $product = $products->get($row->id);
+                $category = $product?->category;
+
+                fputcsv($out, [
+                    $key,
+                    $row->sku,
+                    $product?->title(),
+                    $row->brand,
+                    $category ? ($category->parent ? $category->parent->name.' / ' : '').$category->name : '',
+                    $product?->is_published ? 'да' : 'нет',
+                ], ';');
+            }
+        }
+
+        rewind($out);
+        $csv = stream_get_contents($out);
+        fclose($out);
+
+        return $csv;
     }
 
     private static function skuKey(?string $sku): string

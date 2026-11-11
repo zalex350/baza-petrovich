@@ -3,9 +3,12 @@
 namespace App\Services;
 
 use App\Enums\OrderExchangeState;
+use App\Enums\OrderHistoryEvent;
 use App\Enums\OrderStatus;
 use App\Exceptions\OrderExchangeException;
 use App\Models\Order;
+use App\Models\OrderStatusHistory;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -66,7 +69,8 @@ class OrderExchange
 
     /**
      * 1С не смогла записать заказ: состояние «отклонён» с причиной — на разбор менеджеру.
-     * Статус для покупателя не меняется; отклонённый заказ не резервирует остаток.
+     * Статус для покупателя не меняется; резерв держится, пока менеджер не решит
+     * (cancel через OrderStatusService или resend()).
      *
      * @throws OrderExchangeException
      */
@@ -88,9 +92,57 @@ class OrderExchange
                 'reject_reason' => trim($reason),
             ])->save();
 
+            $this->event($order, OrderHistoryEvent::ExchangeRejected, null, $order->reject_reason, OrderStatusService::SOURCE_1C);
+
             $this->reserve->recalculateOrder($order->id);
 
             return $order;
         });
+    }
+
+    /**
+     * Менеджер разобрал отказ 1С и отправляет заказ повторно: снова «ожидает передачи»
+     * (попадёт в /orders/new). Причина отказа остаётся в истории заказа.
+     *
+     * @throws OrderExchangeException
+     */
+    public function resend(Order $order, User $by): Order
+    {
+        return DB::transaction(function () use ($order, $by) {
+            $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+            if ($order->exchange_state !== OrderExchangeState::Rejected) {
+                throw new OrderExchangeException(OrderExchangeException::NOT_REJECTED);
+            }
+
+            if ($order->status === OrderStatus::Cancelled) {
+                throw new OrderExchangeException(OrderExchangeException::ORDER_CANCELLED);
+            }
+
+            $order->forceFill([
+                'exchange_state' => OrderExchangeState::Pending,
+                'reject_reason' => null,
+            ])->save();
+
+            $this->event($order, OrderHistoryEvent::ExchangeResent, $by, null, OrderStatusService::SOURCE_SITE);
+
+            // Резерв не меняется: rejected и pending резервируют одинаково
+            $this->reserve->recalculateOrder($order->id);
+
+            return $order;
+        });
+    }
+
+    private function event(Order $order, OrderHistoryEvent $event, ?User $by, ?string $comment, string $source): void
+    {
+        OrderStatusHistory::create([
+            'order_id' => $order->id,
+            'from_status' => $order->status,
+            'to_status' => $order->status,
+            'event' => $event,
+            'user_id' => $by?->id,
+            'comment' => $comment !== null && $comment !== '' ? $comment : null,
+            'source' => $source,
+        ]);
     }
 }

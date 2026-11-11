@@ -38,11 +38,68 @@
             {{ date_ru($order->placed_at, true) }}
         </p>
 
+        <p data-exchange-state>
+            Обмен с 1С:
+            <x-badge :tone="match ($order->exchange_state) { \App\Enums\OrderExchangeState::Sent => 'success', \App\Enums\OrderExchangeState::Rejected => 'danger', default => 'neutral' }">
+                {{ $order->exchange_state->label() }}
+            </x-badge>
+            @if($order->number_1c)
+                — № {{ $order->number_1c }}@if($order->registered_at) от {{ date_ru($order->registered_at, true) }}@endif
+            @endif
+        </p>
+
     </div>
 
 </div>
 
 @include('partials.order_delivery', ['order' => $order])
+
+{{-- 1С отклонила заказ: решает менеджер — отменить (резерв снимается) или отправить повторно --}}
+@if($order->exchange_state === \App\Enums\OrderExchangeState::Rejected && $order->status !== \App\Enums\OrderStatus::Cancelled)
+
+    <x-alert type="error" title="1С отклонила заказ" class="mb-6" data-exchange-rejected>
+
+        <p class="whitespace-pre-line">Причина: {{ $order->reject_reason ?: '—' }}</p>
+
+        <p class="mt-1">Остаток по заказу зарезервирован, пока заказ не отменён или не отправлен повторно.</p>
+
+        <div class="mt-4 flex flex-wrap gap-3">
+
+            <x-confirm
+                action="/admin/order/{{ $order->id }}/exchange/resend"
+                label="Отправить в 1С повторно"
+                title="Отправить заказ в 1С повторно?"
+                confirm-label="Отправить"
+                variant="primary"
+            >
+                Заказ {{ $order->number }} снова попадёт в выгрузку для 1С. Убедитесь, что причина отказа устранена.
+            </x-confirm>
+
+            <x-confirm
+                action="/admin/order/{{ $order->id }}/exchange/cancel"
+                label="Отменить заказ"
+                title="Отменить заказ?"
+                confirm-label="Отменить заказ"
+                :open="$errors->has('comment')"
+            >
+                Заказ {{ $order->number }} будет отменён, резерв остатка снимется.
+
+                <x-slot:fields>
+                    <x-textarea
+                        name="comment"
+                        id="exchange_cancel_comment"
+                        label="Комментарий (необязательно)"
+                        rows="2"
+                        maxlength="1000"
+                    />
+                </x-slot:fields>
+            </x-confirm>
+
+        </div>
+
+    </x-alert>
+
+@endif
 
 {{-- Запрос клиента на отмену: подтвердить (отмена + возврат остатка) или отклонить с комментарием --}}
 @if($order->hasOpenCancelRequest())

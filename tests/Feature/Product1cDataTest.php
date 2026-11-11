@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -197,6 +198,21 @@ class Product1cDataTest extends TestCase
         $this->assertStringContainsString('| SAVOL:S1 | SAVOL-S1, SAVOL-S-1 |', $report);
         $this->assertStringContainsString("| {$own->id} | OWN-1 | OWN | O-1 |", $report);
         $this->assertStringContainsString('| Строк catalog.db без товара на сайте | 1 |', $report);
+
+        // Одинаковые ключи — CSV для заказчика
+        $mixers = Category::create(['name' => 'Смесители', 'slug' => 'm']);
+        $s1->update(['display_name' => 'Смеситель S1', 'category_id' => Category::create(['name' => 'Для кухни', 'slug' => 'k', 'parent_id' => $mixers->id])->id]);
+        $s1dash->update(['is_published' => false]);
+        $this->fill($path, ['--dry-run' => true])->assertSuccessful();
+
+        $csv = File::get($this->dir.'/duplicate-keys.csv');
+        $this->assertStringStartsWith("\u{FEFF}", $csv);
+        $rows = array_map(fn ($line) => str_getcsv($line, ';'), array_filter(explode("\n", substr($csv, 3))));
+        $this->assertSame([
+            ['ключ', 'sku', 'название', 'бренд', 'категория', 'опубликован'],
+            ['SAVOL:S1', 'SAVOL-S-1', 'SAVOL S-1', 'SAVOL', '', 'нет'],
+            ['SAVOL:S1', 'SAVOL-S1', 'Смеситель S1', 'SAVOL', 'Смесители / Для кухни', 'да'],
+        ], array_values($rows));
 
         // Повтор — ничего не меняет
         $this->fill($path)->assertSuccessful();

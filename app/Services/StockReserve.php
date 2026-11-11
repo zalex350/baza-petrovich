@@ -14,10 +14,10 @@ use Illuminate\Support\Facades\DB;
  * products.stock_1c — остаток 1С как есть; products.stock — доступный покупателю:
  * stock = max(0, stock_1c − резерв). Резерв — количество в неотменённых заказах,
  * которые 1С ещё не учла в остатке:
- *   - exchange_state = pending (ещё не переданы);
+ *   - exchange_state = pending (ещё не переданы) или rejected (1С отказала, решает менеджер:
+ *     отмена снимает резерв, повторная отправка возвращает в pending);
  *   - exchange_state = sent, но registered_at позже stock_synced_at товара (или остаток
  *     из 1С ещё не загружался): последний остаток 1С снят до регистрации заказа.
- * Отклонённые 1С (rejected) не резервируют.
  *
  * Пересчёт — recalculate() после оформления, отмены, подтверждения / отказа 1С.
  * Запись stock_1c / stock_synced_at (загрузка остатков) или stock напрямую (админка, сиды)
@@ -25,6 +25,9 @@ use Illuminate\Support\Facades\DB;
  */
 class StockReserve
 {
+    /** Состояния обмена, в которых 1С заказ ещё не учла */
+    private const UNREGISTERED = [OrderExchangeState::Pending->value, OrderExchangeState::Rejected->value];
+
     /**
      * Резерв одного товара. $stockSyncedAt — время остатка, которое будет у товара
      * (в Product::saving оно ещё не записано в БД).
@@ -38,7 +41,7 @@ class StockReserve
         return (int) $this->reservingItems()
             ->where('order_items.product_id', $productId)
             ->where(function ($q) use ($stockSyncedAt) {
-                $q->where('orders.exchange_state', OrderExchangeState::Pending->value)
+                $q->whereIn('orders.exchange_state', self::UNREGISTERED)
                     ->orWhere(function ($q) use ($stockSyncedAt) {
                         $q->where('orders.exchange_state', OrderExchangeState::Sent->value)
                             ->whereNotNull('orders.registered_at')
@@ -66,7 +69,7 @@ class StockReserve
             ->join('products', 'products.id', '=', 'order_items.product_id')
             ->whereIn('order_items.product_id', $ids)
             ->where(function ($q) {
-                $q->where('orders.exchange_state', OrderExchangeState::Pending->value)
+                $q->whereIn('orders.exchange_state', self::UNREGISTERED)
                     ->orWhere(function ($q) {
                         $q->where('orders.exchange_state', OrderExchangeState::Sent->value)
                             ->whereNotNull('orders.registered_at')

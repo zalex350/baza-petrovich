@@ -21,12 +21,6 @@ class Product extends Model
     /** Характеристика, которая показывается в разделе «Комплектация», а не в таблице */
     public const PACKAGE_ATTRIBUTE = 'Комплектация';
 
-    /**
-     * Поля, которые у товара с GUID приходят только из 1С: в админке — только чтение с подписью «из 1С»
-     * (docs/1C_EXCHANGE_SPEC.md, раздел 4, правило 5). article и unit в форму не входят вовсе.
-     */
-    public const FIELDS_FROM_1C = ['article', 'name', 'brand', 'unit', 'vat_rate', 'price', 'stock'];
-
     use SoftDeletes;
 
     protected $fillable = [
@@ -101,13 +95,14 @@ class Product extends Model
     }
 
     /**
-     * Поля, закрытые от правки в админке: у товара с GUID 1С — FIELDS_FROM_1C, без GUID — нет.
+     * Поля, закрытые от правки в админке: у товара с GUID 1С — поля, которыми владеет 1С
+     * (config shop.exchange_1c.managed_fields, SHOP_1C_MANAGED_FIELDS), без GUID — нет.
      *
      * @return list<string>
      */
     public function lockedFrom1c(): array
     {
-        return $this->guid !== null ? self::FIELDS_FROM_1C : [];
+        return $this->guid !== null ? array_values((array) config('shop.exchange_1c.managed_fields', [])) : [];
     }
 
     /**

@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\InvoiceSource;
+use App\Enums\OrderExchangeState;
 use App\Enums\OrderStatus;
 use App\Exceptions\CancelRequestException;
 use App\Exceptions\InvalidStatusTransition;
+use App\Exceptions\OrderExchangeException;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderInvoice;
+use App\Services\OrderExchange;
 use App\Services\OrderStatusService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -21,10 +24,10 @@ class AdminOrderController extends Controller
     public function index()
     {
         $filters = request()->validate([
-            'q'         => ['nullable', 'string', 'max:100'],
-            'status'    => ['nullable', Rule::enum(OrderStatus::class)],
+            'q' => ['nullable', 'string', 'max:100'],
+            'status' => ['nullable', Rule::enum(OrderStatus::class)],
             'date_from' => ['nullable', 'date'],
-            'date_to'   => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date'],
             'cancel_request' => ['nullable', 'boolean'],
         ]);
 
@@ -33,7 +36,7 @@ class AdminOrderController extends Controller
         $orders = Order::with(['user', 'organization'])
             // Поиск: номер заказа, клиент (организация: название, УНП), пользователь (имя, email)
             ->when($q !== '', function ($query) use ($q) {
-                $like = '%' . $q . '%';
+                $like = '%'.$q.'%';
 
                 $query->where(function ($query) use ($like) {
                     $query->where('number', 'like', $like)
@@ -61,8 +64,8 @@ class AdminOrderController extends Controller
         return view(
             'admin.orders',
             [
-                'orders'   => $orders,
-                'filters'  => $filters,
+                'orders' => $orders,
+                'filters' => $filters,
                 'statuses' => OrderStatus::cases(),
             ]
         );
@@ -75,7 +78,7 @@ class AdminOrderController extends Controller
         return view(
             'admin.order',
             [
-                'order'        => $order,
+                'order' => $order,
                 'manualStatus' => $this->manualStatus(),
             ]
         );
@@ -110,12 +113,12 @@ class AdminOrderController extends Controller
         $order = Order::findOrFail($id);
 
         $data = request()->validate([
-            'status'  => ['required', Rule::enum(OrderStatus::class)],
+            'status' => ['required', Rule::enum(OrderStatus::class)],
             'comment' => ['nullable', 'string', 'max:1000'],
         ], [
             'status.required' => 'Выберите новый статус',
-            'status.enum'     => 'Неизвестный статус',
-            'comment.max'     => 'Комментарий не длиннее 1000 символов',
+            'status.enum' => 'Неизвестный статус',
+            'comment.max' => 'Комментарий не длиннее 1000 символов',
         ]);
 
         $to = OrderStatus::from($data['status']);
@@ -162,7 +165,7 @@ class AdminOrderController extends Controller
             'reject_comment' => ['required', 'string', 'max:1000'],
         ], [
             'reject_comment.required' => 'Укажите причину отклонения',
-            'reject_comment.max'      => 'Комментарий не длиннее 1000 символов',
+            'reject_comment.max' => 'Комментарий не длиннее 1000 символов',
         ]);
 
         try {
@@ -172,6 +175,49 @@ class AdminOrderController extends Controller
         }
 
         return back()->with('success', 'Запрос на отмену отклонён');
+    }
+
+    /**
+     * Отклонённый 1С заказ: менеджер отменяет его (резерв снимается). Работает и при выключенной
+     * ручной смене статусов — решение по отказу 1С остаётся за сайтом.
+     */
+    public function cancelRejected($id, OrderStatusService $statuses)
+    {
+        $order = Order::findOrFail($id);
+
+        $data = request()->validate([
+            'comment' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'comment.max' => 'Комментарий не длиннее 1000 символов',
+        ]);
+
+        if ($order->exchange_state !== OrderExchangeState::Rejected) {
+            return back()->with('error', '1С не отклоняла заказ');
+        }
+
+        try {
+            $statuses->change($order, OrderStatus::Cancelled, auth()->user(), $data['comment'] ?? 'Отклонён 1С: '.$order->reject_reason);
+        } catch (InvalidStatusTransition $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', "Заказ {$order->number} отменён");
+    }
+
+    /**
+     * Отклонённый 1С заказ: менеджер разобрал причину и отправляет его в 1С повторно.
+     */
+    public function resendTo1c($id, OrderExchange $exchange)
+    {
+        $order = Order::findOrFail($id);
+
+        try {
+            $exchange->resend($order, auth()->user());
+        } catch (OrderExchangeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', "Заказ {$order->number} будет отправлен в 1С повторно");
     }
 
     /**

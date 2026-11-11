@@ -112,6 +112,10 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         [AdminOrderController::class, 'rejectCancel']
     );
 
+    // Заказ, отклонённый 1С: отменить (резерв снимается) или отправить в 1С повторно
+    Route::post('/admin/order/{id}/exchange/cancel', [AdminOrderController::class, 'cancelRejected']);
+    Route::post('/admin/order/{id}/exchange/resend', [AdminOrderController::class, 'resendTo1c']);
+
     // Счёт на оплату (SRS §8.10): загрузка PDF, удаление, проверка
     Route::post('/admin/order/{id}/invoice', [AdminOrderController::class, 'uploadInvoice']);
     Route::post('/admin/order/{id}/invoice/delete', [AdminOrderController::class, 'deleteInvoice']);

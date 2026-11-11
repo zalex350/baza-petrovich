@@ -191,7 +191,7 @@
 |---|---|
 | SRS §10.7.5 | Каждая смена статуса и событие отмены пишется в `order_status_history` с автором и комментарием |
 | Отмена | Снимает резерв: доступный остаток пересчитывается (`StockReserve`); `stock_returned_at` — наследие, больше не пишется |
-| Обмен с 1С | `exchange_state` (`pending` / `sent` / `rejected`) отдельно от статуса; `OrderExchange::confirm()` / `reject()` — подтверждение и отказ 1С (`order_cancelled`, `guid_conflict`); переходы 1С — `OrderStatus::canTransitionFrom1c` (вперёд с пропусками, отмена из любого незавершённого) |
+| Обмен с 1С | `exchange_state` (`pending` / `sent` / `rejected`) отдельно от статуса; `OrderExchange::confirm()` / `reject()` / `resend()` — подтверждение, отказ 1С (`order_cancelled`, `guid_conflict`) и повторная отправка; отклонённый заказ держит резерв, в админке заказа — «Отправить в 1С повторно» и «Отменить заказ» (`/admin/order/{id}/exchange/resend|cancel`, работают и при выключенной ручной смене статусов); переходы 1С — `OrderStatus::canTransitionFrom1c` (вперёд с пропусками, отмена из любого незавершённого) |
 | Запрос отмены | Клиент сам не отменяет (BR-133: и не удаляет): запрос с причиной до 1000 символов, только оформивший, только в статусах «Новый» и «Подтверждён», один открытый запрос. Решает администратор: одобрить (→ Отменён) или отклонить с комментарием |
 | Ручные статусы | `SHOP_ORDERS_MANUAL_STATUS=false` отключает смену статусов в админке (на будущее — статусы из 1С) |
 | Счёт на оплату | `OrderInvoice` (один на заказ): PDF до 10 МБ в закрытом хранилище (диск `local`, `invoices/{order_id}/`). В админке заказа — загрузить, заменить, удалить, скачать. `source`: `manual` / `erp` (из 1С, `external_id`) — `OrderInvoice::attach()` |
@@ -426,7 +426,7 @@
 | Команда | `catalog:import-db <path> --dry-run` (отчёт `docs/catalog/import-report.md` + `uncategorized.csv`), боевой — `--backup=<дамп>` |
 | Сервисы | `CatalogImport\CatalogImportPlanner` (только чтение, строит план), `CatalogImportPlan`, `CatalogImportApplier` (применяет), `CatalogImportReport`, `CatalogMapping`, `ColumnLimits` |
 | Маппинги | `database/data/catalog/`: `brands.php`, `categories.php` (`map`, `rules`, `split`, `products`), `attributes.php`, `filters.php`, `cleanup.php` |
-| Артикулы | `catalog:fill-articles <path> [--dry-run]`: `products.article` из `catalog.db.article` (по sku) и ключ сопоставления с 1С `match_key`; идемпотентна, отчёт — `docs/catalog/articles-report.md` |
+| Артикулы | `catalog:fill-articles <path> [--dry-run]`: `products.article` из `catalog.db.article` (по sku) и ключ сопоставления с 1С `match_key`; идемпотентна, отчёт — `docs/catalog/articles-report.md`, группы с одинаковым ключом для заказчика — `docs/catalog/duplicate-keys.csv` |
 | Прочие команды | `attributes:from-specifications` (текст `specifications` → справочник), `catalog:import`, `demo:clear` |
 
 | Правило | Суть |

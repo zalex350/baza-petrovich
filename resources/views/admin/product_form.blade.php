@@ -14,7 +14,8 @@
 @php
     $isNew = ! $product->exists;
     $locked = ! config('shop.catalog.manual_products');
-    // Товар с GUID 1С: его поля 1С (Product::FIELDS_FROM_1C) — только чтение с подписью «из 1С»
+    // Товар с GUID 1С: поля, которыми владеет 1С (Product::lockedFrom1c, SHOP_1C_MANAGED_FIELDS), —
+    // только чтение с подписью «из 1С»
     $from1c = fn (string $field) => in_array($field, $product->lockedFrom1c(), true);
     $lock = fn (string $field) => $locked || $from1c($field);
     $hint1c = fn (string $field, ?string $hint = null) => $from1c($field) ? 'из 1С' : $hint;
@@ -74,13 +75,16 @@
 
         <x-input name="name" label="Название (системное)" :value="$product->name" :hint="$hint1c('name')" :form="$form" :disabled="$lock('name')" :required="! $lock('name')" class="md:col-span-2" />
 
-        <x-input name="sku" label="Артикул (SKU)" :value="$product->sku" :form="$form" :disabled="$locked" :required="! $locked" />
+        <x-input name="sku" label="Артикул (SKU)" :value="$product->sku" :hint="$hint1c('sku')" :form="$form" :disabled="$lock('sku')" :required="! $lock('sku')" />
 
         <x-input name="brand" label="Бренд" :value="$product->brand" :hint="$hint1c('brand')" :form="$form" :disabled="$lock('brand')" />
 
-        @if($product->lockedFrom1c())
+        {{-- Артикул производителя и единица в форму не входят: показываются, только когда их владелец — 1С --}}
+        @if($from1c('article'))
             <x-input name="article" label="Артикул производителя" :value="$product->article" hint="из 1С" disabled />
+        @endif
 
+        @if($from1c('unit'))
             <x-input name="unit" label="Единица измерения" :value="$product->unit" hint="из 1С" disabled />
         @endif
 
@@ -113,14 +117,14 @@
                 $stockHint = $reservedQty > 0 ? "Доступно на сайте; в 1С — {$product->stock_1c}, в резерве заказов сайта — {$reservedQty}." : null;
             @endphp
             <x-input name="stock" type="number" min="0" step="1" label="Остаток" :value="$product->stock" :hint="$from1c('stock') ? trim('из 1С. '.$stockHint) : $stockHint" :form="$form" :disabled="$lock('stock')" :required="! $lock('stock')" />
-            <x-checkbox name="on_order" label="Под заказ, когда остатка нет" :checked="$product->on_order" :form="$form" :disabled="$locked" />
+            <x-checkbox name="on_order" :label="'Под заказ, когда остатка нет'.($from1c('on_order') ? ' (из 1С)' : '')" :checked="$product->on_order" :form="$form" :disabled="$lock('on_order')" />
         </div>
 
         {{-- Кратность заказа: поле количества на витрине (x-qty) начинается с default_qty и шагает от min_qty на qty_step --}}
         <div class="md:col-span-2 grid gap-6 sm:grid-cols-3" data-qty-rules>
-            <x-input name="min_qty" type="number" min="1" step="1" label="Минимум в заказе, шт." :value="$product->min_qty" :form="$form" :disabled="$locked" :required="! $locked" />
-            <x-input name="qty_step" type="number" min="1" step="1" label="Шаг (кратность), шт." :value="$product->qty_step" :form="$form" :disabled="$locked" :required="! $locked" />
-            <x-input name="default_qty" type="number" min="1" step="1" label="По умолчанию, шт." hint="Минимум, минимум + шаг, …" :value="$product->default_qty" :form="$form" :disabled="$locked" :required="! $locked" />
+            <x-input name="min_qty" type="number" min="1" step="1" label="Минимум в заказе, шт." :value="$product->min_qty" :hint="$hint1c('min_qty')" :form="$form" :disabled="$lock('min_qty')" :required="! $lock('min_qty')" />
+            <x-input name="qty_step" type="number" min="1" step="1" label="Шаг (кратность), шт." :value="$product->qty_step" :hint="$hint1c('qty_step')" :form="$form" :disabled="$lock('qty_step')" :required="! $lock('qty_step')" />
+            <x-input name="default_qty" type="number" min="1" step="1" label="По умолчанию, шт." :hint="$hint1c('default_qty', 'Минимум, минимум + шаг, …')" :value="$product->default_qty" :form="$form" :disabled="$lock('default_qty')" :required="! $lock('default_qty')" />
         </div>
 
     </div>

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\OrderExchangeState;
+use App\Enums\OrderHistoryEvent;
 use App\Enums\OrderStatus;
 use App\Exceptions\OrderExchangeException;
 use App\Models\Order;
@@ -174,7 +175,7 @@ class StockReserveTest extends TestCase
         $this->assertSame([10, 10], $this->stock());
     }
 
-    public function test_reject_marks_order_and_releases_reserve(): void
+    public function test_reject_keeps_reserve_until_manager_decides(): void
     {
         $order = $this->place(2);
 
@@ -183,7 +184,82 @@ class StockReserveTest extends TestCase
         $this->assertSame(OrderExchangeState::Rejected, $order->exchange_state);
         $this->assertSame('Контрагент не найден по УНП', $order->reject_reason);
         $this->assertSame(OrderStatus::New, $order->status);
+        $this->assertSame([8, 10], $this->stock());
+
+        $event = $order->statusHistory()->get()->last();
+        $this->assertSame([OrderHistoryEvent::ExchangeRejected, OrderStatusService::SOURCE_1C, null], [$event->event, $event->source, $event->user_id]);
+        $this->assertSame('Контрагент не найден по УНП', $event->comment);
+    }
+
+    // --- Админка: решение по отказу 1С ---
+
+    private function rejected(int $qty = 2): Order
+    {
+        return $this->exchange()->reject($this->place($qty), 'Контрагент не найден по УНП');
+    }
+
+    public function test_admin_sees_rejected_block_with_two_actions(): void
+    {
+        $order = $this->rejected();
+
+        $this->actingAs($this->admin)->get("/admin/order/{$order->id}")
+            ->assertOk()
+            ->assertSee('data-exchange-rejected', false)
+            ->assertSee('Причина: Контрагент не найден по УНП')
+            ->assertSee("/admin/order/{$order->id}/exchange/resend", false)
+            ->assertSee("/admin/order/{$order->id}/exchange/cancel", false)
+            ->assertSee('Отклонён 1С');
+
+        // Не отклонённый заказ — без блока
+        $other = $this->place(1);
+        $this->actingAs($this->admin)->get("/admin/order/{$other->id}")
+            ->assertOk()
+            ->assertDontSee('data-exchange-rejected', false)
+            ->assertSee('Ожидает передачи в 1С');
+    }
+
+    public function test_admin_resends_rejected_order(): void
+    {
+        $order = $this->rejected();
+
+        $this->actingAs($this->admin)->post("/admin/order/{$order->id}/exchange/resend")->assertSessionHas('success');
+
+        $order->refresh();
+        $this->assertSame(OrderExchangeState::Pending, $order->exchange_state);
+        $this->assertNull($order->reject_reason);
+        $this->assertSame([8, 10], $this->stock());
+
+        $event = $order->statusHistory()->get()->last();
+        $this->assertSame([OrderHistoryEvent::ExchangeResent, $this->admin->id], [$event->event, $event->user_id]);
+
+        // Повтор — уже не отклонён
+        $this->actingAs($this->admin)->post("/admin/order/{$order->id}/exchange/resend")->assertSessionHas('error');
+    }
+
+    public function test_admin_cancels_rejected_order_and_releases_reserve(): void
+    {
+        config(['shop.orders.manual_status' => false]); // решение по отказу 1С — всегда за сайтом
+        $order = $this->rejected();
+
+        $this->actingAs($this->admin)->post("/admin/order/{$order->id}/exchange/cancel")->assertSessionHas('success');
+
+        $order->refresh();
+        $this->assertSame(OrderStatus::Cancelled, $order->status);
         $this->assertSame([10, 10], $this->stock());
+        $this->assertSame('Отклонён 1С: Контрагент не найден по УНП', $order->statusHistory()->get()->last()->comment);
+
+        // Отменённый — повторно не отправить
+        $this->actingAs($this->admin)->post("/admin/order/{$order->id}/exchange/resend")->assertSessionHas('error');
+    }
+
+    public function test_exchange_cancel_requires_rejected_order(): void
+    {
+        $order = $this->place(2);
+
+        $this->actingAs($this->admin)->post("/admin/order/{$order->id}/exchange/cancel")->assertSessionHas('error');
+        $this->assertSame(OrderStatus::New, $order->fresh()->status);
+
+        $this->actingAs($this->client)->post("/admin/order/{$order->id}/exchange/resend")->assertForbidden();
     }
 
     public function test_manual_sent_to_1c_keeps_reserve(): void
