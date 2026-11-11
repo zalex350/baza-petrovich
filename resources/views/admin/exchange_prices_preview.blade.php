@@ -52,7 +52,7 @@
         <h2 class="text-xl font-semibold mb-4">Будет обновлено</h2>
         <x-table stack="lg" caption="Будет обновлено" class="mb-2">
             <x-slot:head>
-                <x-table.th>Артикул</x-table.th>
+                <x-table.th>SKU</x-table.th>
                 <x-table.th>Товар</x-table.th>
                 <x-table.th>Цена без НДС</x-table.th>
                 <x-table.th>Остаток 1С</x-table.th>
@@ -60,7 +60,7 @@
             </x-slot:head>
             @foreach(array_slice($plan->updated, 0, $limit, true) as $id => ['before' => $b, 'after' => $a])
                 <tr data-preview-updated="{{ $id }}">
-                    <x-table.td label="Артикул" nowrap>{{ $sku($id) }}</x-table.td>
+                    <x-table.td label="SKU" nowrap>{{ $sku($id) }}</x-table.td>
                     <x-table.td label="Товар">{{ $title($id) }}</x-table.td>
                     <x-table.td label="Цена без НДС" nowrap>
                         @if($b['price'] !== $a['price']){{ $money($b['price']) }} → <strong>{{ $money($a['price']) }}</strong>@else {{ $money($a['price']) }} @endif
@@ -85,12 +85,12 @@
         <h2 class="text-xl font-semibold mb-4">Остаток станет 0 (нет в полном файле)</h2>
         <x-table stack="lg" caption="Остаток станет 0" class="mb-6">
             <x-slot:head>
-                <x-table.th>Артикул</x-table.th>
+                <x-table.th>SKU</x-table.th>
                 <x-table.th>Товар</x-table.th>
             </x-slot:head>
             @foreach(array_slice($plan->zeroed, 0, $limit) as $id)
                 <tr data-preview-zeroed="{{ $id }}">
-                    <x-table.td label="Артикул" nowrap>{{ $sku($id) }}</x-table.td>
+                    <x-table.td label="SKU" nowrap>{{ $sku($id) }}</x-table.td>
                     <x-table.td label="Товар">{{ $title($id) }}</x-table.td>
                 </tr>
             @endforeach
@@ -103,14 +103,14 @@
             <x-slot:head>
                 <x-table.th align="right">Строка</x-table.th>
                 <x-table.th>GUID</x-table.th>
-                <x-table.th>Артикул</x-table.th>
+                <x-table.th>SKU</x-table.th>
                 <x-table.th>Ошибка</x-table.th>
             </x-slot:head>
             @foreach(array_slice($r->errors, 0, $limit) as $error)
                 <tr data-preview-error>
                     <x-table.td label="Строка" align="right" nowrap>{{ $error['line'] ?? '—' }}</x-table.td>
                     <x-table.td label="GUID"><code class="break-all">{{ $error['guid'] ?? '—' }}</code></x-table.td>
-                    <x-table.td label="Артикул">{{ $error['sku'] ?? '—' }}</x-table.td>
+                    <x-table.td label="SKU">{{ $error['sku'] ?? '—' }}</x-table.td>
                     <x-table.td label="Ошибка">{{ $error['message'] }}</x-table.td>
                 </tr>
             @endforeach

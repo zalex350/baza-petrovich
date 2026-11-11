@@ -63,7 +63,7 @@
         <x-slot:head>
             <x-table.th align="right">Строка</x-table.th>
             <x-table.th>GUID</x-table.th>
-            <x-table.th>Артикул</x-table.th>
+            <x-table.th>SKU</x-table.th>
             <x-table.th>Ошибка</x-table.th>
         </x-slot:head>
 
@@ -71,7 +71,7 @@
             <tr data-exchange-error>
                 <x-table.td label="Строка" align="right" nowrap>{{ $error->line ?? '—' }}</x-table.td>
                 <x-table.td label="GUID"><code class="break-all">{{ $error->guid ?? '—' }}</code></x-table.td>
-                <x-table.td label="Артикул">{{ $error->sku ?? '—' }}</x-table.td>
+                <x-table.td label="SKU">{{ $error->sku ?? '—' }}</x-table.td>
                 <x-table.td label="Ошибка">{{ $error->message }}</x-table.td>
             </tr>
         @endforeach
