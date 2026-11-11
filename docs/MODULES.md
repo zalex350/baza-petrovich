@@ -476,3 +476,23 @@
 | Выгрузка ассортимента | Кабинет → «Выгрузка ассортимента» (`/account/assortment`, пункт меню — только у организации с кодами, иначе 404). Файл `.xlsx` (`App\Services\AssortmentExport`, openspout, потоково): ваш код, наш артикул, название, цена без НДС, цена с НДС (по ставке товара; нет цены — «Цена уточняется»), остаток — точным числом до `shop.export_stock_cap` (20, `SHOP_EXPORT_STOCK_CAP`), больше — «более 20». Товары — опубликованные (`is_active`, `is_published`) с кодом своей организации, по артикулу; галочка «Включить товары без кода» — после них все остальные опубликованные с пустым кодом. Код и артикул — текстом (ведущие нули сохраняются) |
 
 Тесты: `ProductClientCodeTest`, `ClientCodesAdminTest`.
+
+---
+
+## 12. Обмен с 1С: API и журнал
+
+**Назначение.** 1С обращается к сайту по HTTPS (`/api/1c/v1`, `docs/1C_EXCHANGE_SPEC.md`): присылает файлы номенклатуры, цен и остатков, статусов, забирает заказы. Этап 2 — транспорт, задания, журнал и оповещения; обработчики данных — этапы 3–5 (пока заглушка: задание сразу `done`, 0 строк).
+
+| | |
+|---|---|
+| Маршруты API | `routes/api.php`: `GET /ping`, `POST /catalog`, `POST /prices-stock` (`?mode=full\|delta`), `GET /jobs/{id}` — `Api\ExchangeController` |
+| Доступ | `AuthenticateExchange`: IP из белого списка (адрес или CIDR, пустой список — 403 всем) → Bearer-токен (401). Лимитер `exchange-1c` — запросов в минуту на токен (`SHOP_1C_RATE_LIMIT`, 60) |
+| Приём тела | `Exchange\ExchangeUpload`: `text/csv` / `application/json`, `Content-Encoding: gzip` (распаковка потоком), предел 50 МБ (`SHOP_1C_MAX_BODY_MB`) и на сжатое, и на распакованное → 413; UTF-8 (BOM снимается), заголовок CSV с обязательными колонками типа (`ExchangeJobType::requiredColumns`) → иначе 400 до очереди |
+| Идемпотентность | `X-Exchange-Id` (уникальный в `exchange_jobs`): повтор — то же задание без чтения тела; другой поток с тем же id — 409 `exchange_id_conflict`; параллельный дубль ловит уникальный индекс |
+| Задания | `ExchangeJob` (UUID v7 = `job_id`): тип, направление, режим, статус `queued/processing/done/failed`, счётчики, `message` (причина failed), `exchange_id`, токен, IP, время; ошибки по строкам — `exchange_job_errors`. Обработка — `ProcessExchangeJob` → `Exchange\ExchangeJobs::process` → обработчик типа (`ExchangeHandler`; пока `StubHandler`) |
+| Архив | Диск `exchange` (`storage/app/exchange/ГГГГ/ММ/<job_id>.csv`), распакованный файл; `exchange:prune` ежедневно удаляет файлы старше `SHOP_1C_ARCHIVE_DAYS` (90), запись журнала остаётся (`file_pruned_at`) |
+| Оповещения | `Exchange\ExchangeAlerts` → `ExchangeAlertNotification` администраторам с галочкой «Сбои обмена с 1С» (`users.notify_exchange`): задание failed, ошибок больше порога (5 %) — сразу; цены и остатки не приходили дольше N ч (после первой загрузки цен), заказы `pending` дольше N мин (выключено до этапа 5) — `exchange:check` раз в 10 минут. Одного вида — не чаще интервала (60 мин) |
+| Админка | «Обмен с 1С» (`/admin/exchange`, `AdminExchangeController`, вкладки `x-tabs`): журнал (фильтры тип / статус / даты, по 50), задание `/admin/exchange/job/{id}` (сведения, ошибки по строкам, скачать файл), токены (создать — показ один раз без сохранения в сессии, отозвать), IP (добавить адрес / CIDR, удалить, «ваш текущий адрес»), настройки (`App\Support\ExchangeSettings` в `settings`: предохранитель `mode=full` 10 %, порог ошибок 5 %, часы без цен 2, минуты ожидания заказа 30, интервал писем 60, галочка писем о заказах) |
+| Стенд | nginx сервера: `location /api/1c/` без basic auth, `client_max_body_size 50m`; сервис `scheduler` — `docs/STAGING.md`, «API обмена с 1С» |
+
+Тесты: `tests/Feature/Exchange` (`ExchangeApiTest`, `ExchangeJobsTest`, `ExchangeAdminTest`).

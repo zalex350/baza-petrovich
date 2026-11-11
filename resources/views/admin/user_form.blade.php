@@ -105,6 +105,13 @@
                 :checked="$notify('notify_partner_request')"
             />
 
+            <x-checkbox
+                name="notify_exchange"
+                label="Сбои обмена с 1С"
+                hint="Письмо, если задание обмена не обработано, в нём много ошибок или цены давно не приходили."
+                :checked="$notify('notify_exchange')"
+            />
+
             <p class="text-sm text-slate-500">Письма уходят на email пользователя: {{ $user->email ?: 'указанный выше' }}.</p>
 
         </fieldset>

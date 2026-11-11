@@ -299,7 +299,7 @@ class AdminNotificationsTest extends TestCase
         $admin = User::factory()->admin()->create();
 
         $this->actingAs($self)->from("/admin/user/{$admin->id}")
-            ->post("/admin/user/{$admin->id}/notifications", ['notify_new_order' => '0', 'notify_cancel_request' => '0', 'notify_partner_request' => '0'])
+            ->post("/admin/user/{$admin->id}/notifications", ['notify_new_order' => '0', 'notify_cancel_request' => '0', 'notify_partner_request' => '0', 'notify_exchange' => '0'])
             ->assertRedirect("/admin/user/{$admin->id}")
             ->assertSessionHas('success', 'Настройки уведомлений сохранены');
 
@@ -307,14 +307,15 @@ class AdminNotificationsTest extends TestCase
         $this->assertFalse($admin->notify_new_order);
         $this->assertFalse($admin->notify_cancel_request);
         $this->assertFalse($admin->notify_partner_request);
+        $this->assertFalse($admin->notify_exchange);
 
         // Своё тоже можно менять; имя, email и роль не трогаются
-        $this->actingAs($self)->post("/admin/user/{$self->id}/notifications", ['notify_new_order' => '0', 'notify_cancel_request' => '1', 'notify_partner_request' => '1']);
+        $this->actingAs($self)->post("/admin/user/{$self->id}/notifications", ['notify_new_order' => '0', 'notify_cancel_request' => '1', 'notify_partner_request' => '1', 'notify_exchange' => '1']);
         $this->assertFalse($self->fresh()->notify_new_order);
         $this->assertTrue($self->fresh()->isAdmin());
 
         $this->actingAs($self)->post("/admin/user/{$admin->id}/notifications", ['notify_new_order' => 'да'])
-            ->assertSessionHasErrors(['notify_new_order', 'notify_cancel_request', 'notify_partner_request']);
+            ->assertSessionHasErrors(['notify_new_order', 'notify_cancel_request', 'notify_partner_request', 'notify_exchange']);
     }
 
     public function test_card_settings_are_not_for_clients_or_non_admins(): void

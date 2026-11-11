@@ -46,6 +46,23 @@ services:
       php:
         condition: service_started
 
+  # Планировщик Laravel (routes/console.php): обмен с 1С — очистка архива файлов (ежедневно),
+  # проверка и письма о сбоях (раз в 10 минут). schedule:work сам запускает schedule:run раз в минуту.
+  scheduler:
+    image: smesitel_by-app:latest
+    pull_policy: never
+    command: ["php", "artisan", "schedule:work"]
+    restart: unless-stopped
+    stop_grace_period: 30s
+    volumes:
+      - ./.env:/var/www/.env:ro
+      - storage:/var/www/storage
+    depends_on:
+      mysql:
+        condition: service_healthy
+      php:
+        condition: service_started
+
   nginx:
     build:
       context: .

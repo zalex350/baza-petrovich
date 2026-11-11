@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\AdminPartnerRequestController;
 use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminProductDocumentController;
 use App\Http\Controllers\Admin\AdminProductImageController;
+use App\Http\Controllers\Admin\AdminExchangeController;
 use App\Http\Controllers\Admin\AdminSettingsController;
 use App\Http\Controllers\Admin\AdminUserController;
 use Illuminate\Support\Facades\Route;
@@ -345,4 +346,14 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     // Заявки «Стать партнёром»
     Route::get('/admin/partners', [AdminPartnerRequestController::class, 'index']);
     Route::post('/admin/partner/{id}/status', [AdminPartnerRequestController::class, 'updateStatus']);
+
+    // Обмен с 1С: журнал, задание и его файл, токены API, белый список IP, настройки
+    Route::get('/admin/exchange', [AdminExchangeController::class, 'index']);
+    Route::get('/admin/exchange/job/{id}', [AdminExchangeController::class, 'job']);
+    Route::get('/admin/exchange/job/{id}/file', [AdminExchangeController::class, 'file']);
+    Route::post('/admin/exchange/tokens', [AdminExchangeController::class, 'storeToken']);
+    Route::post('/admin/exchange/token/{id}/revoke', [AdminExchangeController::class, 'revokeToken'])->whereNumber('id');
+    Route::post('/admin/exchange/ips', [AdminExchangeController::class, 'storeIp']);
+    Route::post('/admin/exchange/ip/{id}/delete', [AdminExchangeController::class, 'deleteIp'])->whereNumber('id');
+    Route::post('/admin/exchange/settings', [AdminExchangeController::class, 'saveSettings']);
 });

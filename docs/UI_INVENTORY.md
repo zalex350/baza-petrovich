@@ -69,6 +69,8 @@
 | `/admin/page/create`, `/admin/page/{id}` | `…@create`, `…@edit` | `admin/page_form` | `page`, `page/{id}`, `page/{id}/delete` |
 | `/admin/settings` | `AdminSettingsController@edit` | `admin/settings` | `settings` |
 | `/admin/partners` | `AdminPartnerRequestController@index` | `admin/partners` | `partner/{id}/status` |
+| `/admin/exchange` (`?tab=jobs\|tokens\|ips\|settings`) | `AdminExchangeController@index` | `admin/exchange` | `exchange/tokens`, `exchange/token/{id}/revoke`, `exchange/ips`, `exchange/ip/{id}/delete`, `exchange/settings` |
+| `/admin/exchange/job/{id}` | `AdminExchangeController@job` | `admin/exchange_job` | `exchange/job/{id}/file` (GET, скачать) |
 
 ### Auth (Breeze)
 
