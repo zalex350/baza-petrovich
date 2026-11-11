@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\AssortmentExport;
 use App\Services\ClientCodes;
 use App\Services\UserInvitations;
+use App\Support\LocalTime;
 
 /**
  * Разделы личного кабинета (SRS §8) только для просмотра: реквизиты своей организации
@@ -65,7 +66,7 @@ class AccountController extends Controller
 
         $path = $export->write($organization, request()->boolean('without_code'));
 
-        return response()->download($path, 'assortment-'.now()->format('Y-m-d').'.xlsx', [
+        return response()->download($path, 'assortment-'.LocalTime::now()->format('Y-m-d').'.xlsx', [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ])->deleteFileAfterSend();
     }

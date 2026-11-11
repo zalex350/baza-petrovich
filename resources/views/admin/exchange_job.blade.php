@@ -14,13 +14,13 @@
 
 <div class="mb-6 rounded-card border border-line bg-surface p-card" data-exchange-job-card>
     <dl class="grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-        <div><dt class="text-meta text-ink-muted">Статус</dt><dd><x-badge :tone="$job->status->tone()">{{ $job->status->label() }}</x-badge></dd></div>
+        <div><dt class="text-meta text-ink-muted">Статус</dt><dd><x-badge :tone="$job->statusTone()" data-job-status>{{ $job->statusLabel() }}</x-badge></dd></div>
         <div><dt class="text-meta text-ink-muted">Операция</dt><dd>{{ $job->direction === 'export' ? 'Экспорт (сайт → 1С)' : 'Импорт (1С → сайт)' }}@if($job->mode), {{ $job->mode }}@endif</dd></div>
         <div><dt class="text-meta text-ink-muted">Задание</dt><dd><code class="break-all">{{ $job->id }}</code></dd></div>
         <div><dt class="text-meta text-ink-muted">Строк</dt><dd>всего {{ $job->rows_total }}, принято {{ $job->rows_ok }}, пропущено {{ $job->rows_skipped }}, с ошибкой {{ $job->rows_error }}</dd></div>
         <div><dt class="text-meta text-ink-muted">Обработка</dt><dd>
             @if($job->finished_at)
-                {{ date_ru($job->started_at ?? $job->received_at, time: true) }} — {{ $job->finished_at->format('H:i:s') }}
+                {{ date_ru($job->started_at ?? $job->received_at, time: true) }} — {{ \App\Support\LocalTime::of($job->finished_at)->format('H:i:s') }}
             @else
                 ещё не завершена
             @endif

@@ -477,6 +477,14 @@ docker compose exec php rm -rf /tmp/catalog.db /tmp/backup_catalog_import.sql /t
 
 `~/imports/catalog.db` и отчёты на сервере — удалить, когда не нужны: `rm -rf ~/imports`.
 
+## Время
+
+В БД время хранится в UTC (`app.timezone`), людям показывается по Минску (`APP_DISPLAY_TIMEZONE`, по умолчанию `Europe/Minsk`, — `App\Support\LocalTime`). Сервер MySQL должен работать в UTC, иначе колонки `TIMESTAMP` сдвинутся при чтении. Проверка — обе колонки должны совпадать:
+
+```bash
+docker compose -f docker-compose.staging.yml exec mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "select @@global.time_zone, @@system_time_zone, now(), utc_timestamp()"'
+```
+
 ## Полезные команды
 
 ```bash

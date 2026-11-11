@@ -11,7 +11,7 @@ use App\Models\ExchangeToken;
 use App\Models\Setting;
 use App\Services\Exchange\ManualPricesUpload;
 use App\Support\ExchangeSettings;
-use Illuminate\Support\Carbon;
+use App\Support\LocalTime;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -51,7 +51,7 @@ class AdminExchangeController extends Controller
 
         abort_unless($job->hasFile(), 404, 'Файл удалён по сроку хранения или не сохранялся');
 
-        $name = $job->type->value.'_'.$job->received_at->format('Y-m-d_His').'.'.pathinfo($job->file_path, PATHINFO_EXTENSION);
+        $name = $job->type->value.'_'.LocalTime::of($job->received_at)->format('Y-m-d_His').'.'.pathinfo($job->file_path, PATHINFO_EXTENSION);
 
         return Storage::disk('exchange')->download($job->file_path, $name);
     }
@@ -239,8 +239,9 @@ class AdminExchangeController extends Controller
         $jobs = ExchangeJob::with(['token', 'user'])
             ->when($filters['type'], fn ($q, $type) => $q->where('type', $type))
             ->when($filters['status'], fn ($q, $status) => $q->where('status', $status))
-            ->when($filters['from'], fn ($q, $from) => $q->where('received_at', '>=', Carbon::parse($from)->startOfDay()))
-            ->when($filters['to'], fn ($q, $to) => $q->where('received_at', '<=', Carbon::parse($to)->endOfDay()))
+            // Даты фильтра — дни по Минску (LocalTime::day), в БД — UTC
+            ->when($filters['from'], fn ($q, $from) => $q->where('received_at', '>=', LocalTime::day($from)[0]))
+            ->when($filters['to'], fn ($q, $to) => $q->where('received_at', '<=', LocalTime::day($to)[1]))
             ->latest('received_at')
             ->paginate(50)
             ->withQueryString();

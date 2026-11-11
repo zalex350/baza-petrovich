@@ -13,6 +13,7 @@ use App\Models\Order;
 use App\Models\OrderInvoice;
 use App\Services\OrderExchange;
 use App\Services\OrderStatusService;
+use App\Support\LocalTime;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -54,8 +55,9 @@ class AdminOrderController extends Controller
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             // Только заказы с открытым запросом на отмену
             ->when($filters['cancel_request'] ?? null, fn ($query) => $query->whereNotNull('cancel_requested_at'))
-            ->when($filters['date_from'] ?? null, fn ($query, $date) => $query->whereDate('placed_at', '>=', $date))
-            ->when($filters['date_to'] ?? null, fn ($query, $date) => $query->whereDate('placed_at', '<=', $date))
+            // Дни по Минску (LocalTime::day): placed_at в БД — UTC
+            ->when($filters['date_from'] ?? null, fn ($query, $date) => $query->where('placed_at', '>=', LocalTime::day($date)[0]))
+            ->when($filters['date_to'] ?? null, fn ($query, $date) => $query->where('placed_at', '<=', LocalTime::day($date)[1]))
             ->orderByDesc('placed_at')
             ->orderByDesc('id')
             ->paginate(50)

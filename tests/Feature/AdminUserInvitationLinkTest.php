@@ -74,7 +74,7 @@ class AdminUserInvitationLinkTest extends TestCase
             ->assertSee('value="'.e($url).'"', false)
             ->assertSee('readonly', false)
             ->assertSee('data-copy', false)
-            ->assertSee('Действует до 08.03.2026 14:07')
+            ->assertSee('Действует до 08.03.2026 17:07')
             ->assertSee('Выпустить новую ссылку');
 
         // Ссылка из карточки рабочая — та же, что в письме
@@ -131,12 +131,12 @@ class AdminUserInvitationLinkTest extends TestCase
         Carbon::setTestNow(now()->addHours(73));
 
         $this->card($user)
-            ->assertSee('Срок ссылки истёк 08.03.2026 14:07')
+            ->assertSee('Срок ссылки истёк 08.03.2026 17:07')
             ->assertDontSee('id="invite-url"', false)
             ->assertSee('Выпустить новую ссылку');
 
         $this->actingAs($this->admin)->post("/admin/user/{$user->id}/invitation")->assertSessionHas('success');
-        $this->card($user)->assertSee('id="invite-url"', false)->assertSee('Действует до 11.03.2026 15:07');
+        $this->card($user)->assertSee('id="invite-url"', false)->assertSee('Действует до 11.03.2026 18:07');
     }
 
     public function test_invitation_issued_before_links_shows_hint_to_reissue(): void

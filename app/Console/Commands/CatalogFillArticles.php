@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Product;
+use App\Support\LocalTime;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -192,7 +193,7 @@ class CatalogFillArticles extends Command
         $md = [
             '# Артикулы и ключ сопоставления с 1С',
             '',
-            'Команда `catalog:fill-articles` ('.basename($path).', '.now()->format('d.m.Y H:i').'). '
+            'Команда `catalog:fill-articles` ('.basename($path).', '.LocalTime::now()->format('d.m.Y H:i').'). '
                 .'Ключ — `Product::matchKey`: бренд сайта + артикул без учёта регистра, пробелы схлопнуты, '
                 .'кириллические двойники латиницы и типографские тире приведены; дефисы значимы '
                 .'(docs/1C_EXCHANGE_SPEC.md, раздел 4).',

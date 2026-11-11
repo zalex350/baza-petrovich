@@ -29,7 +29,7 @@ class ExchangeAlerts
     public function afterJob(ExchangeJob $job): void
     {
         $url = url("/admin/exchange/job/{$job->id}");
-        $what = $job->type->label().' ('.$job->received_at->format('d.m.Y H:i').')';
+        $what = $job->type->label().' ('.date_ru($job->received_at, time: true).')';
 
         if ($job->status === ExchangeJobStatus::Failed) {
             $this->send('job_failed', 'задание не обработано', [
@@ -61,7 +61,7 @@ class ExchangeAlerts
         // Пока ни одной успешной загрузки цен (обмен не запущен) — молчим
         if ($lastPrices !== null && now()->diffInMinutes($lastPrices, true) > $hours * 60) {
             $this->send('stale_prices', "цены и остатки не приходили больше {$hours} ч", [
-                '**Последняя загрузка:** '.Carbon::parse($lastPrices)->format('d.m.Y H:i'),
+                '**Последняя загрузка:** '.date_ru(Carbon::parse($lastPrices), time: true),
                 'Проверьте расписание выгрузки в 1С и журнал обмена.',
             ], url('/admin/exchange'));
         }

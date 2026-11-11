@@ -36,6 +36,6 @@ class FormatsTest extends TestCase
         $client = User::factory()->create(['organization_id' => Organization::factory()->create()->id, 'blocked_at' => now()]);
 
         $this->actingAs(User::factory()->admin()->create())->get("/admin/user/{$client->id}")
-            ->assertOk()->assertSee('с 05.03.2026 14:07')->assertSee('05.03.2026 14:07');
+            ->assertOk()->assertSee('с 05.03.2026 17:07')->assertSee('05.03.2026 17:07'); // 14:07 UTC — 17:07 по Минску
     }
 }

@@ -72,7 +72,7 @@ class ExchangeAdminTest extends TestCase
             ->assertSee("/admin/exchange/job/{$job->id}/file", false);
 
         $this->actingAs($this->admin)->get("/admin/exchange/job/{$job->id}/file")->assertOk()
-            ->assertDownload('catalog_2026-11-10_100000.csv');
+            ->assertDownload('catalog_2026-11-10_130000.csv'); // 10:00 UTC — 13:00 по Минску
 
         Storage::disk('exchange')->delete($job->file_path);
         $this->actingAs($this->admin)->get("/admin/exchange/job/{$job->id}/file")->assertNotFound();

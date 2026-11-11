@@ -85,6 +85,24 @@ class ExchangeJob extends Model
         return $this->belongsTo(User::class);
     }
 
+    /** Готово, но часть строк с ошибками — «Готово с ошибками» (жёлтый), а не просто «Готово» */
+    public function hasRowErrors(): bool
+    {
+        return $this->status === ExchangeJobStatus::Done && $this->rows_error > 0;
+    }
+
+    /** Подпись статуса для людей (журнал, карточка задания); в API — status->value как есть */
+    public function statusLabel(): string
+    {
+        return $this->hasRowErrors() ? 'Готово с ошибками' : $this->status->label();
+    }
+
+    /** Тон x-badge */
+    public function statusTone(): string
+    {
+        return $this->hasRowErrors() ? 'warning' : $this->status->tone();
+    }
+
     public function isManual(): bool
     {
         return $this->source === self::SOURCE_MANUAL;
