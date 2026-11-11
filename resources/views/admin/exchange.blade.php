@@ -64,7 +64,7 @@
                         {{ $job->type->label() }}
                         @if($job->mode)<span class="text-meta text-ink-muted">· {{ $job->mode }}</span>@endif
                     </x-table.td>
-                    <x-table.td label="Статус"><x-badge :tone="$job->status->tone()">{{ $job->status->label() }}</x-badge></x-table.td>
+                    <x-table.td label="Статус"><x-badge :tone="$job->statusTone()" data-job-status>{{ $job->statusLabel() }}</x-badge></x-table.td>
                     <x-table.td label="Строк" align="right" nowrap>{{ $job->rows_total }}</x-table.td>
                     <x-table.td label="Ошибок" align="right" nowrap>
                         @if($job->rows_error > 0)<span class="font-semibold text-tone-danger-text">{{ $job->rows_error }}</span>@else 0 @endif

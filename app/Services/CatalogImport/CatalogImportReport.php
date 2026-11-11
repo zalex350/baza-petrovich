@@ -3,6 +3,7 @@
 namespace App\Services\CatalogImport;
 
 use App\Models\Category;
+use App\Support\LocalTime;
 
 /**
  * Отчёт dry-run (docs/catalog/import-report.md) и список для проверки (docs/catalog/uncategorized.csv).
@@ -18,7 +19,7 @@ class CatalogImportReport
         $md = [];
         $md[] = '# Импорт каталога — пробный прогон (dry-run)';
         $md[] = '';
-        $md[] = '> Сформировано командой `php artisan catalog:import-db '.$source.' --dry-run` '.now()->format('Y-m-d H:i').'.';
+        $md[] = '> Сформировано командой `php artisan catalog:import-db '.$source.' --dry-run` '.LocalTime::now()->format('Y-m-d H:i').'.';
         $md[] = '> База **не менялась**. Маппинги — `database/data/catalog/*.php`; решения — `docs/CATALOG_ANALYSIS.md`, «Решения».';
         $md[] = '';
         if ($plan->errors) {

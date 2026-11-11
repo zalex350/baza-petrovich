@@ -289,14 +289,15 @@ class CartOrderSplitTest extends TestCase
     {
         $colleague = User::factory()->create(['organization_id' => $this->client->organization_id]);
 
-        Carbon::setTestNow('2026-12-31 23:00:00');
+        // Год номера — по Минску: 20:30 UTC = 23:30 31.12, 21:10 UTC = 00:10 01.01
+        Carbon::setTestNow('2026-12-31 20:30:00');
         $this->addToCart($this->product);
         $first = $this->checkout();
 
         $this->addToCart($this->product, 1, $colleague);
         $second = $this->checkout($colleague);
 
-        Carbon::setTestNow('2027-01-01 00:10:00');
+        Carbon::setTestNow('2026-12-31 21:10:00');
         $this->addToCart($this->product);
         $third = $this->checkout();
 
@@ -387,7 +388,7 @@ class CartOrderSplitTest extends TestCase
             ->assertOk()
             ->assertSee('SM-2026-000001')
             ->assertSee('01.10.2026')
-            ->assertDontSee('01.10.2026 12:30'); // список — без времени (date_ru)
+            ->assertDontSee('01.10.2026 15:30'); // список — без времени (date_ru)
 
         $this->assertSame(1, substr_count($response->getContent(), '/admin/order/'));
         $this->assertSame([$order->id], $response->viewData('orders')->pluck('id')->all());
@@ -406,14 +407,14 @@ class CartOrderSplitTest extends TestCase
             ->assertOk()
             ->assertSee('SM-2026-000001')
             ->assertSee('01.10.2026')
-            ->assertDontSee('01.10.2026 12:30'); // список — без времени (date_ru)
+            ->assertDontSee('01.10.2026 15:30'); // список — без времени (date_ru)
 
         $this->assertSame([$order->id], $response->viewData('activeOrders')->pluck('id')->all());
 
         $this->actingAs($this->client)->get("/order/{$order->id}")
             ->assertOk()
             ->assertSee('Заказ SM-2026-000001')
-            ->assertSee('01.10.2026 12:30'); // карточка — со временем (date_ru)
+            ->assertSee('01.10.2026 15:30'); // карточка — со временем по Минску (12:30 UTC)
     }
 
     // --- Повторный заказ ---

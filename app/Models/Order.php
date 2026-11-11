@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\OrderExchangeState;
 use App\Enums\OrderStatus;
 use App\Services\Vat\VatTotal;
+use App\Support\LocalTime;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -147,7 +148,8 @@ class Order extends Model
      */
     public static function nextNumber(Carbon $placedAt): string
     {
-        $year = (int) $placedAt->format('Y');
+        // Год — по Минску: заказ 01.01 в 00:30 по Минску (31.12 21:30 UTC) — номер нового года
+        $year = (int) LocalTime::of($placedAt)->format('Y');
 
         DB::table('order_sequences')->upsert(
             [['year' => $year, 'last_number' => 1]],

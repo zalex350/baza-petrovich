@@ -7,6 +7,7 @@
 
 use App\Models\Product;
 use App\Services\ClientCodes;
+use App\Support\LocalTime;
 use App\Support\Money;
 use Carbon\CarbonInterface;
 
@@ -28,7 +29,8 @@ if (! function_exists('date_ru')) {
      */
     function date_ru(?CarbonInterface $date, bool $time = false): string
     {
-        return $date?->format($time ? 'd.m.Y H:i' : 'd.m.Y') ?? '';
+        // Время в БД — UTC, людям — по Минску (LocalTime)
+        return LocalTime::of($date)?->format($time ? 'd.m.Y H:i' : 'd.m.Y') ?? '';
     }
 }
 
