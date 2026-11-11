@@ -14,6 +14,11 @@
 @php
     $isNew = ! $product->exists;
     $locked = ! config('shop.catalog.manual_products');
+    // Товар с GUID 1С: поля, которыми владеет 1С (Product::lockedFrom1c, SHOP_1C_MANAGED_FIELDS), —
+    // только чтение с подписью «из 1С»
+    $from1c = fn (string $field) => in_array($field, $product->lockedFrom1c(), true);
+    $lock = fn (string $field) => $locked || $from1c($field);
+    $hint1c = fn (string $field, ?string $hint = null) => $from1c($field) ? 'из 1С' : $hint;
     $form = 'product-form';
 
     // Тексты сайта: введённое → черновик → опубликованное
@@ -59,6 +64,8 @@
     <p class="text-sm text-slate-500 mb-4">
         @if($locked)
             Приходят из 1С и здесь не редактируются.
+        @elseif($product->lockedFrom1c())
+            Товар связан с 1С: поля с подписью «из 1С» приходят оттуда и здесь не редактируются. Остальные сохраняются любой кнопкой внизу сразу.
         @else
             Сохраняются любой кнопкой внизу сразу, без черновика. После подключения обмена с 1С будут приходить оттуда.
         @endif
@@ -66,11 +73,20 @@
 
     <div class="grid gap-6 md:grid-cols-2">
 
-        <x-input name="name" label="Название (системное)" :value="$product->name" :form="$form" :disabled="$locked" :required="! $locked" class="md:col-span-2" />
+        <x-input name="name" label="Название (системное)" :value="$product->name" :hint="$hint1c('name')" :form="$form" :disabled="$lock('name')" :required="! $lock('name')" class="md:col-span-2" />
 
-        <x-input name="sku" label="Артикул (SKU)" :value="$product->sku" :form="$form" :disabled="$locked" :required="! $locked" />
+        <x-input name="sku" label="Артикул (SKU)" :value="$product->sku" :hint="$hint1c('sku')" :form="$form" :disabled="$lock('sku')" :required="! $lock('sku')" />
 
-        <x-input name="brand" label="Бренд" :value="$product->brand" :form="$form" :disabled="$locked" />
+        <x-input name="brand" label="Бренд" :value="$product->brand" :hint="$hint1c('brand')" :form="$form" :disabled="$lock('brand')" />
+
+        {{-- Артикул производителя и единица в форму не входят: показываются, только когда их владелец — 1С --}}
+        @if($from1c('article'))
+            <x-input name="article" label="Артикул производителя" :value="$product->article" hint="из 1С" disabled />
+        @endif
+
+        @if($from1c('unit'))
+            <x-input name="unit" label="Единица измерения" :value="$product->unit" hint="из 1С" disabled />
+        @endif
 
         {{-- Цена нового товара — обязательна и больше 0 при любой кнопке (F-6). У товара без цены
              (из импорта, цена придёт из 1С) поле не обязательно (AdminProductController::erpRules) --}}
@@ -84,26 +100,31 @@
             :min="$isNew ? '0.01' : '0'"
             label="Цена без НДС, BYN"
             :value="$product->price"
-            :hint="$priceOptional ? 'Цены нет — на сайте «Цена уточняется», заказать товар нельзя. Можно сохранить без цены.' : ($isNew ? 'Обязательна, больше 0.' : null)"
+            :hint="$hint1c('price', $priceOptional ? 'Цены нет — на сайте «Цена уточняется», заказать товар нельзя. Можно сохранить без цены.' : ($isNew ? 'Обязательна, больше 0.' : null))"
             :form="$form"
-            :disabled="$locked"
-            :required="! $locked && ! $priceOptional"
+            :disabled="$lock('price')"
+            :required="! $lock('price') && ! $priceOptional"
         />
 
-        <x-field id="f-vat" label="Ставка НДС, %" error="vat_rate" :required="! $locked">
-            @include('partials.vat_rate_select', ['current' => old('vat_rate', $product->vat_rate), 'form' => $form, 'disabled' => $locked, 'id' => 'f-vat'])
+        <x-field id="f-vat" label="Ставка НДС, %" error="vat_rate" :hint="$hint1c('vat_rate')" :required="! $lock('vat_rate')">
+            @include('partials.vat_rate_select', ['current' => old('vat_rate', $product->vat_rate), 'form' => $form, 'disabled' => $lock('vat_rate'), 'id' => 'f-vat'])
         </x-field>
 
         <div class="space-y-2">
-            <x-input name="stock" type="number" min="0" step="1" label="Остаток" :value="$product->stock" :form="$form" :disabled="$locked" :required="! $locked" />
-            <x-checkbox name="on_order" label="Под заказ, когда остатка нет" :checked="$product->on_order" :form="$form" :disabled="$locked" />
+            @php
+                // Резерв сайта: заказы, ещё не учтённые в остатке 1С (StockReserve)
+                $reservedQty = $product->exists ? max(0, (int) $product->stock_1c - (int) $product->stock) : 0;
+                $stockHint = $reservedQty > 0 ? "Доступно на сайте; в 1С — {$product->stock_1c}, в резерве заказов сайта — {$reservedQty}." : null;
+            @endphp
+            <x-input name="stock" type="number" min="0" step="1" label="Остаток" :value="$product->stock" :hint="$from1c('stock') ? trim('из 1С. '.$stockHint) : $stockHint" :form="$form" :disabled="$lock('stock')" :required="! $lock('stock')" />
+            <x-checkbox name="on_order" :label="'Под заказ, когда остатка нет'.($from1c('on_order') ? ' (из 1С)' : '')" :checked="$product->on_order" :form="$form" :disabled="$lock('on_order')" />
         </div>
 
         {{-- Кратность заказа: поле количества на витрине (x-qty) начинается с default_qty и шагает от min_qty на qty_step --}}
         <div class="md:col-span-2 grid gap-6 sm:grid-cols-3" data-qty-rules>
-            <x-input name="min_qty" type="number" min="1" step="1" label="Минимум в заказе, шт." :value="$product->min_qty" :form="$form" :disabled="$locked" :required="! $locked" />
-            <x-input name="qty_step" type="number" min="1" step="1" label="Шаг (кратность), шт." :value="$product->qty_step" :form="$form" :disabled="$locked" :required="! $locked" />
-            <x-input name="default_qty" type="number" min="1" step="1" label="По умолчанию, шт." hint="Минимум, минимум + шаг, …" :value="$product->default_qty" :form="$form" :disabled="$locked" :required="! $locked" />
+            <x-input name="min_qty" type="number" min="1" step="1" label="Минимум в заказе, шт." :value="$product->min_qty" :hint="$hint1c('min_qty')" :form="$form" :disabled="$lock('min_qty')" :required="! $lock('min_qty')" />
+            <x-input name="qty_step" type="number" min="1" step="1" label="Шаг (кратность), шт." :value="$product->qty_step" :hint="$hint1c('qty_step')" :form="$form" :disabled="$lock('qty_step')" :required="! $lock('qty_step')" />
+            <x-input name="default_qty" type="number" min="1" step="1" label="По умолчанию, шт." :hint="$hint1c('default_qty', 'Минимум, минимум + шаг, …')" :value="$product->default_qty" :form="$form" :disabled="$lock('default_qty')" :required="! $lock('default_qty')" />
         </div>
 
     </div>

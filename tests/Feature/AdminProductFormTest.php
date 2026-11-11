@@ -397,4 +397,91 @@ class AdminProductFormTest extends TestCase
 
         $this->assertSame(['site.jpg'], $this->product->images()->pluck('original_name')->all());
     }
+
+    // --- Товар с GUID 1С: поля 1С только для чтения (docs/1C_EXCHANGE_SPEC.md, раздел 4, правило 5) ---
+
+    private function linkTo1c(): void
+    {
+        $this->product->forceFill(['guid' => 'p-guid-1', 'article' => 'START-1', 'unit' => 'компл'])->save();
+    }
+
+    public function test_product_with_guid_shows_1c_fields_read_only(): void
+    {
+        $this->linkTo1c();
+
+        $html = $this->actingAs($this->admin)->get("/admin/product/{$this->product->id}")->assertOk()->getContent();
+
+        $this->assertStringContainsString('поля с подписью «из 1С»', $html);
+        foreach (['f-name', 'f-brand', 'f-price', 'f-vat', 'f-stock', 'f-article', 'f-unit'] as $id) {
+            $this->assertMatchesRegularExpression('/id="'.$id.'-hint"[^>]*>\s*из 1С/u', $html, $id);
+        }
+        foreach (['f-name', 'f-brand', 'f-price', 'f-stock', 'f-article', 'f-unit'] as $id) {
+            $this->assertMatchesRegularExpression('/<input[^>]*id="'.$id.'"[^>]*\sdisabled(?=[\s=>\/])/s', $html, $id);
+        }
+        $this->assertMatchesRegularExpression('/<select[^>]*id="f-vat"[^>]*\sdisabled(?=[\s=>\/])/s', $html);
+        $this->assertStringContainsString('value="START-1"', $html);
+        $this->assertStringContainsString('value="компл"', $html);
+        // Не из 1С — редактируются
+        $this->assertDoesNotMatchRegularExpression('/<input[^>]*id="f-sku"[^>]*\sdisabled(?=[\s=>\/])/s', $html);
+        $this->assertDoesNotMatchRegularExpression('/<input[^>]*id="f-min_qty"[^>]*\sdisabled(?=[\s=>\/])/s', $html);
+    }
+
+    public function test_product_with_guid_ignores_1c_fields_on_save(): void
+    {
+        $this->linkTo1c();
+
+        $this->actingAs($this->admin)->post("/admin/product/{$this->product->id}", $this->edit([
+            'action' => 'draft',
+            'name' => 'Подмена', 'brand' => 'Hansgrohe', 'price' => 1, 'vat_rate' => 10, 'stock' => 99,
+            'sku' => 'GR-002', 'min_qty' => 2, 'qty_step' => 2, 'default_qty' => 2,
+        ]))->assertSessionHasNoErrors();
+
+        $product = $this->product->fresh();
+        $this->assertSame(['Grohe Start', 'Grohe', 100.0, 20.0, 5], [$product->name, $product->brand, (float) $product->price, (float) $product->vat_rate, $product->stock]);
+        // Поля не из списка 1С — как прежде, сразу
+        $this->assertSame(['GR-002', 2, 2], [$product->sku, $product->min_qty, $product->qty_step]);
+    }
+
+    public function test_product_with_guid_saves_without_1c_fields_in_request(): void
+    {
+        $this->linkTo1c();
+        // Отключённые поля браузер не отправляет — обязательность к ним не применяется
+        $data = array_diff_key($this->edit(['action' => 'draft', 'description' => 'Новое']), array_flip(['name', 'brand', 'price', 'vat_rate', 'stock']));
+
+        $this->actingAs($this->admin)->post("/admin/product/{$this->product->id}", $data)->assertSessionHasNoErrors();
+
+        $this->assertSame('Новое', $this->product->fresh()->draft->data['description']);
+    }
+
+    public function test_managed_fields_come_from_config(): void
+    {
+        $this->linkTo1c();
+        // 1С подтвердила кратность, цену не присылает
+        config(['shop.exchange_1c.managed_fields' => ['name', 'min_qty', 'qty_step']]);
+
+        $html = $this->actingAs($this->admin)->get("/admin/product/{$this->product->id}")->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('/id="f-min_qty-hint"[^>]*>\s*из 1С/u', $html);
+        $this->assertDoesNotMatchRegularExpression('/<input[^>]*id="f-price"[^>]*\sdisabled(?=[\s=>\/])/s', $html);
+        $this->assertStringNotContainsString('id="f-article"', $html);
+
+        $this->actingAs($this->admin)->post("/admin/product/{$this->product->id}", $this->edit([
+            'action' => 'draft', 'name' => 'Подмена', 'price' => 120, 'min_qty' => 3, 'qty_step' => 3, 'default_qty' => 3,
+        ]))->assertSessionHasNoErrors();
+
+        $product = $this->product->fresh();
+        $this->assertSame(['Grohe Start', 120.0, 1, 1], [$product->name, (float) $product->price, $product->min_qty, $product->qty_step]);
+    }
+
+    public function test_default_managed_fields(): void
+    {
+        $this->assertSame(['article', 'name', 'brand', 'unit', 'vat_rate', 'price', 'stock'], config('shop.exchange_1c.managed_fields'));
+    }
+
+    public function test_product_without_guid_has_no_1c_hints(): void
+    {
+        $html = $this->actingAs($this->admin)->get("/admin/product/{$this->product->id}")->assertOk()->getContent();
+
+        $this->assertDoesNotMatchRegularExpression('/-hint"[^>]*>\s*из 1С/u', $html);
+        $this->assertDoesNotMatchRegularExpression('/<input[^>]*id="f-name"[^>]*\sdisabled(?=[\s=>\/])/s', $html);
+    }
 }

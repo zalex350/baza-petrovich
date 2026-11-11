@@ -81,12 +81,16 @@
 
                             @endif
 
+                            @if($record->source === '1c')
+                                <span class="text-sm text-slate-500">· 1С</span>
+                            @endif
+
                         </td>
 
                         @if($showAuthor)
 
                             <td class="py-2 pr-4 text-slate-700">
-                                {{ $record->user->name ?? '—' }}
+                                {{ $record->user->name ?? ($record->source === '1c' ? '1С' : '—') }}
                             </td>
 
                         @endif

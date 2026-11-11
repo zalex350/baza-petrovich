@@ -22,14 +22,17 @@ class OrderStatusHistory extends Model
         'event',
         'user_id',
         'comment',
+        'source',
+        'changed_at_1c',
         'created_at',
     ];
 
     protected $casts = [
         'from_status' => OrderStatus::class,
-        'to_status'   => OrderStatus::class,
-        'event'       => OrderHistoryEvent::class,
-        'created_at'  => 'datetime',
+        'to_status' => OrderStatus::class,
+        'event' => OrderHistoryEvent::class,
+        'created_at' => 'datetime',
+        'changed_at_1c' => 'datetime',
     ];
 
     public function order()

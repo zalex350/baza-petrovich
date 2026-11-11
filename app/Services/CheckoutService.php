@@ -24,6 +24,7 @@ class CheckoutService
         private readonly CartValidator $validator,
         private readonly OrderStatusService $statuses,
         private readonly VatCalculator $vat,
+        private readonly StockReserve $reserve,
     ) {}
 
     /**
@@ -146,19 +147,21 @@ class CheckoutService
                     'product_id' => $product->id,
                     'product_name' => $product->title(),
                     'product_sku' => $product->sku,
+                    'product_guid' => $product->guid,
                     'client_code' => $clientCodes->get($product->id),
                     'quantity' => $item->quantity,
+                    'unit' => $product->unit,
                     'price' => $item->price_at_add,
                     'vat_rate' => $product->vat_rate,
                     'amount_without_vat' => $lines[$item->id]->net,
                     'vat_amount' => $lines[$item->id]->vat,
                     'amount_with_vat' => $lines[$item->id]->gross,
                 ]);
-
-                // Остаток прочитан под блокировкой и проверен валидатором — в минус не уйдёт
-                $product->stock -= $item->quantity;
-                $product->save();
             }
+
+            // Остаток не списывается: заказ ждёт передачи в 1С (pending) и резервирует его —
+            // доступный остаток пересчитан от остатка 1С (StockReserve). Товары заблокированы выше
+            $this->reserve->recalculate($products->keys());
 
             // Неотмеченные позиции остаются в корзине
             $cart->items()->whereKey($items->modelKeys())->delete();

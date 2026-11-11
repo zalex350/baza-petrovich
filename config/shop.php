@@ -74,6 +74,17 @@ return [
         'manual_products' => (bool) env('SHOP_CATALOG_MANUAL_PRODUCTS', true),
     ],
 
+    'exchange_1c' => [
+        // Поля товара, которыми владеет 1С (docs/1C_EXCHANGE_SPEC.md, раздел 4, правило 5):
+        // у товара с GUID в админке только для чтения с подписью «из 1С», сервер их не принимает.
+        // Через запятую; допустимы article, name, sku, brand, unit, vat_rate, price, stock,
+        // on_order, min_qty, qty_step, default_qty. min_qty / qty_step / on_order — добавить,
+        // когда 1С подтвердит, что присылает их.
+        'managed_fields' => array_values(array_filter(array_map('trim', explode(',',
+            (string) env('SHOP_1C_MANAGED_FIELDS', 'article,name,brand,unit,vat_rate,price,stock')
+        )))),
+    ],
+
     'orders' => [
         // Статусы заказов меняет менеджер вручную в админке. false — ручная смена
         // отключена (статусы приходят из внешней системы, например 1С).

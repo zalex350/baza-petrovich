@@ -56,7 +56,7 @@ class AdminProductController extends Controller
         $noCategory = fn ($q) => $q->where(fn ($q) => $q->whereNull('category_id')->orWhereIn('category_id', $hiddenIds));
         $matches = fn ($q) => $q->when($search !== '', fn ($q) => $q->where(function ($q) use ($search) {
             $like = '%'.$search.'%';
-            $q->where('sku', 'like', $like)->orWhere('name', 'like', $like)->orWhere('brand', 'like', $like);
+            $q->where('sku', 'like', $like)->orWhere('name', 'like', $like)->orWhere('display_name', 'like', $like)->orWhere('brand', 'like', $like);
         }));
 
         $products = Product::with('draft')
@@ -196,9 +196,11 @@ class AdminProductController extends Controller
         $product = Product::findOrFail($id);
 
         $manual = config('shop.catalog.manual_products');
+        // У товара с GUID 1С его поля только для чтения (docs/1C_EXCHANGE_SPEC.md, раздел 4, правило 5)
+        $erpFields = array_values(array_diff(self::ERP_FIELDS, $product->lockedFrom1c()));
 
         $data = request()->validate(
-            ($manual ? $this->erpRules($product) : []) + $this->siteRules($product)
+            ($manual ? array_intersect_key($this->erpRules($product), array_flip($erpFields)) : []) + $this->siteRules($product)
         );
 
         // Характеристики — до записи: ошибка в них не сохраняет ничего
@@ -208,7 +210,7 @@ class AdminProductController extends Controller
             $data['attributes'] = $this->attributes->fromRows((array) request('attributes', []), $known);
         }
 
-        $direct = $manual ? $this->normalizeVat(array_intersect_key($data, array_flip(self::ERP_FIELDS))) : [];
+        $direct = $manual ? $this->normalizeVat(array_intersect_key($data, array_flip($erpFields))) : [];
 
         foreach (self::DIRECT_SITE_FIELDS as $field) {
             if (request()->has($field)) {

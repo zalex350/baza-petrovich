@@ -207,12 +207,16 @@ erDiagram
     products {
         bigint id
         string sku
+        string article "1С, без бренда"
+        string match_key "бренд + артикул"
         string guid "1С"
-        string name
-        string display_name
+        string name "наименование 1С"
+        string display_name "название сайта"
+        string unit "1С"
         decimal price "без НДС"
         decimal vat_rate
-        int stock
+        int stock "доступный"
+        int stock_1c "остаток 1С"
         bool on_order
         int min_qty
         int qty_step
@@ -246,6 +250,10 @@ erDiagram
         bigint id
         string number "SM-ГГГГ-000001"
         string status
+        string exchange_state "pending, sent, rejected"
+        string guid_1c
+        string number_1c
+        timestamp registered_at
         decimal total_with_vat
         string delivery_address "снимок"
         string checkout_token
@@ -255,6 +263,8 @@ erDiagram
         bigint id
         string product_name
         string product_sku
+        string product_guid "снимок"
+        string unit "снимок"
         decimal price
         decimal vat_rate
         decimal amount_with_vat
@@ -265,6 +275,7 @@ erDiagram
         string from_status
         string to_status
         string event
+        string source "site, 1c"
         bigint user_id
         string comment
     }
@@ -318,7 +329,6 @@ erDiagram
 | `order_invoices` | Счёт на оплату, один на заказ: PDF в закрытом хранилище, `source` (`manual` / `erp`), `external_id` (номер в 1С), `uploaded_by` |
 | `product_documents` | Документы товара: PDF на диске фото (публичная ссылка), `type` (`ProductDocumentType`), `title`, `size`, `sort_order` |
 | `user_invitation_tokens` | Брокер приглашений: токен хешем, рядом `token_encrypted` (APP_KEY) для показа ссылки |
-| `product_stocks` | Наследие тестовых данных (`catalog:fill-test-data`), в логике магазина не используется |
 | `categories.image` | Картинка категории (webp) — плитки подкатегорий; в дереве меню (`CatalogMenu`) — поле `image` |
 | `banners` | Слайдер главной: `image_desktop`, `image_mobile`, `url`, `sort_order`, `is_active` |
 | `pages` | Информационные страницы: `slug`, `body` (HTML из Trix, при выводе очищается), SEO, `is_published`. Три страницы меню создаёт миграция с `[ЗАПОЛНИТЬ]` |
@@ -333,6 +343,10 @@ erDiagram
 |---|---|---|
 | Название, артикул, бренд, цена, НДС, остаток, «под заказ», кратность (`min_qty`, `qty_step`, `default_qty`) | **1С** (пока вводятся в админке) | `AdminProductController::ERP_FIELDS`. При `SHOP_CATALOG_MANUAL_PRODUCTS=false` поля только для чтения, создание товара — 403 |
 | `products.guid`, `organizations.guid` | **1С** | Не в `$fillable`, в админке только чтение, пока не заполняются |
+| Поля номенклатуры 1С: `article` (артикул без бренда), `unit`, `barcode`, `group_1c`, отметки обмена `synced_at` / `price_synced_at` / `stock_synced_at` | **1С** | Не в `$fillable`. `article` пока заполняет `catalog:fill-articles` из `catalog.db`; `match_key` (`Product::matchKey`: бренд + артикул без регистра, пробелов и дефисов) — ключ первичного сопоставления, пересчитывается при сохранении товара. `name` — наименование 1С, название сайта — `display_name` (`docs/1C_EXCHANGE_SPEC.md`) |
+| Остаток: `products.stock_1c` — остаток 1С, `products.stock` — доступный = `stock_1c` − резерв сайта | **1С** (пока вводится в админке) | `App\Services\StockReserve`. Резерв — неотменённые заказы в состоянии обмена `pending`, `rejected` (до решения менеджера) и `sent` с `registered_at` позже `stock_synced_at` товара. Оформление остаток не списывает, отмена не возвращает: пересчёт при оформлении, отмене, подтверждении / отказе 1С (`App\Services\OrderExchange`); запись `stock` напрямую (админка, сиды) задаёт доступный, `stock_1c` выводится в `Product::saving`. Остальной код читает `stock` |
+| Товар с `guid`: поля, которыми владеет 1С, — `config('shop.exchange_1c.managed_fields')` (`SHOP_1C_MANAGED_FIELDS`, по умолчанию `article,name,brand,unit,vat_rate,price,stock`; `min_qty`, `qty_step`, `on_order` — когда 1С подтвердит) | **1С** | `Product::lockedFrom1c()`. В форме товара — только чтение с подписью «из 1С», сервер их не принимает. Без `guid` — как остальные поля 1С |
+| Заказ: `exchange_state`, `exported_at`, `guid_1c`, `number_1c`, `registered_at`, `reject_reason`; позиции — снимок `product_guid`, `unit`; история — `source` (`site` / `1c`), `changed_at_1c` | **1С** после регистрации | Не в `$fillable`, меняет `OrderExchange`. Ручной перевод в «Передан в 1С» (обмена ещё нет) ставит `sent` и `registered_at = now`. Отклонённый 1С заказ (`rejected`) менеджер в админке отменяет или отправляет повторно (→ `pending`); в истории — события «Отклонён 1С», «Отправлен в 1С повторно», записи из 1С помечены «1С» |
 | Статусы заказа после «Передан в 1С» | **1С** (пока вручную) | При `SHOP_ORDERS_MANUAL_STATUS=false` ручная смена статусов отключена |
 | Категория, адрес страницы (slug), «ХИТ», «НОВИНКА», «Акция» | **Сайт** | `DIRECT_SITE_FIELDS`, применяются сразу (SRS §11.3) |
 | Отображаемое название, описание, характеристики (текст), комплектация | **Сайт** | `DRAFT_FIELDS`: через черновик (`product_drafts`) и «Опубликовать» |

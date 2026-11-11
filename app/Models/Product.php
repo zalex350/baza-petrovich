@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\StockReserve;
 use App\Services\Vat\VatCalculator;
 use App\Services\Vat\VatLine;
 use Illuminate\Database\Eloquent\Model;
@@ -10,6 +11,10 @@ use Illuminate\Support\Collection;
 
 /**
  * guid — GUID номенклатуры 1С: заполняется только обменом с 1С, поэтому не в $fillable.
+ * Так же — поля номенклатуры 1С (docs/1C_EXCHANGE_SPEC.md, раздел 4): article (артикул без бренда,
+ * catalog:fill-articles), unit, barcode, group_1c и отметки обмена synced_at / price_synced_at /
+ * stock_synced_at, остаток 1С stock_1c (stock — доступный: stock_1c − резерв сайта, App\Services\StockReserve). name — наименование 1С, display_name — название сайта (title()).
+ * match_key — ключ сопоставления «бренд + артикул» (matchKey()), пересчитывается при сохранении.
  */
 class Product extends Model
 {
@@ -47,6 +52,7 @@ class Product extends Model
 
     protected $attributes = [
         'vat_rate' => 20.00,
+        'unit' => 'шт',
         'on_order' => false,
         'min_qty' => 1,
         'qty_step' => 1,
@@ -69,7 +75,54 @@ class Product extends Model
         'is_promo' => 'boolean',
         // Описание сгенерировано: на сайте не показывается, пока его не одобрят в админке
         'description_generated' => 'boolean',
+        'stock' => 'integer',
+        'stock_1c' => 'integer',
+        'synced_at' => 'datetime',
+        'price_synced_at' => 'datetime',
+        'stock_synced_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (Product $product) {
+            // Остаток 1С и доступный остаток (stock = stock_1c − резерв сайта) — согласованы
+            app(StockReserve::class)->sync($product);
+
+            if (! $product->exists || $product->isDirty(['brand', 'article'])) {
+                $product->match_key = self::matchKey($product->brand, $product->article);
+            }
+        });
+    }
+
+    /**
+     * Поля, закрытые от правки в админке: у товара с GUID 1С — поля, которыми владеет 1С
+     * (config shop.exchange_1c.managed_fields, SHOP_1C_MANAGED_FIELDS), без GUID — нет.
+     *
+     * @return list<string>
+     */
+    public function lockedFrom1c(): array
+    {
+        return $this->guid !== null ? array_values((array) config('shop.exchange_1c.managed_fields', [])) : [];
+    }
+
+    /**
+     * Ключ первичного сопоставления с 1С: бренд и артикул без регистра, пробелов и дефисов
+     * («Ledeme», «L 4755-2» → «LEDEME:L47552»). Без бренда или артикула — null:
+     * по одному артикулу товары разных брендов не сопоставляются.
+     * Массовые обновления мимо модели (query builder) пересчитывают ключ сами — этим же методом.
+     */
+    public static function matchKey(?string $brand, ?string $article): ?string
+    {
+        // Пробелы (в том числе неразрывные), дефис и типографские тире/минус
+        $normalize = fn (?string $value) => mb_strtoupper(
+            (string) preg_replace('/[\s\p{Z}\-\x{2010}-\x{2015}\x{2212}]+/u', '', (string) $value)
+        );
+
+        $brand = $normalize($brand);
+        $article = $normalize($article);
+
+        return $brand !== '' && $article !== '' ? "{$brand}:{$article}" : null;
+    }
 
     /**
      * Цена в БД — без НДС; vat_rate = null — «Без НДС».

@@ -341,8 +341,9 @@ class OrderStatusTest extends TestCase
 
         $order->refresh();
         $this->assertSame(OrderStatus::Cancelled, $order->status);
-        $this->assertNotNull($order->stock_returned_at);
+        // Отменённый заказ не резервирует: доступный остаток = остаток 1С
         $this->assertSame(10, $this->product->fresh()->stock);
+        $this->assertSame(10, $this->product->fresh()->stock_1c);
     }
 
     public function test_stock_is_returned_exactly_once(): void
@@ -406,7 +407,6 @@ class OrderStatusTest extends TestCase
         $this->changeStatus($hard, 'cancelled')->assertSessionHas('success');
 
         $this->assertSame(OrderStatus::Cancelled, $hard->fresh()->status);
-        $this->assertNotNull($hard->fresh()->stock_returned_at);
     }
 
     // --- Клиент: отмена вместо удаления (BR-133) ---

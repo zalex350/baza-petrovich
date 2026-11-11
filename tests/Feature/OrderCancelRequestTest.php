@@ -236,7 +236,6 @@ class OrderCancelRequestTest extends TestCase
         $order->refresh();
         $this->assertSame(OrderStatus::Cancelled, $order->status);
         $this->assertFalse($order->hasOpenCancelRequest());
-        $this->assertNotNull($order->stock_returned_at);
         $this->assertSame(10, $this->product->fresh()->stock);
 
         $record = $order->statusHistory()->get()->last();

@@ -48,6 +48,7 @@ class SearchController extends Controller
 
                         $inner->whereRaw('LOWER(sku) LIKE ?', [$like])
                             ->orWhereRaw('LOWER(name) LIKE ?', [$like])
+                            ->orWhereRaw('LOWER(display_name) LIKE ?', [$like])
                             ->orWhereRaw('LOWER(brand) LIKE ?', [$like])
                             ->orWhereRaw('LOWER(description) LIKE ?', [$like]);
 
@@ -101,6 +102,7 @@ class SearchController extends Controller
 
                         $inner->whereRaw('LOWER(sku) LIKE ?', [$like])
                             ->orWhereRaw('LOWER(name) LIKE ?', [$like])
+                            ->orWhereRaw('LOWER(display_name) LIKE ?', [$like])
                             ->orWhereRaw('LOWER(brand) LIKE ?', [$like]);
 
                         if ($organizationId) {

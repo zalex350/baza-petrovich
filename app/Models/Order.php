@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\OrderExchangeState;
 use App\Enums\OrderStatus;
 use App\Services\Vat\VatTotal;
 use Illuminate\Database\Eloquent\Builder;
@@ -22,6 +23,11 @@ class Order extends Model
 {
     use HasFactory;
 
+    /** Поля обмена с 1С (exchange_state, guid_1c, number_1c, registered_at, reject_reason) — не в $fillable: их меняет OrderExchange */
+    protected $attributes = [
+        'exchange_state' => 'pending',
+    ];
+
     protected $fillable = [
         'number',
         'user_id',
@@ -39,7 +45,6 @@ class Order extends Model
         'comment',
         'placed_at',
         'checkout_token',
-        'stock_returned_at',
         'cancel_requested_at',
         'cancel_requested_by',
         'cancel_reason',
@@ -55,7 +60,11 @@ class Order extends Model
         'total_vat' => 'decimal:2',
         'total_with_vat' => 'decimal:2',
         'placed_at' => 'datetime',
+        // Наследие: отметка возврата остатка при отмене до резерва сайта (App\Services\StockReserve), больше не пишется
         'stock_returned_at' => 'datetime',
+        'exchange_state' => OrderExchangeState::class,
+        'exported_at' => 'datetime',
+        'registered_at' => 'datetime',
         'cancel_requested_at' => 'datetime',
     ];
 
@@ -69,12 +78,12 @@ class Order extends Model
 
     public function items()
     {
-        return $this->hasMany(\App\Models\OrderItem::class, 'order_id');
+        return $this->hasMany(OrderItem::class, 'order_id');
     }
 
     public function user()
     {
-        return $this->belongsTo(\App\Models\User::class);
+        return $this->belongsTo(User::class);
     }
 
     public function organization()

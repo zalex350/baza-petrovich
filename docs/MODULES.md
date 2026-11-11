@@ -89,7 +89,7 @@
 | BR-061, BR-062 | Характеристики в заданном порядке, пустые не выводятся |
 | Наличие | `x-stock`: «Много» / «Мало» / «N шт.» по порогам `shop.stock_many` и `shop.stock_few`; при нуле — «Под заказ» (`on_order`) или «Нет в наличии» |
 | Описание | Сгенерированное импортом (`description_generated`) на сайте не показывается до одобрения |
-| Название | `display_name` → `name` → «БРЕНД артикул» (`Product::title()`) |
+| Название | `display_name` (название сайта) → `name` (наименование 1С) → «БРЕНД артикул» (`Product::title()`); поиск — по обоим |
 | Крошки | Цепочка категории самого товара (BR-084) |
 
 Тесты: `Storefront/ProductPageTest`, `ProductImageStorefrontTest`, `ProductVatTest`.
@@ -149,7 +149,7 @@
 | Правило | Суть |
 |---|---|
 | BR-121 | Оформляет только клиент, только на свою организацию |
-| BR-123, BR-124, BR-134 | Транзакция: блокировка корзины и товаров (в порядке id), повторная проверка, списание остатка, удаление оформленных позиций; неотмеченные остаются |
+| BR-123, BR-124, BR-134 | Транзакция: блокировка корзины и товаров (в порядке id), повторная проверка, резерв остатка (`StockReserve`: доступный = остаток 1С − заказы, не учтённые 1С; остаток 1С не списывается), снимок позиций (в том числе `product_guid`, `unit`), удаление оформленных позиций; неотмеченные остаются |
 | BR-135 | Любая проблема отменяет оформление с полным перечнем причин |
 | BR-128, BR-129 | Адрес доставки обязателен и должен принадлежать организации; в заказ копируется снимком |
 | BR-132 | Номер `SM-ГГГГ-000001`, сквозной в пределах года (`order_sequences`, атомарный upsert) |
@@ -190,12 +190,13 @@
 | Правило | Суть |
 |---|---|
 | SRS §10.7.5 | Каждая смена статуса и событие отмены пишется в `order_status_history` с автором и комментарием |
-| Отмена | Возвращает остаток на склад (`stock_returned_at` защищает от повторного возврата) |
+| Отмена | Снимает резерв: доступный остаток пересчитывается (`StockReserve`); `stock_returned_at` — наследие, больше не пишется |
+| Обмен с 1С | `exchange_state` (`pending` / `sent` / `rejected`) отдельно от статуса; `OrderExchange::confirm()` / `reject()` / `resend()` — подтверждение, отказ 1С (`order_cancelled`, `guid_conflict`) и повторная отправка; отклонённый заказ держит резерв, в админке заказа — «Отправить в 1С повторно» и «Отменить заказ» (`/admin/order/{id}/exchange/resend|cancel`, работают и при выключенной ручной смене статусов); переходы 1С — `OrderStatus::canTransitionFrom1c` (вперёд с пропусками, отмена из любого незавершённого) |
 | Запрос отмены | Клиент сам не отменяет (BR-133: и не удаляет): запрос с причиной до 1000 символов, только оформивший, только в статусах «Новый» и «Подтверждён», один открытый запрос. Решает администратор: одобрить (→ Отменён) или отклонить с комментарием |
 | Ручные статусы | `SHOP_ORDERS_MANUAL_STATUS=false` отключает смену статусов в админке (на будущее — статусы из 1С) |
 | Счёт на оплату | `OrderInvoice` (один на заказ): PDF до 10 МБ в закрытом хранилище (диск `local`, `invoices/{order_id}/`). В админке заказа — загрузить, заменить, удалить, скачать. `source`: `manual` / `erp` (из 1С, `external_id`) — `OrderInvoice::attach()` |
 
-Тесты: `OrderStatusTest`, `OrderCancelRequestTest`, `OrderStatusMigrationTest`, `OrderItemWithoutProductTest`.
+Тесты: `OrderStatusTest`, `OrderCancelRequestTest`, `OrderStatusMigrationTest`, `OrderItemWithoutProductTest`, `StockReserveTest`.
 
 ---
 
@@ -425,7 +426,8 @@
 | Команда | `catalog:import-db <path> --dry-run` (отчёт `docs/catalog/import-report.md` + `uncategorized.csv`), боевой — `--backup=<дамп>` |
 | Сервисы | `CatalogImport\CatalogImportPlanner` (только чтение, строит план), `CatalogImportPlan`, `CatalogImportApplier` (применяет), `CatalogImportReport`, `CatalogMapping`, `ColumnLimits` |
 | Маппинги | `database/data/catalog/`: `brands.php`, `categories.php` (`map`, `rules`, `split`, `products`), `attributes.php`, `filters.php`, `cleanup.php` |
-| Прочие команды | `attributes:from-specifications` (текст `specifications` → справочник), `catalog:import`, `catalog:fill-test-data` (наследие), `demo:clear` |
+| Артикулы | `catalog:fill-articles <path> [--dry-run]`: `products.article` из `catalog.db.article` (по sku) и ключ сопоставления с 1С `match_key`; идемпотентна, отчёт — `docs/catalog/articles-report.md`, группы с одинаковым ключом для заказчика — `docs/catalog/duplicate-keys.csv` |
+| Прочие команды | `attributes:from-specifications` (текст `specifications` → справочник), `catalog:import`, `demo:clear` |
 
 | Правило | Суть |
 |---|---|

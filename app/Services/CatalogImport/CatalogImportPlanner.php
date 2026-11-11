@@ -85,7 +85,8 @@ class CatalogImportPlanner
 
             if (! $our) {
                 $plan->newProducts[] = [
-                    'sku' => $row['sku'], 'name' => $row['name'] ?: trim(($row['brand'] ?? '').' '.$row['article']),
+                    'sku' => $row['sku'], 'article' => trim((string) $row['article']) ?: null,
+                    'name' => $row['name'] ?: trim(($row['brand'] ?? '').' '.$row['article']),
                     'brand' => $this->map->brand($row['brand']), 'category' => $target['path'] ? CatalogImportPlan::pathKey($target['path']) : null,
                     'is_new' => $target['novelty'], 'description' => $row['description'],
                     'description_generated' => (bool) $row['description_generated'], 'attributes' => $set,
