@@ -20,13 +20,13 @@ enum OrderStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::New        => 'Новый',
-            self::Confirmed  => 'Подтверждён',
-            self::SentTo1c   => 'Передан в 1С',
+            self::New => 'Новый',
+            self::Confirmed => 'Подтверждён',
+            self::SentTo1c => 'Передан в 1С',
             self::InProgress => 'В работе',
-            self::Shipped    => 'Отгружен',
-            self::Completed  => 'Выполнен',
-            self::Cancelled  => 'Отменён',
+            self::Shipped => 'Отгружен',
+            self::Completed => 'Выполнен',
+            self::Cancelled => 'Отменён',
         };
     }
 
@@ -37,13 +37,13 @@ enum OrderStatus: string
     public function color(): string
     {
         return match ($this) {
-            self::New        => 'bg-status-new-bg text-status-new-text',
-            self::Confirmed  => 'bg-status-confirmed-bg text-status-confirmed-text',
-            self::SentTo1c   => 'bg-status-sent-bg text-status-sent-text',
+            self::New => 'bg-status-new-bg text-status-new-text',
+            self::Confirmed => 'bg-status-confirmed-bg text-status-confirmed-text',
+            self::SentTo1c => 'bg-status-sent-bg text-status-sent-text',
             self::InProgress => 'bg-status-progress-bg text-status-progress-text',
-            self::Shipped    => 'bg-status-shipped-bg text-status-shipped-text',
-            self::Completed  => 'bg-status-completed-bg text-status-completed-text',
-            self::Cancelled  => 'bg-status-cancelled-bg text-status-cancelled-text',
+            self::Shipped => 'bg-status-shipped-bg text-status-shipped-text',
+            self::Completed => 'bg-status-completed-bg text-status-completed-text',
+            self::Cancelled => 'bg-status-cancelled-bg text-status-cancelled-text',
         };
     }
 
@@ -53,11 +53,11 @@ enum OrderStatus: string
     public function allowedTransitions(): array
     {
         return match ($this) {
-            self::New        => [self::Confirmed, self::Cancelled],
-            self::Confirmed  => [self::SentTo1c, self::Cancelled],
-            self::SentTo1c   => [self::InProgress],
+            self::New => [self::Confirmed, self::Cancelled],
+            self::Confirmed => [self::SentTo1c, self::Cancelled],
+            self::SentTo1c => [self::InProgress],
             self::InProgress => [self::Shipped],
-            self::Shipped    => [self::Completed],
+            self::Shipped => [self::Completed],
             self::Completed, self::Cancelled => [],
         };
     }
@@ -65,6 +65,25 @@ enum OrderStatus: string
     public function canTransitionTo(self $to): bool
     {
         return in_array($to, $this->allowedTransitions(), true);
+    }
+
+    /**
+     * Переход по данным 1С (docs/1C_EXCHANGE_SPEC.md, раздел 7): только вперёд по флоу,
+     * промежуточные шаги можно пропускать; «Отменён» — из любого незавершённого статуса.
+     */
+    public function canTransitionFrom1c(self $to): bool
+    {
+        if ($this->isFinal()) {
+            return false;
+        }
+
+        if ($to === self::Cancelled) {
+            return true;
+        }
+
+        $flow = [self::New, self::Confirmed, self::SentTo1c, self::InProgress, self::Shipped, self::Completed];
+
+        return array_search($to, $flow, true) > array_search($this, $flow, true);
     }
 
     /**

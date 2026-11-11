@@ -38,6 +38,8 @@ class CatalogBenchmarkSeeder extends Seeder
                 'brand'        => 'Бренд ' . ($i % 20 + 1),
                 'price'        => $i % 37 === 0 ? null : round(20 + ($i * 7919 % 2000), 2),
                 'stock'        => $i % 5 === 0 ? 0 : $i % 50,
+                // Вставка мимо модели: остаток 1С = доступный (резерва у новых товаров нет)
+                'stock_1c'     => $i % 5 === 0 ? 0 : $i % 50,
                 'on_order'     => $i % 10 === 0,
                 'category_id'  => $i % 2 ? $parent->id : $child->id,
                 'is_active'    => $i % 50 !== 0,

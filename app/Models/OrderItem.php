@@ -13,6 +13,8 @@ class OrderItem extends Model
         'product_name',
         'product_sku',
         'client_code',
+        'product_guid',
+        'unit',
         'quantity',
         'price',
         'vat_rate',

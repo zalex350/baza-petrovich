@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\StockReserve;
 use App\Services\Vat\VatCalculator;
 use App\Services\Vat\VatLine;
 use Illuminate\Database\Eloquent\Model;
@@ -12,13 +13,19 @@ use Illuminate\Support\Collection;
  * guid — GUID номенклатуры 1С: заполняется только обменом с 1С, поэтому не в $fillable.
  * Так же — поля номенклатуры 1С (docs/1C_EXCHANGE_SPEC.md, раздел 4): article (артикул без бренда,
  * catalog:fill-articles), unit, barcode, group_1c и отметки обмена synced_at / price_synced_at /
- * stock_synced_at. name — наименование 1С, display_name — название сайта (title()).
+ * stock_synced_at, остаток 1С stock_1c (stock — доступный: stock_1c − резерв сайта, App\Services\StockReserve). name — наименование 1С, display_name — название сайта (title()).
  * match_key — ключ сопоставления «бренд + артикул» (matchKey()), пересчитывается при сохранении.
  */
 class Product extends Model
 {
     /** Характеристика, которая показывается в разделе «Комплектация», а не в таблице */
     public const PACKAGE_ATTRIBUTE = 'Комплектация';
+
+    /**
+     * Поля, которые у товара с GUID приходят только из 1С: в админке — только чтение с подписью «из 1С»
+     * (docs/1C_EXCHANGE_SPEC.md, раздел 4, правило 5). article и unit в форму не входят вовсе.
+     */
+    public const FIELDS_FROM_1C = ['article', 'name', 'brand', 'unit', 'vat_rate', 'price', 'stock'];
 
     use SoftDeletes;
 
@@ -74,6 +81,8 @@ class Product extends Model
         'is_promo' => 'boolean',
         // Описание сгенерировано: на сайте не показывается, пока его не одобрят в админке
         'description_generated' => 'boolean',
+        'stock' => 'integer',
+        'stock_1c' => 'integer',
         'synced_at' => 'datetime',
         'price_synced_at' => 'datetime',
         'stock_synced_at' => 'datetime',
@@ -82,10 +91,23 @@ class Product extends Model
     protected static function booted(): void
     {
         static::saving(function (Product $product) {
+            // Остаток 1С и доступный остаток (stock = stock_1c − резерв сайта) — согласованы
+            app(StockReserve::class)->sync($product);
+
             if (! $product->exists || $product->isDirty(['brand', 'article'])) {
                 $product->match_key = self::matchKey($product->brand, $product->article);
             }
         });
+    }
+
+    /**
+     * Поля, закрытые от правки в админке: у товара с GUID 1С — FIELDS_FROM_1C, без GUID — нет.
+     *
+     * @return list<string>
+     */
+    public function lockedFrom1c(): array
+    {
+        return $this->guid !== null ? self::FIELDS_FROM_1C : [];
     }
 
     /**

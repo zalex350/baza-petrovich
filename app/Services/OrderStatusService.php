@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\OrderExchangeState;
 use App\Enums\OrderHistoryEvent;
 use App\Enums\OrderStatus;
 use App\Events\CancelRequested;
@@ -9,42 +10,69 @@ use App\Exceptions\CancelRequestException;
 use App\Exceptions\InvalidStatusTransition;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
-use App\Models\Product;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Смена статуса заказа: только по допустимым переходам, с записью в историю
- * (SRS §10.7.5) и возвратом остатка при отмене. Клиент сам не отменяет —
+ * (SRS §10.7.5) и пересчётом резерва сайта при отмене (StockReserve).
+ * Источник смены — сайт или 1С (source = 1c: переходы OrderStatus::canTransitionFrom1c,
+ * в истории — пометка «1С» и время смены в 1С). Клиент сам не отменяет —
  * он создаёт запрос на отмену, администратор подтверждает или отклоняет его.
  */
 class OrderStatusService
 {
+    public const SOURCE_SITE = 'site';
+
+    public const SOURCE_1C = '1c';
+
+    public function __construct(private readonly StockReserve $reserve) {}
+
     /**
      * @throws InvalidStatusTransition
      */
-    public function change(Order $order, OrderStatus $to, ?User $by = null, ?string $comment = null): Order
-    {
-        return DB::transaction(function () use ($order, $to, $by, $comment) {
+    public function change(
+        Order $order,
+        OrderStatus $to,
+        ?User $by = null,
+        ?string $comment = null,
+        string $source = self::SOURCE_SITE,
+        ?Carbon $changedAt1c = null,
+    ): Order {
+        return DB::transaction(function () use ($order, $to, $by, $comment, $source, $changedAt1c) {
             // Блокировка заказа: два одновременных изменения не пройдут оба от одного исходного статуса
             $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
 
             $from = $order->status;
 
-            if (! $from->canTransitionTo($to)) {
+            $allowed = $source === self::SOURCE_1C ? $from->canTransitionFrom1c($to) : $from->canTransitionTo($to);
+
+            if (! $allowed) {
                 throw new InvalidStatusTransition($from, $to);
             }
 
             if ($to === OrderStatus::Cancelled) {
-                $this->returnStock($order);
                 // Заказ отменён — открытый запрос на отмену исполнен
                 $this->closeCancelRequest($order);
+            }
+
+            // «Передан в 1С» вручную (обмена ещё нет): заказ зарегистрирован в 1С сейчас —
+            // резерв держится, пока не придёт остаток 1С новее (StockReserve)
+            if ($to === OrderStatus::SentTo1c && $source === self::SOURCE_SITE && $order->exchange_state !== OrderExchangeState::Sent) {
+                $order->exchange_state = OrderExchangeState::Sent;
+                $order->registered_at ??= now();
             }
 
             $order->status = $to;
             $order->save();
 
-            $this->record($order, $from, $to, $by, $comment);
+            // Отменённый заказ не резервирует остаток
+            if ($to === OrderStatus::Cancelled) {
+                $this->reserve->recalculateOrder($order->id);
+            }
+
+            $this->record($order, $from, $to, $by, $comment, $source, $changedAt1c);
 
             return $order;
         });
@@ -106,7 +134,7 @@ class OrderStatusService
                 $order,
                 OrderStatus::Cancelled,
                 $by,
-                'Отмена по запросу клиента' . ($comment !== '' ? ": {$comment}" : '')
+                'Отмена по запросу клиента'.($comment !== '' ? ": {$comment}" : '')
             );
         });
     }
@@ -161,12 +189,12 @@ class OrderStatusService
         $comment = trim((string) $comment);
 
         OrderStatusHistory::create([
-            'order_id'    => $order->id,
+            'order_id' => $order->id,
             'from_status' => $order->status,
-            'to_status'   => $order->status,
-            'event'       => $event,
-            'user_id'     => $by->id,
-            'comment'     => $comment !== '' ? $comment : null,
+            'to_status' => $order->status,
+            'event' => $event,
+            'user_id' => $by->id,
+            'comment' => $comment !== '' ? $comment : null,
         ]);
     }
 
@@ -174,48 +202,25 @@ class OrderStatusService
      * Запись истории о смене статуса. $from = null — оформление заказа (recordPlaced);
      * $by = null — смена без пользователя; пустой комментарий хранится как null.
      */
-    private function record(Order $order, ?OrderStatus $from, OrderStatus $to, ?User $by, ?string $comment): void
-    {
+    private function record(
+        Order $order,
+        ?OrderStatus $from,
+        OrderStatus $to,
+        ?User $by,
+        ?string $comment,
+        string $source = self::SOURCE_SITE,
+        ?Carbon $changedAt1c = null,
+    ): void {
         $comment = trim((string) $comment);
 
         OrderStatusHistory::create([
-            'order_id'    => $order->id,
+            'order_id' => $order->id,
             'from_status' => $from,
-            'to_status'   => $to,
-            'user_id'     => $by?->id,
-            'comment'     => $comment !== '' ? $comment : null,
+            'to_status' => $to,
+            'user_id' => $by?->id,
+            'comment' => $comment !== '' ? $comment : null,
+            'source' => $source,
+            'changed_at_1c' => $changedAt1c,
         ]);
-    }
-
-    /**
-     * Возвращает на склад списанное при оформлении. stock_returned_at делает возврат
-     * идемпотентным: повторный вызов для того же заказа ничего не меняет.
-     */
-    private function returnStock(Order $order): void
-    {
-        if ($order->stock_returned_at !== null) {
-            return;
-        }
-
-        $quantities = $order->items()
-            ->whereNotNull('product_id')
-            ->get(['product_id', 'quantity'])
-            ->groupBy('product_id')
-            ->map->sum('quantity');
-
-        // withTrashed: остаток возвращается и удалённому (soft delete) товару — его могут восстановить.
-        // Физически удалённому товару (product_id = null) возвращать некуда.
-        $products = Product::withTrashed()
-            ->whereIn('id', $quantities->keys())
-            ->orderBy('id')
-            ->lockForUpdate()
-            ->get();
-
-        foreach ($products as $product) {
-            $product->stock += $quantities[$product->id];
-            $product->save();
-        }
-
-        $order->stock_returned_at = now();
     }
 }

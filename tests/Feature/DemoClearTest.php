@@ -11,6 +11,7 @@ use App\Models\OrderItem;
 use App\Models\Organization;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\StockReserve;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -74,13 +75,17 @@ class DemoClearTest extends TestCase
         $demoClient = User::where('email', 'ivanov@demo.test')->first();
         $order = Order::create(['user_id' => $demoClient->id, 'organization_id' => $demoClient->organization_id, 'status' => OrderStatus::Confirmed]);
         OrderItem::create(['order_id' => $order->id, 'product_id' => $this->real->id, 'quantity' => 3, 'price' => 50]);
-        $this->real->decrement('stock', 3);
+        // Как после оформления: оба заказа (реальный — 1 шт., демо — 3 шт.) резервируют остаток 1С
+        app(StockReserve::class)->recalculate([$this->real->id]);
+        $this->assertSame(16, $this->real->fresh()->stock);
 
         $this->artisan('demo:clear', ['--force' => true])
             ->expectsOutputToContain('возвращено единиц реальных товаров: 3')
             ->assertSuccessful();
 
-        $this->assertSame(20, (int) $this->real->fresh()->stock);
+        // Резерв демо-заказа снят, реального — остался
+        $this->assertSame(20, $this->real->fresh()->stock_1c);
+        $this->assertSame(19, $this->real->fresh()->stock);
     }
 
     public function test_asks_for_confirmation(): void
