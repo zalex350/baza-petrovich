@@ -91,15 +91,15 @@
         <x-table stack caption="Новые коды">
             <x-slot:head>
                 <x-table.th>Строка</x-table.th>
-                <x-table.th>Наш артикул</x-table.th>
+                <x-table.th>Артикул</x-table.th>
                 <x-table.th>Название</x-table.th>
                 <x-table.th>Код клиента</x-table.th>
             </x-slot:head>
             @foreach(array_slice($preview['add'], 0, $limit) as $row)
                 <tr>
                     <x-table.td label="Строка" nowrap>{{ $row['row'] }}</x-table.td>
-                    <x-table.td label="Наш артикул" class="font-mono">{{ $row['product']->sku }}</x-table.td>
-                    <x-table.td label="Название">{{ $row['product']->name }}</x-table.td>
+                    <x-table.td label="Артикул" class="font-mono">{{ $row['product']->displayArticle() }}@if($row['product']->brand) <span class="font-sans text-ink-muted">· {{ $row['product']->brand }}</span>@endif</x-table.td>
+                    <x-table.td label="Название">{{ $row['product']->title() }}</x-table.td>
                     <x-table.td label="Код клиента" class="font-mono">{{ $row['code'] }}</x-table.td>
                 </tr>
             @endforeach
@@ -116,7 +116,7 @@
         <x-table stack caption="Изменённые коды">
             <x-slot:head>
                 <x-table.th>Строка</x-table.th>
-                <x-table.th>Наш артикул</x-table.th>
+                <x-table.th>Артикул</x-table.th>
                 <x-table.th>Название</x-table.th>
                 <x-table.th>Было</x-table.th>
                 <x-table.th>Стало</x-table.th>
@@ -124,8 +124,8 @@
             @foreach(array_slice($preview['update'], 0, $limit) as $row)
                 <tr>
                     <x-table.td label="Строка" nowrap>{{ $row['row'] }}</x-table.td>
-                    <x-table.td label="Наш артикул" class="font-mono">{{ $row['product']->sku }}</x-table.td>
-                    <x-table.td label="Название">{{ $row['product']->name }}</x-table.td>
+                    <x-table.td label="Артикул" class="font-mono">{{ $row['product']->displayArticle() }}@if($row['product']->brand) <span class="font-sans text-ink-muted">· {{ $row['product']->brand }}</span>@endif</x-table.td>
+                    <x-table.td label="Название">{{ $row['product']->title() }}</x-table.td>
                     <x-table.td label="Было" class="font-mono text-ink-muted line-through">{{ $row['old'] }}</x-table.td>
                     <x-table.td label="Стало" class="font-mono">{{ $row['code'] }}</x-table.td>
                 </tr>
@@ -143,13 +143,13 @@
         <p class="text-sm text-ink-muted mb-4">Режим «Заменить полностью»: этих товаров нет в файле.</p>
         <x-table stack caption="Удаляемые коды">
             <x-slot:head>
-                <x-table.th>Наш артикул</x-table.th>
+                <x-table.th>Артикул</x-table.th>
                 <x-table.th>Название</x-table.th>
                 <x-table.th>Код клиента</x-table.th>
             </x-slot:head>
             @foreach(array_slice($preview['delete'], 0, $limit) as $code)
                 <tr>
-                    <x-table.td label="Наш артикул" class="font-mono">{{ $code->product?->sku ?? '—' }}</x-table.td>
+                    <x-table.td label="Артикул" class="font-mono">{{ $code->product?->displayArticle() ?? '—' }}@if($code->product?->brand) <span class="font-sans text-ink-muted">· {{ $code->product->brand }}</span>@endif</x-table.td>
                     <x-table.td label="Название">{{ $code->product?->name ?? 'Товар удалён' }}</x-table.td>
                     <x-table.td label="Код клиента" class="font-mono">{{ $code->code }}</x-table.td>
                 </tr>

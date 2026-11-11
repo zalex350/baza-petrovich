@@ -44,14 +44,24 @@ class NewOrderNotification extends AdminOrderNotification
     }
 
     /**
-     * Позиция: «GR-001 (код клиента: A-1) — Смеситель × 2 шт.»; код — снимок при оформлении.
+     * Позиция: «Арт. L4755-2 (SKU LEDEME-L4755-2, код клиента: A-1) — Смеситель × 2 шт.»;
+     * артикул и код — снимки при оформлении. Письмо — администраторам, поэтому SKU тоже.
      */
     private static function itemLine(OrderItem $item): string
     {
-        $sku = self::text($item->product_sku);
+        $sku = 'Арт. '.self::text($item->displayArticle());
+        $extra = [];
+
+        if ($item->product_article && $item->product_sku) {
+            $extra[] = 'SKU '.self::text($item->product_sku);
+        }
 
         if ($item->client_code) {
-            $sku .= ' (код клиента: **'.self::text($item->client_code).'**)';
+            $extra[] = 'код клиента: **'.self::text($item->client_code).'**';
+        }
+
+        if ($extra) {
+            $sku .= ' ('.implode(', ', $extra).')';
         }
 
         return $sku.' — '.self::text($item->product_name).' × '.$item->quantity.' шт.';

@@ -12,18 +12,19 @@ use OpenSpout\Writer\XLSX\Writer;
 
 /**
  * Выгрузка ассортимента для организации клиента (кабинет → «Выгрузка ассортимента»,
- * docs/MODULES.md §11): .xlsx (openspout/openspout) — ваш код, наш артикул, название,
- * цена без НДС, цена с НДС, остаток.
+ * docs/MODULES.md §11): .xlsx (openspout/openspout) — ваш код, артикул, бренд, название,
+ * цена без НДС, цена с НДС, остаток. Артикул — Product::displayArticle (артикул производителя,
+ * без него — код сайта); SKU как отдельная колонка клиенту не выводится.
  *
  * Товары — опубликованные (is_active и is_published), с кодом этой организации; с опцией
  * withoutCode — и без кода (ячейка кода пустая, такие строки — после строк с кодом).
  * Только коды своей организации. Остаток — точным числом до shop.export_stock_cap,
  * больше — «более N». Цены — текущие цены товара (без НДС и с НДС по ставке товара); цены
- * нет — «Цена уточняется». Порядок — по нашему артикулу.
+ * нет — «Цена уточняется». Порядок — по артикулу.
  */
 class AssortmentExport
 {
-    public const HEADERS = ['Ваш код', 'Наш артикул', 'Название', 'Цена без НДС', 'Цена с НДС', 'Остаток'];
+    public const HEADERS = ['Ваш код', 'Артикул', 'Бренд', 'Название', 'Цена без НДС', 'Цена с НДС', 'Остаток'];
 
     /** Товаров в одной выборке: файл пишется потоково, весь каталог в памяти не держится */
     private const CHUNK = 1000;
@@ -37,9 +38,9 @@ class AssortmentExport
 
         $options = new Options;
         $options->setColumnWidth(18, 1);
-        $options->setColumnWidth(16, 2);
-        $options->setColumnWidth(60, 3);
-        $options->setColumnWidth(14, 4, 5, 6);
+        $options->setColumnWidth(16, 2, 3);
+        $options->setColumnWidth(60, 4);
+        $options->setColumnWidth(14, 5, 6, 7);
 
         $writer = new Writer($options);
         $writer->openToFile($path);
@@ -68,7 +69,7 @@ class AssortmentExport
     private function products(Organization $organization, bool $codes)
     {
         return Product::query()
-            ->select(['products.id', 'products.sku', 'products.name', 'products.display_name', 'products.price', 'products.vat_rate', 'products.stock'])
+            ->select(['products.id', 'products.sku', 'products.article', 'products.brand', 'products.name', 'products.display_name', 'products.price', 'products.vat_rate', 'products.stock'])
             ->addSelect('product_client_codes.code as export_code')
             ->leftJoin('product_client_codes', fn ($join) => $join
                 ->on('product_client_codes.product_id', '=', 'products.id')
@@ -76,7 +77,7 @@ class AssortmentExport
             ->where('products.is_active', true)
             ->where('products.is_published', true)
             ->when($codes, fn ($q) => $q->whereNotNull('product_client_codes.id'), fn ($q) => $q->whereNull('product_client_codes.id'))
-            ->orderBy('products.sku')
+            ->orderByRaw("COALESCE(NULLIF(TRIM(products.article), ''), products.sku)")
             ->orderBy('products.id')
             ->lazy(self::CHUNK);
     }
@@ -87,7 +88,8 @@ class AssortmentExport
 
         return new Row([
             Cell::fromValue((string) $product->export_code, $text),
-            Cell::fromValue((string) $product->sku, $text),
+            Cell::fromValue($product->displayArticle(), $text),
+            Cell::fromValue((string) $product->brand),
             Cell::fromValue($product->title()),
             $price === null ? Cell::fromValue('Цена уточняется') : Cell::fromValue($price, $money),
             $price === null ? Cell::fromValue('Цена уточняется') : Cell::fromValue($product->price_with_vat, $money),

@@ -31,7 +31,7 @@ class AdminProductController extends Controller
     ) {}
 
     /** Поля учётной системы: при shop.catalog.manual_products = false приходят только из 1С */
-    private const ERP_FIELDS = ['name', 'sku', 'brand', 'price', 'vat_rate', 'stock', 'on_order', 'min_qty', 'qty_step', 'default_qty'];
+    private const ERP_FIELDS = ['name', 'sku', 'article', 'brand', 'price', 'vat_rate', 'stock', 'on_order', 'min_qty', 'qty_step', 'default_qty'];
 
     /** Бейджи витрины: у существующего товара сохраняются сразу по галочке (badge) */
     private const BADGE_FIELDS = ['is_hit', 'is_new', 'is_promo'];
@@ -56,7 +56,7 @@ class AdminProductController extends Controller
         $noCategory = fn ($q) => $q->where(fn ($q) => $q->whereNull('category_id')->orWhereIn('category_id', $hiddenIds));
         $matches = fn ($q) => $q->when($search !== '', fn ($q) => $q->where(function ($q) use ($search) {
             $like = '%'.$search.'%';
-            $q->where('sku', 'like', $like)->orWhere('name', 'like', $like)->orWhere('display_name', 'like', $like)->orWhere('brand', 'like', $like);
+            $q->where('sku', 'like', $like)->orWhere('article', 'like', $like)->orWhere('name', 'like', $like)->orWhere('display_name', 'like', $like)->orWhere('brand', 'like', $like);
         }));
 
         $products = Product::with('draft')
@@ -196,8 +196,8 @@ class AdminProductController extends Controller
         $product = Product::findOrFail($id);
 
         $manual = config('shop.catalog.manual_products');
-        // У товара с GUID 1С его поля только для чтения (docs/1C_EXCHANGE_SPEC.md, раздел 4, правило 5)
-        $erpFields = array_values(array_diff(self::ERP_FIELDS, $product->lockedFrom1c()));
+        // У товара с GUID 1С его поля и sku только для чтения (docs/1C_EXCHANGE_SPEC.md, раздел 4, правило 6)
+        $erpFields = array_values(array_diff(self::ERP_FIELDS, $product->lockedFields()));
 
         $data = request()->validate(
             ($manual ? array_intersect_key($this->erpRules($product), array_flip($erpFields)) : []) + $this->siteRules($product)
@@ -337,6 +337,7 @@ class AdminProductController extends Controller
         return [
             'name' => 'required|string|max:255',
             'sku' => ['required', 'string', 'max:100', Rule::unique('products', 'sku')->ignore($product?->id)],
+            'article' => 'nullable|string|max:255',
             'brand' => 'nullable|string|max:255',
             // Цена нового товара обязательна и больше 0 при любой кнопке (F-6). У товара с ценой
             // стереть её нельзя. У товара без цены (из импорта каталога — цена придёт из 1С) поле

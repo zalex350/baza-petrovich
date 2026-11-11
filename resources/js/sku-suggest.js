@@ -1,6 +1,6 @@
 // Подсказки артикула в «Добавить по артикулу» (корзина, x-cart-quick-add): тот же /search/suggest,
-// что и в шапке, но выбор не открывает товар, а подставляет ваш код (если есть) или артикул
-// и количество по умолчанию.
+// что и в шапке, но выбор не открывает товар, а подставляет ваш код (если есть) или артикул,
+// id товара (product_id) и количество по умолчанию.
 // ↑/↓ — выбор, Enter — подставить выбранное и сразу добавить (без выбора — отправить форму),
 // щелчок — подставить и перейти в количество, Esc — закрыть.
 
@@ -35,7 +35,7 @@ export default (url) => ({
                 const data = await response.json();
 
                 // code — код товара у организации клиента (только своей), иначе null
-                this.items = (data.products ?? []).map((p) => ({ sku: p.sku, code: p.client_code ?? null, name: p.name, qty: p.default_qty ?? 1 }));
+                this.items = (data.products ?? []).map((p) => ({ id: p.id, article: p.article, brand: p.brand ?? null, code: p.client_code ?? null, name: p.name, qty: p.default_qty ?? 1 }));
                 this.active = -1;
                 this.open = this.items.length > 0 && document.activeElement === this.$refs.sku;
             } catch {
@@ -68,8 +68,10 @@ export default (url) => ({
     },
 
     fill(item) {
-        // «Добавить по вашему коду» — подставляется ваш код, без кода — артикул
-        this.$refs.sku.value = item.code ?? item.sku;
+        // «Добавить по вашему коду» — подставляется ваш код, без кода — артикул; товар запоминается
+        // (product_id): артикул бывает у нескольких брендов, добавится именно выбранный
+        this.$refs.sku.value = item.code ?? item.article;
+        this.$refs.productId.value = item.id;
         this.$refs.qty.value = item.qty;
         this.close();
     },

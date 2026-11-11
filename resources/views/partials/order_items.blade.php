@@ -98,7 +98,11 @@
                     </td>
 
                     <td class="px-4 py-3 text-sm text-slate-400">
-                        {{ $item->product_sku }}
+                        {{ $item->displayArticle() }}
+                        {{-- SKU — внутренний код обмена с 1С: только в админке --}}
+                        @if($admin && $item->product_sku && $item->product_article)
+                            <div class="whitespace-nowrap" data-order-item-sku>SKU: {{ $item->product_sku }}</div>
+                        @endif
                         {{-- Снимок кода клиента при оформлении: клиенту — «Ваш код», в админке — «Код клиента» --}}
                         @if($item->client_code)
                             <div class="text-slate-700 whitespace-nowrap" data-client-code>

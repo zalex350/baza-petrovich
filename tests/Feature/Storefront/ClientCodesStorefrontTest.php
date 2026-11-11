@@ -175,19 +175,19 @@ class ClientCodesStorefrontTest extends TestCase
         // «kl» есть в обоих кодах организации; точное совпадение кода — первым
         $products = $this->actingAs($this->client)->getJson('/search/suggest?q=KL-BETA')->assertOk()->json('products');
 
-        $this->assertSame('HG-002', $products[0]['sku']);
+        $this->assertSame('HG-002', $products[0]['article']);
         $this->assertSame('kl-beta', $products[0]['client_code']);
 
-        $products = collect($this->actingAs($this->client)->getJson('/search/suggest?q=Grohe')->json('products'))->keyBy('sku');
+        $products = collect($this->actingAs($this->client)->getJson('/search/suggest?q=Grohe')->json('products'))->keyBy('article');
         $this->assertSame('КЛ-Альфа-7', $products['GR-001']['client_code']);
         $this->assertNull($products['OR-003']['client_code']);
 
         // Чужой код: не находится и не отдаётся
         $this->assertSame([], $this->actingAs($this->client)->getJson('/search/suggest?q=chuzhoy')->json('products'));
-        $this->assertSame('CHUZHOY-1', collect($this->actingAs($this->otherClient)->getJson('/search/suggest?q=Grohe')->json('products'))->keyBy('sku')['GR-001']['client_code']);
+        $this->assertSame('CHUZHOY-1', collect($this->actingAs($this->otherClient)->getJson('/search/suggest?q=Grohe')->json('products'))->keyBy('article')['GR-001']['client_code']);
 
         auth()->logout();
-        $guest = collect($this->getJson('/search/suggest?q=Grohe')->json('products'))->keyBy('sku');
+        $guest = collect($this->getJson('/search/suggest?q=Grohe')->json('products'))->keyBy('article');
         $this->assertNull($guest['GR-001']['client_code']);
         $this->assertSame([], $this->getJson('/search/suggest?q=kl-beta')->json('products'));
     }

@@ -7,6 +7,7 @@ use App\Exceptions\CheckoutException;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
+use App\Services\ArticleSearch;
 use App\Services\CartSummary;
 use App\Services\CartValidator;
 use App\Services\CheckoutService;
@@ -19,6 +20,9 @@ use Throwable;
 
 class CartController extends Controller
 {
+    /** Сессия: выбор товара при неоднозначном артикуле (форма без JS) — x-cart-quick-add */
+    public const QUICK_CHOICES = 'quick_add_choices';
+
     public function __construct(
         private readonly CartValidator $validator,
         private readonly CartSummary $summary,
@@ -143,11 +147,15 @@ class CartController extends Controller
 
     /**
      * «Добавить по артикулу» на странице корзины: артикул + количество (пусто — количество товара
-     * по умолчанию). Ошибки — под полями: не найден / недоступен — у артикула, кратность и
-     * остаток — у количества. JSON (cart-page.js) — {ok, message, cart, item_id} или {ok: false,
-     * errors: {sku|qty: текст}}; обычная форма — назад в корзину с ошибками у полей.
+     * по умолчанию). Поиск: product_id (выбор из подсказки или из списка) → код организации
+     * клиента → артикул или sku (ArticleSearch::whereExact). Артикул не уникален между брендами:
+     * несколько товаров — не добавляется ничего, ответ — выбор с брендом (x-cart-quick-choices).
+     * Не найден — ошибка, при варианте без дефисов — «Возможно, вы искали …» (не добавляется).
+     * Ошибки — под полями: не найден / недоступен — у артикула, кратность и остаток — у количества.
+     * JSON (cart-page.js) — {ok, message, cart, item_id} или {ok: false, errors: {sku|qty: текст},
+     * choices_html?}; обычная форма — назад в корзину с ошибками у полей (выбор — в сессии).
      */
-    public function quickAdd()
+    public function quickAdd(ArticleSearch $articles)
     {
         if (! auth()->user()->isClient()) {
             return $this->quickAddResult(['sku' => 'Оформлять заказы могут только клиенты']);
@@ -156,6 +164,7 @@ class CartController extends Controller
         $validator = Validator::make(request()->all(), [
             'sku' => ['required', 'string', 'max:100'],
             'qty' => ['nullable', 'integer', 'min:1', 'max:100000'],
+            'product_id' => ['nullable', 'integer'],
         ], [
             'sku.required' => 'Укажите артикул',
             'qty.integer' => 'Количество — целое число',
@@ -174,13 +183,34 @@ class CartController extends Controller
         $shown = fn () => Product::query()->where('is_active', true)->where('is_published', true);
         $codeProductId = $this->codes->productIdByCode($sku);
 
-        $product = ($codeProductId ? $shown()->find($codeProductId) : null)
-            ?? $shown()->whereRaw('LOWER(sku) = ?', [mb_strtolower($sku)])->first();
+        $product = ! empty($data['product_id']) ? $shown()->find($data['product_id']) : null;
+        $product ??= $codeProductId ? $shown()->find($codeProductId) : null;
 
         if (! $product) {
-            return $this->quickAddResult(['sku' => $this->codes->has()
+            $found = $articles->whereExact($shown(), $sku)->orderBy('brand')->orderBy('id')->limit(20)->get();
+
+            if ($found->count() > 1) {
+                return $this->quickAddResult(
+                    ['sku' => "Артикул «{$sku}» есть у нескольких товаров — выберите нужный"],
+                    $found->map(fn (Product $p) => [
+                        'id' => $p->id,
+                        'article' => $p->displayArticle(),
+                        'brand' => $p->brand,
+                        'name' => $p->title(),
+                    ])->all(),
+                );
+            }
+
+            $product = $found->first();
+        }
+
+        if (! $product) {
+            $message = $this->codes->has()
                 ? "Товар с кодом или артикулом «{$sku}» не найден"
-                : "Товар с артикулом «{$sku}» не найден"]);
+                : "Товар с артикулом «{$sku}» не найден";
+            $hints = $articles->didYouMean($shown(), $sku);
+
+            return $this->quickAddResult(['sku' => $hints ? $message.'. Возможно, вы искали '.implode(', ', $hints) : $message]);
         }
 
         $error = $this->addProduct($product, (int) ($data['qty'] ?? $product->default_qty ?? 1));
@@ -206,14 +236,21 @@ class CartController extends Controller
 
     /**
      * @param  array<string, string>  $errors  поле (sku | qty) → текст
+     * @param  list<array{id: int, article: string, brand: ?string, name: string}>  $choices  товары с этим артикулом
      */
-    private function quickAddResult(array $errors)
+    private function quickAddResult(array $errors, array $choices = [])
     {
         if (request()->expectsJson()) {
-            return response()->json(['ok' => false, 'errors' => $errors], 422, [], JSON_UNESCAPED_UNICODE);
+            $data = ['ok' => false, 'errors' => $errors];
+
+            if ($choices) {
+                $data['choices_html'] = Blade::render('<x-cart-quick-choices :choices="$choices" />', ['choices' => $choices]);
+            }
+
+            return response()->json($data, 422, [], JSON_UNESCAPED_UNICODE);
         }
 
-        return redirect('/order')->withErrors($errors)->withInput();
+        return redirect('/order')->withErrors($errors)->withInput()->with(self::QUICK_CHOICES, $choices);
     }
 
     /**

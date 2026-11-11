@@ -38,7 +38,7 @@
         <a href="{{ $url }}" class="font-semibold text-ink hover:text-link md:text-base" data-product-link>{{ $name }}</a>
 
         <div class="mt-0.5 text-meta text-ink-muted">
-            Арт. {{ $product->sku }}@if($product->brand) · {{ $product->brand }}@endif
+            Арт. {{ $product->displayArticle() }}@if($product->brand) · {{ $product->brand }}@endif
         </div>
 
         @if($clientCode)

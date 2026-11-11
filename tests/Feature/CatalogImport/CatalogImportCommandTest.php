@@ -383,7 +383,7 @@ LEDEME S4', 'для душевых', []],
     {
         // Ключ до импорта — по старому бренду «TIM Thermo»
         $this->find('TIM-C1')->forceFill(['article' => 'C1'])->save();
-        $this->assertSame('TIMTHERMO:C1', $this->find('TIM-C1')->match_key);
+        $this->assertSame('TIM THERMO:C1', $this->find('TIM-C1')->match_key);
 
         $pdo = new PDO('sqlite:'.$this->catalog);
         $pdo->exec("INSERT INTO products (sku, article, brand, name, category, attributes)
@@ -394,7 +394,7 @@ LEDEME S4', 'для душевых', []],
         // Бренд сменился мимо модели — ключ пересчитан; новый товар — с артикулом и ключом
         $this->assertSame('TIM:C1', $this->find('TIM-C1')->match_key);
         $new = $this->find('LEDEME-NEW-1');
-        $this->assertSame(['NEW-1', 'LEDEME:NEW1'], [$new->article, $new->match_key]);
+        $this->assertSame(['NEW-1', 'LEDEME:NEW-1'], [$new->article, $new->match_key]);
     }
 
     public function test_second_run_changes_nothing(): void

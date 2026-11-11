@@ -198,7 +198,7 @@ class AdminClientCodeController extends Controller
      */
     private function ensureCodeFree(int $organizationId, string $code, int $productId, string $field): void
     {
-        $taken = ProductClientCode::with('product:id,sku,name')
+        $taken = ProductClientCode::with('product:id,sku,article,brand,name,display_name')
             ->where('organization_id', $organizationId)
             ->where('product_id', '!=', $productId)
             ->whereRaw('LOWER(code) = ?', [ClientCodeImport::key($code)])

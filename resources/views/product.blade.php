@@ -85,7 +85,7 @@
 
                 <div class="mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-ink-muted">
                     <span data-sku>
-                        Артикул: <x-copy :text="$product->sku" label="Скопировать артикул" />
+                        Арт. <x-copy :text="$product->displayArticle()" label="Скопировать артикул" />
                     </span>
 
                     @if($clientCode = client_code($product))

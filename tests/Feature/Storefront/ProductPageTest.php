@@ -62,7 +62,7 @@ class ProductPageTest extends TestCase
             ->assertSeeInOrder(['aria-label="Хлебные крошки"', 'Главная', 'Каталог', 'Сантехника', 'Смесители'], false)
             ->assertSee('data-product-badge="hit"', false)
             ->assertSee('<h1', false)
-            ->assertSee('Артикул:')
+            ->assertSee('Арт.')
             ->assertSee('aria-label="Скопировать артикул"', false)
             // Производитель — ссылка на товары бренда в категории (там есть фильтр по производителю)
             ->assertSee('href="/catalog/smesiteli?brand%5B0%5D=LEDEME"', false);

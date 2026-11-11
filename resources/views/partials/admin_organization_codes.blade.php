@@ -36,7 +36,8 @@
 <div class="mb-6 rounded-card border border-line bg-surface p-card">
     <h2 class="text-lg font-semibold mb-1">Загрузить из Excel / CSV</h2>
     <p class="text-sm text-ink-muted mb-4">
-        Столбцы «{{ \App\Services\ClientCodeImport::SKU_HEADER }}» и «{{ \App\Services\ClientCodeImport::CODE_HEADER }}» (строка заголовков — в начале листа, порядок столбцов любой).
+        Столбцы «{{ \App\Services\ClientCodeImport::CODE_HEADER }}», «{{ \App\Services\ClientCodeImport::ARTICLE_HEADER }}» и «{{ \App\Services\ClientCodeImport::BRAND_HEADER }}» — как в выгрузке ассортимента клиента, её файл можно загрузить как есть (строка заголовков — в начале листа, порядок столбцов любой; бренд не обязателен).
+        Товар ищется по SKU, затем по бренду и артикулу, затем по артикулу, если он только у одного товара; несколько совпадений — ошибка строки с перечнем брендов.
         Сначала — предпросмотр: что добавится, изменится и какие строки с ошибками; база меняется только после «Применить».
         Коды с ведущими нулями (00123) храните в Excel как текст — в шаблоне столбцы уже текстовые.
     </p>
@@ -68,7 +69,7 @@
 
     <form method="GET" action="{{ $base }}" class="mb-4 flex flex-wrap items-end gap-3" role="search">
         <input type="hidden" name="tab" value="codes">
-        <x-input name="q" id="codes-q" type="search" label="Поиск" :value="$search" placeholder="Наш артикул, название, код клиента" class="grow min-w-64" />
+        <x-input name="q" id="codes-q" type="search" label="Поиск" :value="$search" placeholder="Артикул, SKU, название, код клиента" class="grow min-w-64" />
         <x-button variant="secondary">Найти</x-button>
         @if($search !== '')
             <x-button variant="link" href="{{ $base }}?tab=codes">Сбросить</x-button>
@@ -89,14 +90,14 @@
 
         <x-table stack caption="Коды товаров клиента">
             <x-slot:head>
-                <x-table.th>Наш артикул</x-table.th>
+                <x-table.th>Артикул</x-table.th>
                 <x-table.th>Название</x-table.th>
                 <x-table.th>Код клиента</x-table.th>
                 <x-table.th><span class="sr-only">Действия</span></x-table.th>
             </x-slot:head>
             @foreach($codes as $code)
                 <tr data-client-code="{{ $code->id }}">
-                    <x-table.td label="Наш артикул" class="font-mono">{{ $code->product?->sku ?? '—' }}</x-table.td>
+                    <x-table.td label="Артикул" class="font-mono">{{ $code->product?->displayArticle() ?? '—' }}@if($code->product?->brand) <span class="font-sans text-ink-muted">· {{ $code->product->brand }}</span>@endif</x-table.td>
                     <x-table.td label="Название">
                         @if($code->product)
                             <a href="/admin/product/{{ $code->product->id }}#client-codes" class="text-link hover:underline">{{ $code->product->title() }}</a>
@@ -114,7 +115,7 @@
                             trigger-variant="link"
                             trigger-size="sm"
                         >
-                            Код «{{ $code->code }}» товара {{ $code->product?->sku ?? '' }} будет удалён у клиента «{{ $organization->name }}».
+                            Код «{{ $code->code }}» товара {{ $code->product?->displayArticle() ?? '' }} будет удалён у клиента «{{ $organization->name }}».
                         </x-confirm>
                     </x-table.td>
                 </tr>

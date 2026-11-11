@@ -20,14 +20,14 @@
 | `/partner` | `PartnerController@create` | `partner` | app | `partner` |
 | `/catalog/menu.json` | `CatalogController@menu` | JSON (мега-меню) | — | — |
 | `/product/{id}` | `ProductController@show` | `product` | app | — |
-| `/search` | `SearchController@index` | `search` | app | — |
-| `/search/suggest` | `SearchController@suggest` | JSON (подсказки) | — | — |
+| `/search` | `SearchController@index` | `search` (ничего не найдено — «Возможно, вы искали …», `ArticleSearch::didYouMean`) | app | — |
+| `/search/suggest` | `SearchController@suggest` | JSON (подсказки: `article` — артикул для покупателя, `brand`, `client_code`; без `sku`; пусто — `did_you_mean`) | — | — |
 
 ### Кабинет клиента (auth)
 
 | URL | Контроллер | Шаблон | Действия (POST) |
 |---|---|---|---|
-| `/order` (корзина) | `CartController@index` | `order` | `order/add/{id}`, `update/{id}`, `delete/{id}`, `accept-prices`, `checkout` |
+| `/order` (корзина) | `CartController@index` | `order` (+ `x-cart-quick-add`, при неоднозначном артикуле — `x-cart-quick-choices`) | `order/add/{id}`, `update/{id}`, `delete/{id}`, `accept-prices`, `checkout`, `quick-add` (`sku`, `qty`, `product_id`) |
 | `/order/{id}/placed` | `OrderController@placed` | `order_placed` | — |
 | `/orders` | `OrderController@index` | `orders` (+ `partials/orders_table` ×2) | — |
 | `/order/{id}` | `OrderController@show` | `order_show` | `order/{id}/cancel-request`, `order/{id}/reorder` |
@@ -264,3 +264,7 @@
 | `ui.price` | подписи НДС в карточках/поиске/главной | `product`, `mode` card/full: явные «без НДС» / «с НДС» |
 
 Порядок внедрения: хелперы `money`/`date` (механическая замена, проверяется тестами) → `alert` + `button` + `field` → `table` + `empty` (заодно мобильная адаптация) → `badge`/`page-header`. Мёртвые шаблоны (`welcome`, `dashboard`, `register`, `alerts`, неиспользуемые Breeze-компоненты) удалить отдельным коммитом.
+
+## Артикул и SKU на экранах
+
+Покупатель видит артикул производителя «Арт. …» (`Product::displayArticle`, без артикула — `sku`; в заказе — снимок `OrderItem::displayArticle`): `x-product-row`, `x-product-card`, `product` (с `x-copy`), `x-cart-row`, `partials/order_items`, подсказки поиска, выгрузка ассортимента. SKU — внутренний код обмена с 1С: только в админке — список и форма товара (оба поля), `partials/order_items` при `$admin` («SKU: …»), письмо о новом заказе, журнал обмена.

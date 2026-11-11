@@ -39,7 +39,8 @@ class AssortmentExportTest extends TestCase
         $this->client = User::factory()->create(['organization_id' => $this->org->id]);
         $this->otherClient = User::factory()->create(['organization_id' => $this->other->id]);
 
-        $grohe = $this->product('GR-001', 'Смеситель Grohe', ['price' => 100, 'vat_rate' => 20, 'stock' => 7]);
+        // Артикул производителя — вместо SKU сайта (GR-001 в файл не попадает)
+        $grohe = $this->product('GR-001', 'Смеситель Grohe', ['price' => 100, 'vat_rate' => 20, 'stock' => 7, 'article' => 'G-32559', 'brand' => 'Grohe']);
         $hans = $this->product('HG-002', 'Смеситель Hansgrohe', ['price' => 50.5, 'vat_rate' => null, 'stock' => 250]);
         $tbd = $this->product('AA-000', 'Сифон без цены', ['price' => null, 'stock' => 0]);
         $hidden = $this->product('ZZ-009', 'Снят с публикации', ['is_published' => false]);
@@ -110,13 +111,13 @@ class AssortmentExportTest extends TestCase
     public function test_export_contains_only_published_products_with_own_codes(): void
     {
         $this->assertSame([
-            ['Ваш код', 'Наш артикул', 'Название', 'Цена без НДС', 'Цена с НДС', 'Остаток'],
-            // Порядок — по артикулу; цены нет — «Цена уточняется»
-            ['T-1', 'AA-000', 'Сифон без цены', 'Цена уточняется', 'Цена уточняется', 0],
-            // Код с ведущими нулями — текстом; НДС 20 %; остаток — точным числом
-            ['00777', 'GR-001', 'Смеситель Grohe', 100, 120, 7],
+            ['Ваш код', 'Артикул', 'Бренд', 'Название', 'Цена без НДС', 'Цена с НДС', 'Остаток'],
+            // Порядок — по артикулу (без артикула — SKU); цены нет — «Цена уточняется»
+            ['T-1', 'AA-000', '', 'Сифон без цены', 'Цена уточняется', 'Цена уточняется', 0],
+            // Код с ведущими нулями — текстом; артикул производителя, не SKU; НДС 20 %; остаток — точным числом
+            ['00777', 'G-32559', 'Grohe', 'Смеситель Grohe', 100, 120, 7],
             // Без НДС — цена с НДС та же; остаток больше порога — «более 20»
-            ['Код-Б', 'HG-002', 'Смеситель Hansgrohe', 50.5, 50.5, 'более 20'],
+            ['Код-Б', 'HG-002', '', 'Смеситель Hansgrohe', 50.5, 50.5, 'более 20'],
         ], $this->download($this->client));
     }
 
@@ -125,7 +126,8 @@ class AssortmentExportTest extends TestCase
         $rows = $this->download($this->client, ['without_code' => 1]);
 
         $this->assertSame(['T-1', '00777', 'Код-Б', ''], array_column(array_slice($rows, 1), 0));
-        $this->assertSame(['', 'OR-003', 'Смеситель Oras без кода', 10, 12, 'более 20'], $rows[4]);
+        $this->assertSame(['', 'OR-003', '', 'Смеситель Oras без кода', 10, 12, 'более 20'], $rows[4]);
+        $this->assertNotContains('GR-001', array_merge(...$rows));
 
         // Снятые с публикации и неактивные — нет и с опцией
         $skus = array_column($rows, 1);
@@ -136,7 +138,7 @@ class AssortmentExportTest extends TestCase
     public function test_other_organization_codes_are_not_visible(): void
     {
         // У второй организации — только её код; коды первой не попадают ни в каком режиме
-        $this->assertSame([['CHUZHOY-1', 'GR-001']], array_map(fn ($r) => array_slice($r, 0, 2), array_slice($this->download($this->otherClient), 1)));
+        $this->assertSame([['CHUZHOY-1', 'G-32559']], array_map(fn ($r) => array_slice($r, 0, 2), array_slice($this->download($this->otherClient), 1)));
 
         $all = $this->download($this->otherClient, ['without_code' => 1]);
         $codes = array_filter(array_column($all, 0));
@@ -152,7 +154,7 @@ class AssortmentExportTest extends TestCase
         config(['shop.export_stock_cap' => 5]);
 
         $rows = collect($this->download($this->client))->keyBy(1);
-        $this->assertSame('более 5', $rows['GR-001'][5]);
-        $this->assertSame(0, $rows['AA-000'][5]);
+        $this->assertSame('более 5', $rows['G-32559'][6]);
+        $this->assertSame(0, $rows['AA-000'][6]);
     }
 }

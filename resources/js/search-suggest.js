@@ -7,7 +7,12 @@ const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({
 
 function render(data, query) {
     if (data.products.length === 0 && data.categories.length === 0) {
-        return '<div class="px-4 py-3 text-sm text-slate-500">Ничего не найдено</div>';
+        // Артикул без учёта дефисов: «Возможно, вы искали L4755-2» — ссылка на поиск, не переход к товару
+        const hints = (data.did_you_mean ?? []).map((article) => `<a href="/search?q=${encodeURIComponent(article)}" class="font-medium text-blue-600 hover:underline" data-did-you-mean>${escapeHtml(article)}</a>`);
+
+        return '<div class="px-4 py-3 text-sm text-slate-500">Ничего не найдено'
+            + (hints.length ? `. Возможно, вы искали ${hints.join(', ')}` : '')
+            + '</div>';
     }
 
     let html = '<div class="flex flex-col sm:flex-row sm:divide-x divide-slate-100">';
@@ -35,7 +40,7 @@ function render(data, query) {
             if (prod.client_code) {
                 // Две строки — на телефоне в одну не помещается: «Ваш код X», ниже «артикул · название»
                 html += `<div class="text-sm font-semibold text-slate-800 truncate" data-client-code>Ваш код ${escapeHtml(prod.client_code)}</div>`;
-                html += `<div class="text-xs text-slate-600 truncate">${escapeHtml(prod.sku)} · ${escapeHtml(prod.name)}</div>`;
+                html += `<div class="text-xs text-slate-600 truncate">Арт. ${escapeHtml(prod.article)} · ${escapeHtml(prod.name)}</div>`;
             } else {
                 html += `<div class="text-sm text-slate-800 truncate">${escapeHtml(prod.name)}</div>`;
             }

@@ -35,14 +35,14 @@ class AdminProductFormTest extends TestCase
         $this->category = Category::create(['name' => 'Смесители', 'slug' => 'smesiteli']);
 
         $this->product = Product::create([
-            'name'         => 'Grohe Start',
-            'sku'          => 'GR-001',
-            'brand'        => 'Grohe',
-            'price'        => 100,
-            'stock'        => 5,
-            'category_id'  => $this->category->id,
-            'description'  => 'Старое описание',
-            'is_active'    => true,
+            'name' => 'Grohe Start',
+            'sku' => 'GR-001',
+            'brand' => 'Grohe',
+            'price' => 100,
+            'stock' => 5,
+            'category_id' => $this->category->id,
+            'description' => 'Старое описание',
+            'is_active' => true,
             'is_published' => true,
         ]);
     }
@@ -69,32 +69,32 @@ class AdminProductFormTest extends TestCase
     private function newProduct(array $overrides = []): array
     {
         return array_merge([
-            'name'        => 'Hansgrohe Logis',
-            'sku'         => 'HG-100',
-            'brand'       => 'Hansgrohe',
-            'price'       => 250,
-            'vat_rate'    => 20,
-            'stock'       => 3,
+            'name' => 'Hansgrohe Logis',
+            'sku' => 'HG-100',
+            'brand' => 'Hansgrohe',
+            'price' => 250,
+            'vat_rate' => 20,
+            'stock' => 3,
             'category_id' => $this->category->id,
             'description' => 'Описание нового',
-            'is_active'   => 1,
+            'is_active' => 1,
         ], $overrides);
     }
 
     private function edit(array $overrides = []): array
     {
         return array_merge([
-            'name'             => 'Grohe Start',
-            'sku'              => 'GR-001',
-            'brand'            => 'Grohe',
-            'price'            => 100,
-            'vat_rate'         => 20,
-            'stock'            => 5,
-            'category_id'      => $this->category->id,
-            'display_name'     => '',
-            'slug'             => '',
-            'description'      => 'Старое описание',
-            'specifications'   => '',
+            'name' => 'Grohe Start',
+            'sku' => 'GR-001',
+            'brand' => 'Grohe',
+            'price' => 100,
+            'vat_rate' => 20,
+            'stock' => 5,
+            'category_id' => $this->category->id,
+            'display_name' => '',
+            'slug' => '',
+            'description' => 'Старое описание',
+            'specifications' => '',
             'package_contents' => '',
         ], $overrides);
     }
@@ -125,7 +125,7 @@ class AdminProductFormTest extends TestCase
 
         // Очередь в форме товара, кнопка «Загрузить» — та же форма, но сразу в блок фото
         $this->assertMatchesRegularExpression('#name="images\[\]"[^>]*form="product-form"#s', $html);
-        $this->assertStringContainsString('formaction="/admin/product/' . $this->product->id . '/images"', $html);
+        $this->assertStringContainsString('formaction="/admin/product/'.$this->product->id.'/images"', $html);
     }
 
     // --- Создание ---
@@ -205,8 +205,8 @@ class AdminProductFormTest extends TestCase
     public function test_save_draft_applies_erp_fields_and_keeps_texts_in_draft(): void
     {
         $this->actingAs($this->admin)->post("/admin/product/{$this->product->id}", $this->edit([
-            'action'      => 'draft',
-            'price'       => 120,
+            'action' => 'draft',
+            'price' => 120,
             'description' => 'Новое описание',
         ]))->assertSessionHasNoErrors();
 
@@ -230,9 +230,9 @@ class AdminProductFormTest extends TestCase
     public function test_publish_applies_texts_and_removes_draft(): void
     {
         $this->actingAs($this->admin)->post("/admin/product/{$this->product->id}", $this->edit([
-            'action'       => 'publish',
+            'action' => 'publish',
             'display_name' => 'Смеситель Grohe Start',
-            'description'  => 'Новое описание',
+            'description' => 'Новое описание',
         ]))->assertSessionHasNoErrors();
 
         $this->product->refresh();
@@ -261,7 +261,7 @@ class AdminProductFormTest extends TestCase
             ->assertOk()
             ->assertSee('Черновое описание')
             ->assertSee('data-preview-bar', false)
-            ->assertSee('href="/admin/product/' . $this->product->id . '"', false);
+            ->assertSee('href="/admin/product/'.$this->product->id.'"', false);
 
         $this->assertSame('Старое описание', $this->product->fresh()->description);
     }
@@ -317,7 +317,7 @@ class AdminProductFormTest extends TestCase
 
         // Поля кита пишут disabled="disabled"
         foreach (['name', 'sku', 'brand', 'price', 'stock'] as $field) {
-            $this->assertMatchesRegularExpression('#<input[^>]*name="' . $field . '"[^>]*\sdisabled[\s>=]#s', $html, $field);
+            $this->assertMatchesRegularExpression('#<input[^>]*name="'.$field.'"[^>]*\sdisabled[\s>=]#s', $html, $field);
         }
 
         $this->assertMatchesRegularExpression('#<select[^>]*name="vat_rate"[^>]*\sdisabled[\s>]#s', $html);
@@ -329,13 +329,13 @@ class AdminProductFormTest extends TestCase
         config(['shop.catalog.manual_products' => false]);
 
         $this->actingAs($this->admin)->post("/admin/product/{$this->product->id}", [
-            'action'      => 'publish',
-            'name'        => 'Взломанное имя',
-            'sku'         => 'HACK',
-            'brand'       => 'Other',
-            'price'       => -5,
-            'vat_rate'    => 'abc',
-            'stock'       => 999,
+            'action' => 'publish',
+            'name' => 'Взломанное имя',
+            'sku' => 'HACK',
+            'brand' => 'Other',
+            'price' => -5,
+            'vat_rate' => 'abc',
+            'stock' => 999,
             'description' => 'Новое описание',
         ])->assertSessionHasNoErrors();
 
@@ -372,9 +372,9 @@ class AdminProductFormTest extends TestCase
         $other = Category::create(['name' => 'Ванны', 'slug' => 'vanny']);
 
         $this->actingAs($this->admin)->post("/admin/product/{$this->product->id}", [
-            'action'      => 'draft',
+            'action' => 'draft',
             'category_id' => $other->id,
-            'brand'       => 'Other',
+            'brand' => 'Other',
         ])->assertSessionHasNoErrors();
 
         $this->product->refresh();
@@ -421,8 +421,10 @@ class AdminProductFormTest extends TestCase
         $this->assertMatchesRegularExpression('/<select[^>]*id="f-vat"[^>]*\sdisabled(?=[\s=>\/])/s', $html);
         $this->assertStringContainsString('value="START-1"', $html);
         $this->assertStringContainsString('value="компл"', $html);
+        // SKU у товара с GUID — только чтение: код сайта 1С хранит у себя
+        $this->assertMatchesRegularExpression('/<input[^>]*id="f-sku"[^>]*\sdisabled(?=[\s=>\/])/s', $html);
+        $this->assertMatchesRegularExpression('/id="f-sku-hint"[^>]*>\s*код обмена с 1С/u', $html);
         // Не из 1С — редактируются
-        $this->assertDoesNotMatchRegularExpression('/<input[^>]*id="f-sku"[^>]*\sdisabled(?=[\s=>\/])/s', $html);
         $this->assertDoesNotMatchRegularExpression('/<input[^>]*id="f-min_qty"[^>]*\sdisabled(?=[\s=>\/])/s', $html);
     }
 
@@ -438,8 +440,8 @@ class AdminProductFormTest extends TestCase
 
         $product = $this->product->fresh();
         $this->assertSame(['Grohe Start', 'Grohe', 100.0, 20.0, 5], [$product->name, $product->brand, (float) $product->price, (float) $product->vat_rate, $product->stock]);
-        // Поля не из списка 1С — как прежде, сразу
-        $this->assertSame(['GR-002', 2, 2], [$product->sku, $product->min_qty, $product->qty_step]);
+        // SKU у товара с GUID не меняется; поля не из списка 1С — как прежде, сразу
+        $this->assertSame(['GR-001', 2, 2], [$product->sku, $product->min_qty, $product->qty_step]);
     }
 
     public function test_product_with_guid_saves_without_1c_fields_in_request(): void
@@ -462,7 +464,8 @@ class AdminProductFormTest extends TestCase
         $html = $this->actingAs($this->admin)->get("/admin/product/{$this->product->id}")->assertOk()->getContent();
         $this->assertMatchesRegularExpression('/id="f-min_qty-hint"[^>]*>\s*из 1С/u', $html);
         $this->assertDoesNotMatchRegularExpression('/<input[^>]*id="f-price"[^>]*\sdisabled(?=[\s=>\/])/s', $html);
-        $this->assertStringNotContainsString('id="f-article"', $html);
+        // Артикул не из списка 1С — редактируется
+        $this->assertDoesNotMatchRegularExpression('/<input[^>]*id="f-article"[^>]*\sdisabled(?=[\s=>\/])/s', $html);
 
         $this->actingAs($this->admin)->post("/admin/product/{$this->product->id}", $this->edit([
             'action' => 'draft', 'name' => 'Подмена', 'price' => 120, 'min_qty' => 3, 'qty_step' => 3, 'default_qty' => 3,

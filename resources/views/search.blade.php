@@ -22,6 +22,13 @@
 @if($products->isEmpty())
 
     <x-empty-state title="По вашему запросу ничего не найдено" icon="magnifying-glass" data-empty>
+        @if($didYouMean ?? [])
+            <span class="block" data-did-you-mean>Возможно, вы искали
+                @foreach($didYouMean as $article)
+                    <x-button variant="link" :href="route('search.index', ['q' => $article])">{{ $article }}</x-button>@if(! $loop->last), @endif
+                @endforeach
+            </span>
+        @endif
         Проверьте артикул или название, попробуйте запрос короче.
         <x-slot:action>
             <x-button variant="secondary" :href="route('catalog.index')">Перейти в каталог</x-button>

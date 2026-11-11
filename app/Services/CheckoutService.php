@@ -147,6 +147,7 @@ class CheckoutService
                     'product_id' => $product->id,
                     'product_name' => $product->title(),
                     'product_sku' => $product->sku,
+                    'product_article' => trim((string) $product->article) !== '' ? trim($product->article) : null,
                     'product_guid' => $product->guid,
                     'client_code' => $clientCodes->get($product->id),
                     'quantity' => $item->quantity,
