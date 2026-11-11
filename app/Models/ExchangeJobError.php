@@ -11,6 +11,12 @@ class ExchangeJobError extends Model
 {
     public $timestamps = false;
 
+    /**
+     * Длины колонок: guid и sku приходят из файла как есть, сообщение содержит значения ячеек.
+     * Пишется массово (insert мимо модели) — обрезает ExchangeResult::error.
+     */
+    public const LENGTHS = ['guid' => 64, 'sku' => 255, 'message' => 2000];
+
     protected $fillable = ['exchange_job_id', 'line', 'guid', 'sku', 'message'];
 
     public function job()

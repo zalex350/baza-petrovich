@@ -34,6 +34,8 @@ services:
   queue:
     image: smesitel_by-app:latest
     pull_policy: never
+    # От www-data, как php-fpm: лог и файлы обмена в storage — одного владельца
+    user: www-data
     command: ["php", "artisan", "queue:work", "--tries=3", "--sleep=3", "--max-time=3600"]
     restart: unless-stopped
     stop_grace_period: 30s
@@ -51,6 +53,7 @@ services:
   scheduler:
     image: smesitel_by-app:latest
     pull_policy: never
+    user: www-data
     command: ["php", "artisan", "schedule:work"]
     restart: unless-stopped
     stop_grace_period: 30s
