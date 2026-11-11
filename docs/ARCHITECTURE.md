@@ -31,7 +31,8 @@ Auth на основе Breeze (`laravel/breeze` в dev). Самостоятел�
 |---|---|---|---|
 | `nginx` | `nginx:latest` | 8090 (`APP_PORT`) | Веб-сервер, конфиг `docker/nginx/default.conf` |
 | `php` | `docker/php/Dockerfile` | — | PHP-FPM; здесь `artisan`, `composer` и тесты |
-| `queue` | тот же образ | — | `queue:work --tries=3`: письма из очереди. После правок PHP — `docker-compose restart queue` |
+| `queue` | тот же образ | — | `queue:work --tries=3`: письма из очереди, обработка заданий обмена с 1С. После правок PHP — `docker-compose restart queue` |
+| `scheduler` | тот же образ | — | `schedule:work`: расписание `routes/console.php` (обмен с 1С — `exchange:prune`, `exchange:check`). После правок PHP — `docker-compose restart scheduler` |
 | `mysql` | `mysql:8.0` | 3307 | БД, том `smesitel_by_dbdata`; пароли — только в `.env` |
 | `mailpit` | `axllent/mailpit` | 8025 (веб), 1025 (SMTP) | Перехват почты локально |
 | `node` | `node:22` | — | Только сборка: `npm run build` |
@@ -64,7 +65,7 @@ Auth на основе Breeze (`laravel/breeze` в dev). Самостоятел�
 | `database/seeders` | `DemoSeeder` (только `APP_ENV=staging`), демо-каталог, бенчмарк |
 | `resources/views` | Страницы витрины и кабинета, `admin/`, `partials/`, `layouts/`, `components/` (кит) |
 | `resources/js` | `app.js` и модули Alpine (§6) |
-| `routes/*.php` | Маршруты по доменам, подключаются из `web.php` |
+| `routes/*.php` | Маршруты по доменам, подключаются из `web.php`; `api.php` — API обмена с 1С (`/api/1c/v1`, подключается в `bootstrap/app.php`) |
 | `tests/Feature`, `tests/Unit` | Тесты; кит — `tests/Feature/Ui` |
 | `docs/` | Документация; `docs/design/*.dc.html` — макеты (только референс) |
 
@@ -99,7 +100,8 @@ Auth на основе Breeze (`laravel/breeze` в dev). Самостоятел�
 | `auth` | корзина, заказы, профиль, админка | Гостя отправляет на вход |
 | `role:admin` / `role:client` (`EnsureUserHasRole`) | `routes/admin.php`, адреса клиента | Нет нужной роли → 403 |
 | `EnsureUserIsNotBlocked` | все web-запросы | Заблокированного выходит из сессии и отправляет на вход с сообщением «Учётная запись заблокирована» |
-| `trustProxies('*')` | все запросы | Учитывает HTTPS за прокси на стенде |
+| `trustProxies('*')` | все запросы | Учитывает HTTPS за прокси на стенде; IP клиента — из `X-Forwarded-For`, который ставит nginx сервера |
+| `AuthenticateExchange` + `throttle:exchange-1c` | `routes/api.php` | IP из белого списка (`exchange_ips`, иначе 403), Bearer-токен (`exchange_tokens`, только SHA-256, иначе 401), частота на токен (`shop.exchange_1c.rate_limit_per_minute`, иначе 429). Ошибки — JSON `{"error", "message"}` (`App\Http\ExchangeErrorResponse`) |
 
 Вход: `/login`, `?return=` возвращает на исходную страницу. `/account`: администратора ведёт на `/admin`, клиента — на `/orders`.
 
@@ -119,6 +121,7 @@ Auth на основе Breeze (`laravel/breeze` в dev). Самостоятел�
 - Слушатели регистрируются автообнаружением (`handle*` с типом события).
 - `UserInvitation` (приглашение) отправляется сразу, без очереди и событий.
 - Получатели — активные администраторы с включённой галочкой (`User::notifiedAdmins()`), настройка — в карточке администратора.
+- Обмен с 1С: принятый файл → задание `exchange_jobs` → `ProcessExchangeJob` в очереди (обработчик типа, пока заглушка) → `ExchangeAlerts::afterJob` (письма `ExchangeAlertNotification` администраторам с `notify_exchange`: failed, много ошибок). По расписанию — `exchange:check` (давно нет цен, заказы ждут передачи), `exchange:prune` (архив старше 90 дней). Письмо одного вида — не чаще настройки (`Cache::add`).
 - Кэш (`CACHE_STORE=database`): дерево меню каталога (`CatalogMenu`, TTL `shop.catalog_menu_ttl`). Его сбрасывает `CatalogMenuObserver`; после массовых `update()` — вручную через `CatalogMenu::flush()`.
 
 ## 7. Фронтенд

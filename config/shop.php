@@ -83,6 +83,15 @@ return [
         'managed_fields' => array_values(array_filter(array_map('trim', explode(',',
             (string) env('SHOP_1C_MANAGED_FIELDS', 'article,name,brand,unit,vat_rate,price,stock')
         )))),
+
+        // API /api/1c/v1 (docs/1C_EXCHANGE_SPEC.md, раздел 2): предел тела запроса (и сжатого,
+        // и распакованного) — сверх 413; запросов в минуту на токен — сверх 429 с Retry-After;
+        // срок хранения принятых файлов (storage/app/exchange, очистка exchange:prune)
+        'max_body_mb' => (int) env('SHOP_1C_MAX_BODY_MB', 50),
+        'rate_limit_per_minute' => (int) env('SHOP_1C_RATE_LIMIT', 60),
+        'archive_days' => (int) env('SHOP_1C_ARCHIVE_DAYS', 90),
+        // Пояс времени в ответах API (ISO 8601 со смещением); на входе — любое смещение (App\Support\ExchangeTime)
+        'timezone' => env('SHOP_1C_TIMEZONE', 'Europe/Minsk'),
     ],
 
     'orders' => [

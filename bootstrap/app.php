@@ -7,6 +7,9 @@ use Illuminate\Foundation\Configuration\Middleware;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        // API обмена с 1С (docs/1C_EXCHANGE_SPEC.md): только он, поэтому префикс — на весь файл
+        api: __DIR__.'/../routes/api.php',
+        apiPrefix: 'api/1c/v1',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
@@ -26,6 +29,15 @@ return Application::configure(basePath: dirname(__DIR__))
 
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+
+        // API обмена с 1С: любая ошибка — JSON {"error": "код", "message": "текст"} (раздел 2)
+        $exceptions->render(function (\Throwable $e, \Illuminate\Http\Request $request) {
+            if (! $request->is('api/1c/*')) {
+                return null;
+            }
+
+            return \App\Http\ExchangeErrorResponse::from($e);
+        });
 
         // Общий объём запроса больше post_max_size (несколько больших фото сразу). Сессия
         // ещё не запущена — flash не сохранить, поэтому простая страница с объяснением.

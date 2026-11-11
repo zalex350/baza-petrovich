@@ -8,6 +8,9 @@ use App\Observers\CatalogMenuObserver;
 use App\Services\ClientCodes;
 use App\View\Composers\CatalogMenuComposer;
 use App\View\Composers\HeaderComposer;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -26,5 +29,9 @@ class AppServiceProvider extends ServiceProvider
 
         Category::observe(CatalogMenuObserver::class);
         Product::observe(CatalogMenuObserver::class);
+
+        // API обмена с 1С: запросов в минуту на токен (без токена — на IP); сверх — 429 с Retry-After
+        RateLimiter::for('exchange-1c', fn (Request $request) => Limit::perMinute((int) config('shop.exchange_1c.rate_limit_per_minute', 60))
+            ->by('exchange-1c:'.($request->attributes->get('exchange_token')?->id ?? $request->ip())));
     }
 }

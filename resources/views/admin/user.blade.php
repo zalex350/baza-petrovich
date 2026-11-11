@@ -164,6 +164,13 @@
             :checked="$user->notify_partner_request"
         />
 
+        <x-checkbox
+            name="notify_exchange"
+            label="Сбои обмена с 1С"
+            hint="Письмо, если задание обмена не обработано, в нём много ошибок или цены давно не приходили."
+            :checked="$user->notify_exchange"
+        />
+
         <x-button size="sm">Сохранить</x-button>
     </form>
 

@@ -38,6 +38,14 @@ return [
             'report' => false,
         ],
 
+        // Архив файлов обмена с 1С (ГГГГ/ММ/<job_id>.csv), закрытый; срок — shop.exchange_1c.archive_days
+        'exchange' => [
+            'driver' => 'local',
+            'root' => storage_path('app/exchange'),
+            'throw' => true,
+            'report' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

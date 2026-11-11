@@ -7,7 +7,7 @@
 |---|---|
 | Код (git, ветка `master`) | `/home/deploy/smesitel_by` |
 | Настройки | `/home/deploy/smesitel_by/.env` (владелец `deploy:www-data`, права `640`) |
-| Контейнеры | `docker-compose.staging.yml`, проект `smesitel_by`: `php`, `nginx`, `mysql`, `queue` (воркер очереди: письма) |
+| Контейнеры | `docker-compose.staging.yml`, проект `smesitel_by`: `php`, `nginx`, `mysql`, `queue` (воркер очереди: письма, обмен с 1С), `scheduler` (планировщик: архив и проверки обмена с 1С) |
 | БД MySQL 8 | том `smesitel_by_dbdata`, наружу не открыта |
 | Фото, логи, сессии | том `smesitel_by_storage` (`/var/www/storage` в контейнерах) |
 | HTTPS, пароль на сайт | nginx сервера: `/etc/nginx/sites-enabled/smesitel`, certbot, `/etc/nginx/.htpasswd` |
@@ -48,7 +48,7 @@ cd /home/deploy/smesitel_by
 
 Скрипт по шагам: бэкап БД → `git pull` → сборка образов (`composer install --no-dev`,
 `npm ci && npm run build`) → миграции новым образом → перезапуск контейнеров →
-`storage:link` → кэши config/route/view → `queue:restart` (воркер очереди перезапускается
+`storage:link` → кэши config/route/view → `queue:restart` и проверка планировщика `scheduler` (воркер очереди перезапускается
 с новым кодом) → проверка `http://127.0.0.1:8090/up`.
 
 - Ошибка на любом шаге — скрипт останавливается и пишет, на каком. Если до перезапуска —
@@ -133,6 +133,18 @@ cd /home/deploy/smesitel_by
        auth_basic "Staging";
        auth_basic_user_file /etc/nginx/.htpasswd;
 
+       # API обмена с 1С — без пароля стенда (раздел «API обмена с 1С»)
+       location /api/1c/ {
+           auth_basic off;
+           client_max_body_size 50m;
+           proxy_pass http://127.0.0.1:8090;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $remote_addr;
+           proxy_set_header X-Forwarded-Proto $scheme;
+           proxy_read_timeout 120s;
+       }
+
        location / {
            proxy_pass http://127.0.0.1:8090;
            proxy_set_header Host $host;
@@ -149,6 +161,93 @@ cd /home/deploy/smesitel_by
    и редирект с http. `sudo nginx -t && sudo systemctl reload nginx`.
 7. **Данные:** демо-учётки и заказы — см. «Демо-данные»; каталог — «Импорт каталога на стенде»
    (прежний импорт из JSON — «Полезные команды → Импорт каталога из JSON»).
+
+## API обмена с 1С
+
+Адрес: `https://test.smesitel.by/api/1c/v1` (`docs/1C_EXCHANGE_SPEC.md`). Доступ — Bearer-токен
+и белый список IP из админки («Обмен с 1С» → «Токены», «IP-адреса»); пока список IP пуст,
+API отвечает 403 всем. Basic auth стенда на `/api/1c/` не действует — 1С его не передаёт.
+
+| Что | Значение |
+|---|---|
+| nginx сервера | `location /api/1c/` без `auth_basic`, `client_max_body_size 50m`, `X-Forwarded-For $remote_addr` (адрес клиента — для проверки IP) |
+| nginx стенда (`docker/staging/nginx.conf`) | `client_max_body_size 210M` — больше 50 МБ, менять не нужно |
+| PHP (`docker/php/php.ini` в образе) | `post_max_size = 210M` (тело запроса API), `upload_max_filesize = 20M` (фото; на API не влияет) — менять не нужно. Предел API — 50 МБ в приложении (`SHOP_1C_MAX_BODY_MB`), сверх — 413 |
+| Файлы обмена | том `smesitel_by_storage`: `storage/app/exchange/ГГГГ/ММ/<job_id>.csv`, удаляются через 90 дней (`exchange:prune`) |
+| Обработка | очередь (сервис `queue`); письма о сбоях — администраторам с галочкой «Сбои обмена с 1С» |
+| Расписание | сервис `scheduler` (`php artisan schedule:work`): `exchange:prune` ежедневно 04:10, `exchange:check` раз в 10 минут. До этапа 2 планировщика на стенде не было — его добавляет `./deploy.sh` |
+
+### Настройка nginx сервера (один раз)
+
+Блок `location /api/1c/` — в тот `server`, где `server_name test.smesitel.by` и `listen 443`
+(certbot дописал его в `/etc/nginx/sites-available/smesitel`), перед `location / {`:
+
+```nginx
+    # API обмена с 1С: без basic auth, тело до 50 МБ; X-Forwarded-For — только адрес клиента
+    # (проверка IP по белому списку, подставленный клиентом заголовок не передаётся)
+    location /api/1c/ {
+        auth_basic off;
+        client_max_body_size 50m;
+        proxy_pass http://127.0.0.1:8090;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+    }
+```
+
+Команды (от пользователя с sudo):
+
+```bash
+# 1. Копия текущего конфига
+sudo cp /etc/nginx/sites-available/smesitel /etc/nginx/sites-available/smesitel.bak-$(date +%F)
+
+# 2. Где блок 443 и location / (вставить блок выше перед «location / {» этого server)
+sudo grep -n "listen 443\|server_name\|location /" /etc/nginx/sites-available/smesitel
+sudo nano /etc/nginx/sites-available/smesitel
+
+# 3. Проверка и применение
+sudo nginx -t && sudo systemctl reload nginx
+
+# 4. Без пароля стенда API отвечает JSON (403 — IP ещё не в списке), а не 401 basic auth
+curl -i https://test.smesitel.by/api/1c/v1/ping
+```
+
+Если `nginx -t` ругается — вернуть копию: `sudo cp /etc/nginx/sites-available/smesitel.bak-<дата> /etc/nginx/sites-available/smesitel && sudo systemctl reload nginx`.
+
+### Планировщик
+
+```bash
+cd /home/deploy/smesitel_by
+docker compose ps --services --status running    # до деплоя этапа 2: php nginx mysql queue — без scheduler
+crontab -l                                         # в cron только бэкап (deploy.sh install-cron), schedule:run нет
+./deploy.sh                                        # поднимет scheduler; шаг «Планировщик» проверит, что он запущен
+docker compose ps scheduler
+docker compose exec php php artisan schedule:list  # exchange:prune, exchange:check
+docker compose logs --tail=50 scheduler
+```
+
+### Проверка с токеном
+
+Токен — «Обмен с 1С» → «Токены» → «Создать токен» (показывается один раз). Свой внешний IP
+видно на вкладке «IP-адреса» («Ваш текущий адрес») — добавить его на время проверки, потом удалить.
+
+```bash
+TOKEN=sm1c_...    # не сохранять в истории: пробел перед командой, если HISTCONTROL=ignorespace
+
+curl -s https://test.smesitel.by/api/1c/v1/ping -H "Authorization: Bearer $TOKEN"
+
+printf 'guid;sku;name;brand;unit;vat_rate;active\ng-1;L4755-2;Смеситель;LEDEME;шт;20;1\n' \
+  | gzip -c | curl -s -X POST --data-binary @- "https://test.smesitel.by/api/1c/v1/catalog?mode=delta" \
+    -H "Authorization: Bearer $TOKEN" -H "Content-Type: text/csv" -H "Content-Encoding: gzip" \
+    -H "X-Exchange-Id: $(cat /proc/sys/kernel/random/uuid)"
+# → {"job_id":"…","status":"queued"}
+
+curl -s https://test.smesitel.by/api/1c/v1/jobs/<job_id> -H "Authorization: Bearer $TOKEN"
+```
+
+Пока обработчики не подключены (этапы 3–5), задание сразу `done` с нулём строк, данные сайта не меняются.
 
 ## Демо-данные
 

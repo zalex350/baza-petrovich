@@ -216,6 +216,12 @@ finish() {
     fi
     php_exec queue:restart
 
+    # Планировщик (обмен с 1С: очистка архива, письма о сбоях). up -d пересоздал его новым образом
+    step "Планировщик"
+    if ! compose ps --status running --services | grep -qx scheduler; then
+        fail "планировщик не запущен. Логи: docker compose logs --tail=100 scheduler"
+    fi
+
     step "Проверка"
     local port url
     port="${APP_PORT:-$(grep -E "^APP_PORT=" .env | cut -d= -f2 || true)}"

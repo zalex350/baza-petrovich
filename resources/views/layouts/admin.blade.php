@@ -43,6 +43,7 @@
         ['url' => '/admin/categories',    'label' => 'Категории',    'icon' => 'heroicon-o-folder',                  'active' => ['admin/categories', 'admin/category/*']],
         ['url' => '/admin/banners',       'label' => 'Баннеры',      'icon' => 'heroicon-o-photo',                   'active' => ['admin/banners', 'admin/banner/*']],
         ['url' => '/admin/pages',         'label' => 'Страницы',     'icon' => 'heroicon-o-document-text',           'active' => ['admin/pages', 'admin/page/*']],
+        ['url' => '/admin/exchange',      'label' => 'Обмен с 1С',   'icon' => 'heroicon-o-arrows-right-left',       'active' => ['admin/exchange', 'admin/exchange/*']],
         ['url' => '/admin/settings',      'label' => 'Настройки',    'icon' => 'heroicon-o-cog-6-tooth',             'active' => ['admin/settings']],
     ];
 @endphp

@@ -95,6 +95,7 @@ Routes are split by domain into separate files in `routes/`:
 - `admin.php` — admin panel routes (requires `auth` + `admin` middleware), prefix `/admin`
 - `web.php` — public pages (home, product detail)
 - `catalog.php`, `search.php`, `cart.php`, `orders.php`, `profile.php`, `auth.php`
+- `api.php` — API обмена с 1С, префикс `/api/1c/v1` (`bootstrap/app.php`; токен + белый список IP — `AuthenticateExchange`, `docs/1C_EXCHANGE_SPEC.md`)
 
 Полная карта «URL → контроллер → шаблон» — `docs/UI_INVENTORY.md`.
 
@@ -144,7 +145,7 @@ DB_HOST=mysql  # Docker service name
 DB_PORT=3306
 DB_DATABASE=smesitel
 SESSION_DRIVER=database
-QUEUE_CONNECTION=database   # воркер — контейнер queue; после правок PHP: docker-compose restart queue
+QUEUE_CONNECTION=database   # воркер — контейнер queue; после правок PHP: docker-compose restart queue (и scheduler)
 CACHE_STORE=database
 MAIL_MAILER=smtp             # локально — Mailpit: MAIL_HOST=mailpit, MAIL_PORT=1025, письма — http://localhost:8025
 APP_NAME=smesitel.by         # отправитель и подпись писем (MAIL_FROM_NAME="${APP_NAME}")
