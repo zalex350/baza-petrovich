@@ -12,7 +12,11 @@
 # Шаги: бэкап БД → git pull → сборка образов (composer install --no-dev, npm ci &&
 # npm run build — внутри docker/staging/Dockerfile) → migrate --force (новым образом,
 # пока работает старая версия) → перезапуск контейнеров → storage:link → кэши
-# config/route/view → queue:restart (воркер очереди) → проверка /up.
+# config/route/view → права storage и bootstrap/cache (www-data) → queue:restart
+# (воркер очереди) → проверка /up.
+# artisan — всегда от www-data (php_exec, migrate): от root он создаёт laravel.log и кэши,
+# в которые php-fpm потом не может писать (ошибки приложения теряются). Ручной запуск на
+# сервере — так же: docker compose -f docker-compose.staging.yml exec -u www-data php php artisan …
 # Ошибка до перезапуска — стенд остаётся на прежней версии.
 #
 # Настройки (переменные окружения):
@@ -69,7 +73,13 @@ compose() {
 }
 
 php_exec() {
-    compose exec -T php php artisan "$@"
+    compose exec -T -u www-data php php artisan "$@"
+}
+
+# Владелец storage (том) и bootstrap/cache — www-data: чинит и файлы, созданные ручным
+# artisan от root (laravel.log, кэши)
+fix_permissions() {
+    compose exec -T -u root php chown -R www-data:www-data storage bootstrap/cache
 }
 
 # --- Проверки ---
@@ -191,7 +201,7 @@ import_host_storage() {
 migrate() {
     step "Миграции (php artisan migrate --force)"
     compose up -d mysql
-    compose run --rm -T php php artisan migrate --force
+    compose run --rm -T --user www-data php php artisan migrate --force
 }
 
 restart() {
@@ -202,10 +212,18 @@ restart() {
 
 finish() {
     step "storage:link и кэши config/route/view"
-    compose exec -T php sh -c '[ -L public/storage ] || php artisan storage:link'
+    fix_permissions
+    compose exec -T -u www-data php sh -c '[ -L public/storage ] || php artisan storage:link'
     php_exec config:cache
     php_exec route:cache
     php_exec view:cache
+
+    step "Права storage и bootstrap/cache (www-data)"
+    fix_permissions
+    local foreign
+    foreign="$(compose exec -T -u root php sh -c 'find storage bootstrap/cache ! -user www-data | head -5')"
+    [ -z "$foreign" ] || fail "остались файлы не от www-data: $foreign"
+    echo "Готово: владелец — www-data"
 
     step "Воркер очереди"
     # up -d уже пересоздал queue новым образом. queue:restart — и для случаев, когда контейнер

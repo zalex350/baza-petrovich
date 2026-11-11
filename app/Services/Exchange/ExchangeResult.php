@@ -2,6 +2,9 @@
 
 namespace App\Services\Exchange;
 
+use App\Models\ExchangeJobError;
+use App\Support\ColumnLength;
+
 /**
  * Итог обработки файла: счётчики строк и ошибки по строкам (exchange_job_errors).
  */
@@ -21,6 +24,10 @@ class ExchangeResult
 
     public function error(?int $line, ?string $guid, ?string $sku, string $message): void
     {
-        $this->errors[] = ['line' => $line, 'guid' => $guid, 'sku' => $sku, 'message' => $message];
+        // Значения из файла — любой длины: обрезка до колонок exchange_job_errors
+        $this->errors[] = ColumnLength::fit(
+            ['line' => $line, 'guid' => $guid, 'sku' => $sku, 'message' => $message],
+            ExchangeJobError::LENGTHS,
+        );
     }
 }
