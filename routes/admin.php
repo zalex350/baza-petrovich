@@ -356,4 +356,10 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post('/admin/exchange/ips', [AdminExchangeController::class, 'storeIp']);
     Route::post('/admin/exchange/ip/{id}/delete', [AdminExchangeController::class, 'deleteIp'])->whereNumber('id');
     Route::post('/admin/exchange/settings', [AdminExchangeController::class, 'saveSettings']);
+    // Ручная загрузка цен и остатков: файл → предпросмотр → применить / отменить; шаблон
+    Route::post('/admin/exchange/prices', [AdminExchangeController::class, 'uploadPrices']);
+    Route::get('/admin/exchange/prices/preview', [AdminExchangeController::class, 'previewPrices']);
+    Route::post('/admin/exchange/prices/apply', [AdminExchangeController::class, 'applyPrices']);
+    Route::post('/admin/exchange/prices/cancel', [AdminExchangeController::class, 'cancelPrices']);
+    Route::get('/admin/exchange/prices/template', [AdminExchangeController::class, 'pricesTemplate']);
 });

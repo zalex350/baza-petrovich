@@ -22,8 +22,8 @@ class ExchangeApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const CSV = "guid;sku;name;brand;unit;vat_rate;min_qty;qty_step;barcode;group_1c;active\n"
-        ."5f1c2b8a-3d4e-11ef-9a1b-0050569a1c01;L4755-2;Смеситель LEDEME L4755-2;LEDEME;шт;20;1;1;;Смесители;1\n";
+    private const CSV = "guid;sku;article;brand;name;unit;vat_rate;min_qty;qty_step;barcode;group_1c;active\n"
+        ."5f1c2b8a-3d4e-11ef-9a1b-0050569a1c01;LEDEME-L4755-2;L4755-2;LEDEME;Смеситель LEDEME L4755-2;шт;20;1;1;;Смесители;1\n";
 
     private const PRICES = "guid;sku;price;stock;stock_status;updated_at\n"
         ."5f1c2b8a-3d4e-11ef-9a1b-0050569a1c01;L4755-2;832.26;7;in_stock;2026-11-10T18:30:00+03:00\n";
@@ -171,6 +171,13 @@ class ExchangeApiTest extends TestCase
         $id = $this->postCsv('/catalog', "\u{FEFF}".self::CSV)->assertStatus(202)->json('job_id');
 
         $this->assertSame(self::CSV, Storage::disk('exchange')->get(ExchangeJob::find($id)->file_path));
+    }
+
+    public function test_catalog_requires_article_and_sku_column_is_optional(): void
+    {
+        // sku — код товара на сайте; в 1С может не быть поля под него. Артикул производителя обязателен
+        $this->assertError($this->postCsv('/catalog', "guid;sku;name;unit;vat_rate;active\nx;LEDEME-A1;z;шт;20;1\n"), 400, 'missing_columns');
+        $this->postCsv('/catalog', "guid;article;brand;name;unit;vat_rate;active\nx;A1;LEDEME;z;шт;20;1\n")->assertStatus(202);
     }
 
     public function test_unreadable_files_are_400_and_not_saved(): void

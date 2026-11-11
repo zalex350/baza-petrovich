@@ -25,7 +25,13 @@
                 ещё не завершена
             @endif
         </dd></div>
-        <div><dt class="text-meta text-ink-muted">Токен, IP</dt><dd>{{ $job->token->name ?? '—' }} · {{ $job->ip ?? '—' }}</dd></div>
+        <div><dt class="text-meta text-ink-muted">Источник</dt><dd>
+            @if($job->isManual())
+                Вручную — {{ $job->user->name ?? '—' }}
+            @else
+                1С: {{ $job->token->name ?? '—' }} · {{ $job->ip ?? '—' }}
+            @endif
+        </dd></div>
         <div><dt class="text-meta text-ink-muted">X-Exchange-Id</dt><dd><code class="break-all">{{ $job->exchange_id ?? '—' }}</code></dd></div>
         <div class="sm:col-span-2"><dt class="text-meta text-ink-muted">Исходный файл</dt><dd>
             @if($job->hasFile())
@@ -40,7 +46,11 @@
     </dl>
 
     @if($job->message)
-        <x-alert type="error" title="Задание не обработано" class="mt-4">{{ $job->message }}</x-alert>
+        @if($job->status === \App\Enums\ExchangeJobStatus::Failed)
+            <x-alert type="error" title="Задание не обработано" class="mt-4">{{ $job->message }}</x-alert>
+        @else
+            <x-alert type="info" class="mt-4">{{ $job->message }}</x-alert>
+        @endif
     @endif
 </div>
 
@@ -53,7 +63,7 @@
         <x-slot:head>
             <x-table.th align="right">Строка</x-table.th>
             <x-table.th>GUID</x-table.th>
-            <x-table.th>Артикул</x-table.th>
+            <x-table.th>SKU</x-table.th>
             <x-table.th>Ошибка</x-table.th>
         </x-slot:head>
 
@@ -61,7 +71,7 @@
             <tr data-exchange-error>
                 <x-table.td label="Строка" align="right" nowrap>{{ $error->line ?? '—' }}</x-table.td>
                 <x-table.td label="GUID"><code class="break-all">{{ $error->guid ?? '—' }}</code></x-table.td>
-                <x-table.td label="Артикул">{{ $error->sku ?? '—' }}</x-table.td>
+                <x-table.td label="SKU">{{ $error->sku ?? '—' }}</x-table.td>
                 <x-table.td label="Ошибка">{{ $error->message }}</x-table.td>
             </tr>
         @endforeach

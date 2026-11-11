@@ -101,7 +101,7 @@ Auth на основе Breeze (`laravel/breeze` в dev). Самостоятел�
 | `role:admin` / `role:client` (`EnsureUserHasRole`) | `routes/admin.php`, адреса клиента | Нет нужной роли → 403 |
 | `EnsureUserIsNotBlocked` | все web-запросы | Заблокированного выходит из сессии и отправляет на вход с сообщением «Учётная запись заблокирована» |
 | `trustProxies('*')` | все запросы | Учитывает HTTPS за прокси на стенде; IP клиента — из `X-Forwarded-For`, который ставит nginx сервера |
-| `AuthenticateExchange` + `throttle:exchange-1c` | `routes/api.php` | IP из белого списка (`exchange_ips`, иначе 403), Bearer-токен (`exchange_tokens`, только SHA-256, иначе 401), частота на токен (`shop.exchange_1c.rate_limit_per_minute`, иначе 429). Ошибки — JSON `{"error", "message"}` (`App\Http\ExchangeErrorResponse`) |
+| `AuthenticateExchange` + `throttle:exchange-1c` | `routes/api.php` | IP из белого списка (`exchange_ips`, иначе 403), Bearer-токен (`exchange_tokens`, только SHA-256, иначе 401), частота на токен (`shop.exchange_1c.rate_limit_per_minute`, иначе 429). Ошибки — JSON `{"error", "message"}` (`App\Http\ExchangeErrorResponse`). CORS выключен (`config/cors.php`, `paths = []`) |
 
 Вход: `/login`, `?return=` возвращает на исходную страницу. `/account`: администратора ведёт на `/admin`, клиента — на `/orders`.
 

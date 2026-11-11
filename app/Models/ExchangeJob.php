@@ -21,8 +21,17 @@ class ExchangeJob extends Model
     /** Ошибок по строкам в ответе GET /jobs/{id}; полный список — в журнале админки */
     public const API_ERRORS_LIMIT = 1000;
 
+    /** Источник: прислала 1С по API / загрузил администратор в админке */
+    public const SOURCE_API = 'api';
+
+    public const SOURCE_MANUAL = 'manual';
+
+    protected $attributes = [
+        'source' => self::SOURCE_API,
+    ];
+
     protected $fillable = [
-        'type', 'direction', 'mode', 'status', 'exchange_id', 'token_id', 'ip',
+        'type', 'direction', 'source', 'mode', 'status', 'exchange_id', 'token_id', 'user_id', 'ip',
         'file_path', 'file_size', 'content_type', 'gzip',
         'rows_total', 'rows_ok', 'rows_skipped', 'rows_error', 'message',
         'received_at', 'started_at', 'finished_at', 'file_pruned_at',
@@ -53,6 +62,17 @@ class ExchangeJob extends Model
         return $this->belongsTo(ExchangeToken::class);
     }
 
+    /** Автор ручной загрузки (source = manual) */
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function isManual(): bool
+    {
+        return $this->source === self::SOURCE_MANUAL;
+    }
+
     public function hasFile(): bool
     {
         return $this->file_path !== null && Storage::disk('exchange')->exists($this->file_path);
@@ -76,6 +96,7 @@ class ExchangeJob extends Model
         return [
             'job_id' => $this->id,
             'type' => $this->type->value,
+            'source' => $this->source,
             'status' => $this->status->value,
             'received_at' => ExchangeTime::format($this->received_at),
             'finished_at' => ExchangeTime::format($this->finished_at),

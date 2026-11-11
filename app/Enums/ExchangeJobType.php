@@ -33,13 +33,15 @@ enum ExchangeJobType: string
 
     /**
      * Обязательные колонки CSV (первая строка). Нет — 400 missing_columns, файл не принимается.
+     * Номенклатура: `sku` (код товара на сайте) — колонка необязательная, если в 1С нет поля
+     * под него (раздел 4); артикул производителя — `article`.
      *
      * @return list<string>
      */
     public function requiredColumns(): array
     {
         return match ($this) {
-            self::Catalog => ['guid', 'sku', 'name', 'unit', 'vat_rate', 'active'],
+            self::Catalog => ['guid', 'article', 'name', 'unit', 'vat_rate', 'active'],
             self::PricesStock => ['guid', 'sku', 'stock', 'updated_at'],
             default => [],
         };

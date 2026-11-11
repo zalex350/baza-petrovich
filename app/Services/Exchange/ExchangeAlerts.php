@@ -19,7 +19,7 @@ use Throwable;
 /**
  * Письма администраторам о сбоях обмена (docs/1C_EXCHANGE_SPEC.md, раздел 8; users.notify_exchange):
  *  - задание failed; ошибок в задании больше порога (по умолчанию 5 %) — сразу после обработки;
- *  - цены и остатки не приходили дольше N часов; заказ ждёт передачи дольше N минут
+ *  - цены и остатки не приходили дольше N часов (после первой успешной загрузки, любой источник); заказ ждёт передачи дольше N минут
  *    (включается в настройках после подключения выгрузки заказов) — проверка по расписанию
  *    (exchange:check, раз в 10 минут).
  * Письмо одного вида — не чаще настройки «Повторять не чаще» (по умолчанию раз в час).
@@ -55,9 +55,10 @@ class ExchangeAlerts
     public function check(): void
     {
         $hours = ExchangeSettings::int('exchange_stale_prices_hours');
-        $lastPrices = ExchangeJob::where('type', ExchangeJobType::PricesStock)->max('received_at');
+        // Последняя успешная загрузка цен — из 1С или вручную в админке
+        $lastPrices = ExchangeJob::where('type', ExchangeJobType::PricesStock)->where('status', ExchangeJobStatus::Done)->max('received_at');
 
-        // Пока цены ни разу не приходили (обмен не запущен) — молчим
+        // Пока ни одной успешной загрузки цен (обмен не запущен) — молчим
         if ($lastPrices !== null && now()->diffInMinutes($lastPrices, true) > $hours * 60) {
             $this->send('stale_prices', "цены и остатки не приходили больше {$hours} ч", [
                 '**Последняя загрузка:** '.Carbon::parse($lastPrices)->format('d.m.Y H:i'),

@@ -5,10 +5,12 @@ namespace App\Services\Exchange;
 use App\Enums\ExchangeJobStatus;
 use App\Enums\ExchangeJobType;
 use App\Exceptions\ExchangeApiException;
+use App\Exceptions\ExchangeJobFailedException;
 use App\Jobs\ProcessExchangeJob;
 use App\Models\ExchangeJob;
 use App\Models\ExchangeJobError;
 use App\Models\ExchangeToken;
+use App\Models\User;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -20,8 +22,10 @@ use Throwable;
  */
 class ExchangeJobs
 {
-    /** Обработчики по типу; нет в списке — StubHandler (этапы 3–5 заменят) */
-    private const HANDLERS = [];
+    /** Обработчики по типу; нет в списке — StubHandler (этапы 4–5 заменят) */
+    private const HANDLERS = [
+        'prices-stock' => PricesStockHandler::class,
+    ];
 
     public function __construct(private readonly ExchangeAlerts $alerts) {}
 
@@ -47,15 +51,27 @@ class ExchangeJobs
     }
 
     /**
-     * Принятый файл ($upload из ExchangeUpload) — в архив и в очередь.
+     * Принятый файл ($upload из ExchangeUpload или ручной загрузки) — в архив и в очередь;
+     * $user — ручная загрузка из админки: source = manual, обработка сразу, без очереди.
      *
      * @param  array{path: string, size: int, content_type: string, gzip: bool, extension: string}  $upload
      */
-    public function accept(array $upload, ExchangeJobType $type, ?string $mode, ?string $exchangeId, ?ExchangeToken $token, ?string $ip): ExchangeJob
-    {
+    public function accept(
+        array $upload,
+        ExchangeJobType $type,
+        ?string $mode,
+        ?string $exchangeId,
+        ?ExchangeToken $token,
+        ?string $ip,
+        ?User $user = null,
+    ): ExchangeJob {
+        $manual = $user !== null;
+
         $job = new ExchangeJob([
             'type' => $type,
             'direction' => $type->direction(),
+            'source' => $manual ? ExchangeJob::SOURCE_MANUAL : ExchangeJob::SOURCE_API,
+            'user_id' => $user?->id,
             'mode' => $mode,
             'status' => ExchangeJobStatus::Queued,
             'exchange_id' => $exchangeId,
@@ -82,6 +98,13 @@ class ExchangeJobs
             $disk->delete($job->file_path);
 
             return $this->existing($exchangeId, $type) ?? throw $e;
+        }
+
+        // Ручная загрузка — сразу, администратор ждёт результат; от 1С — в очереди
+        if ($manual) {
+            $this->process($job);
+
+            return $job->fresh();
         }
 
         ProcessExchangeJob::dispatch($job->id);
@@ -121,11 +144,15 @@ class ExchangeJobs
                     'rows_ok' => $result->ok,
                     'rows_skipped' => $result->skipped,
                     'rows_error' => count($result->errors),
+                    'message' => $result->message,
                     'finished_at' => now(),
                 ]);
             });
         } catch (Throwable $e) {
-            report($e);
+            // Отказ обработчика от файла (предохранитель) — ожидаемый, в лог не пишется
+            if (! $e instanceof ExchangeJobFailedException) {
+                report($e);
+            }
 
             $job->update([
                 'status' => ExchangeJobStatus::Failed,

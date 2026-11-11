@@ -203,15 +203,19 @@ class Product1cDataTest extends TestCase
         $mixers = Category::create(['name' => 'Смесители', 'slug' => 'm']);
         $s1->update(['display_name' => 'Смеситель S1', 'category_id' => Category::create(['name' => 'Для кухни', 'slug' => 'k', 'parent_id' => $mixers->id])->id]);
         $s1dash->update(['is_published' => false]);
+        // sku отличается от OWN-1 только пробелами и регистром
+        $this->product('own - 1');
         $this->fill($path, ['--dry-run' => true])->assertSuccessful();
 
         $csv = File::get($this->dir.'/duplicate-keys.csv');
         $this->assertStringStartsWith("\u{FEFF}", $csv);
         $rows = array_map(fn ($line) => str_getcsv($line, ';'), array_filter(explode("\n", substr($csv, 3))));
         $this->assertSame([
-            ['ключ', 'sku', 'название', 'бренд', 'категория', 'опубликован'],
-            ['SAVOL:S1', 'SAVOL-S-1', 'SAVOL S-1', 'SAVOL', '', 'нет'],
-            ['SAVOL:S1', 'SAVOL-S1', 'Смеситель S1', 'SAVOL', 'Смесители / Для кухни', 'да'],
+            ['группа', 'ключ', 'sku', 'название', 'бренд', 'категория', 'опубликован'],
+            ['бренд + артикул', 'SAVOL:S1', 'SAVOL-S-1', 'SAVOL S-1', 'SAVOL', '', 'нет'],
+            ['бренд + артикул', 'SAVOL:S1', 'SAVOL-S1', 'Смеситель S1', 'SAVOL', 'Смесители / Для кухни', 'да'],
+            ['различие в пробелах', 'OWN-1', 'OWN-1', 'OWN 1', 'OWN', '', 'да'],
+            ['различие в пробелах', 'OWN-1', 'own - 1', 'own - 1', '', '', 'да'],
         ], array_values($rows));
 
         // Повтор — ничего не меняет
