@@ -11,9 +11,11 @@ use Illuminate\Support\Collection;
 
 /**
  * guid — GUID номенклатуры 1С: заполняется только обменом с 1С, поэтому не в $fillable.
- * Так же — поля номенклатуры 1С (docs/1C_EXCHANGE_SPEC.md, раздел 4): article (артикул без бренда,
- * catalog:fill-articles), unit, barcode, group_1c и отметки обмена synced_at / price_synced_at /
+ * Так же — поля номенклатуры 1С (docs/1C_EXCHANGE_SPEC.md, раздел 4): unit, barcode, group_1c и отметки обмена synced_at / price_synced_at /
  * stock_synced_at, остаток 1С stock_1c (stock — доступный: stock_1c − резерв сайта, App\Services\StockReserve). name — наименование 1С, display_name — название сайта (title()).
+ * article — артикул производителя без бренда: его видят и ищут покупатели (displayArticle());
+ * у товара без GUID правится в админке, с GUID — приходит из 1С. sku — внутренний код сайта
+ * для обмена с 1С, клиентам не показывается.
  * match_key — ключ сопоставления «бренд + артикул» (matchKey()), пересчитывается при сохранении.
  */
 class Product extends Model
@@ -27,6 +29,7 @@ class Product extends Model
         'name',
         'display_name',
         'sku',
+        'article',
         'price',
         'vat_rate',
         'stock',
@@ -106,22 +109,60 @@ class Product extends Model
     }
 
     /**
-     * Ключ первичного сопоставления с 1С: бренд и артикул без регистра, пробелов и дефисов
-     * («Ledeme», «L 4755-2» → «LEDEME:L47552»). Без бренда или артикула — null:
-     * по одному артикулу товары разных брендов не сопоставляются.
-     * Массовые обновления мимо модели (query builder) пересчитывают ключ сами — этим же методом.
+     * Поля только для чтения в админке: поля 1С (lockedFrom1c) и у товара с GUID — sku:
+     * код сайта 1С хранит у себя и передаёт во всех потоках (спецификация, раздел 4, правило 6).
+     *
+     * @return list<string>
+     */
+    public function lockedFields(): array
+    {
+        return $this->guid !== null ? array_values(array_unique([...$this->lockedFrom1c(), 'sku'])) : [];
+    }
+
+    /** Кириллические буквы, неотличимые от латинских (после перевода в верхний регистр) */
+    private const LOOKALIKES = [
+        'А' => 'A', 'В' => 'B', 'Е' => 'E', 'К' => 'K', 'М' => 'M', 'Н' => 'H',
+        'О' => 'O', 'Р' => 'P', 'С' => 'C', 'Т' => 'T', 'Х' => 'X',
+    ];
+
+    /**
+     * Ключ первичного сопоставления с 1С: «БРЕНД:АРТИКУЛ» после normalizeKeyPart
+     * («Ledeme», «l  4755–2» → «LEDEME:L 4755-2»). Дефисы значимы: L4755-2 и L47552 — разные
+     * ключи. Без бренда или артикула — null: по одному артикулу товары разных брендов
+     * не сопоставляются. Массовые обновления мимо модели пересчитывают ключ этим же методом.
      */
     public static function matchKey(?string $brand, ?string $article): ?string
     {
-        // Пробелы (в том числе неразрывные), дефис и типографские тире/минус
-        $normalize = fn (?string $value) => mb_strtoupper(
-            (string) preg_replace('/[\s\p{Z}\-\x{2010}-\x{2015}\x{2212}]+/u', '', (string) $value)
-        );
+        $brand = self::normalizeKeyPart($brand);
+        $article = self::normalizeKeyPart($article);
+        // Артикул из одних дефисов и пробелов («-», « - ») — не артикул
+        $meaningful = fn (string $value) => trim(str_replace('-', '', $value)) !== '';
 
-        $brand = $normalize($brand);
-        $article = $normalize($article);
+        return $meaningful($brand) && $meaningful($article) ? "{$brand}:{$article}" : null;
+    }
 
-        return $brand !== '' && $article !== '' ? "{$brand}:{$article}" : null;
+    /**
+     * Верхний регистр; пробелы (и неразрывные) схлопнуты в один и обрезаны по краям;
+     * кириллические двойники латиницы (А, В, Е, К, М, Н, О, Р, С, Т, Х) → латиница;
+     * типографские дефисы, тире и минус («‐», «‑», «–», «—», «−») → «-».
+     */
+    public static function normalizeKeyPart(?string $value): string
+    {
+        $value = (string) preg_replace('/[\s\p{Z}]+/u', ' ', mb_strtoupper((string) $value));
+        $value = (string) preg_replace('/[\x{2010}-\x{2015}\x{2212}]/u', '-', $value);
+
+        return strtr(trim($value), self::LOOKALIKES);
+    }
+
+    /**
+     * Артикул для покупателя: артикул производителя, без него — код сайта (sku).
+     * SKU — внутренний код обмена с 1С, клиентам отдельно не показывается.
+     */
+    public function displayArticle(): string
+    {
+        $article = trim((string) $this->article);
+
+        return $article !== '' ? $article : (string) $this->sku;
     }
 
     /**

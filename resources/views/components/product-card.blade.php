@@ -1,7 +1,7 @@
 {{--
     Плитка товара: вид «плитка» в каталоге и подборках, карусели на главной.
     <x-product-card :product="$product" :in-cart="$cartItems[$product->id] ?? null" />
-    Фото, бейджи (%, НОВИНКА, ХИТ), «Код:» (артикул) и «Ваш код:» (client_code(), коды страницы
+    Фото, бейджи (%, НОВИНКА, ХИТ), «Арт.» (Product::displayArticle — артикул, без него sku) и «Ваш код:» (client_code(), коды страницы
     загружает контроллер — ClientCodes::load), название, наличие, цена (без НДС и с НДС),
     покупка — x-product-row.buy layout="tile" (количество + «В корзину», «В корзине: N шт.»).
     product — с mainImage. Плитка тянется на высоту ряда: покупка прижата к низу.
@@ -29,7 +29,7 @@
     </a>
 
     <div class="text-meta text-ink-muted" data-sku>
-        Код: {{ $product->sku }}
+        Арт. {{ $product->displayArticle() }}
         @if($clientCode)
             <span class="block text-ink" data-client-code>Ваш код: <span class="font-semibold">{{ $clientCode }}</span></span>
         @endif

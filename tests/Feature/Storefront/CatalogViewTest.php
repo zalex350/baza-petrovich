@@ -60,7 +60,7 @@ class CatalogViewTest extends TestCase
         $html = $this->actingAs($this->client)->get('/catalog/smesiteli?view=grid')
             ->assertOk()
             ->assertSee('data-view-grid', false)
-            ->assertSee('Код: V-1')
+            ->assertSee('Арт. V-1')
             ->assertDontSee('data-product-row', false)
             ->getContent();
 

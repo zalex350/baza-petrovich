@@ -72,7 +72,7 @@
                     <span class="font-semibold leading-snug text-ink-muted">{{ $item->title() }}</span>
                 @endif
                 <div class="mt-0.5 text-meta text-ink-muted">
-                    {{ $product?->sku }}@if($product && ! $unavailable) · <x-price :amount="$item->price_at_add" vat="net" />/шт.@endif
+                    @if($product)Арт. {{ $product->displayArticle() }}@endif @if($product && ! $unavailable) · <x-price :amount="$item->price_at_add" vat="net" />/шт.@endif
                 </div>
                 @if($clientCode)
                     <div class="text-meta text-ink" data-client-code>Ваш код: <span class="font-semibold">{{ $clientCode }}</span></div>
@@ -123,7 +123,7 @@
                 @else
                     <span class="font-semibold text-ink-muted">{{ $item->title() }}</span>
                 @endif
-                <div class="mt-0.5 text-meta text-ink-muted">{{ $product?->sku }}@if($product?->brand) · {{ $product->brand }}@endif</div>
+                <div class="mt-0.5 text-meta text-ink-muted">@if($product)Арт. {{ $product->displayArticle() }}@endif @if($product?->brand) · {{ $product->brand }}@endif</div>
                 @if($clientCode)
                     <div class="text-meta text-ink" data-client-code>Ваш код: <span class="font-semibold">{{ $clientCode }}</span></div>
                 @endif

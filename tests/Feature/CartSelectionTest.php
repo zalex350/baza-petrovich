@@ -324,7 +324,9 @@ class CartSelectionTest extends TestCase
 
         $this->getJson('/search/suggest?q=FLX')
             ->assertOk()
-            ->assertJsonPath('products.0.sku', 'FLX-050')
+            // Без артикула производителя — SKU в поле article; сам sku клиенту не отдаётся
+            ->assertJsonPath('products.0.article', 'FLX-050')
+            ->assertJsonMissingPath('products.0.sku')
             ->assertJsonPath('products.0.default_qty', 10);
     }
 

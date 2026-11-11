@@ -12,6 +12,7 @@ class OrderItem extends Model
         'product_id',
         'product_name',
         'product_sku',
+        'product_article',
         'client_code',
         'product_guid',
         'unit',
@@ -32,6 +33,14 @@ class OrderItem extends Model
         'vat_amount' => 'decimal:2',
         'amount_with_vat' => 'decimal:2',
     ];
+
+    /**
+     * Артикул позиции для покупателя: снимок артикула производителя, без него — снимок кода сайта.
+     */
+    public function displayArticle(): string
+    {
+        return trim((string) $this->product_article) !== '' ? $this->product_article : (string) $this->product_sku;
+    }
 
     public function getVatRateLabelAttribute(): string
     {

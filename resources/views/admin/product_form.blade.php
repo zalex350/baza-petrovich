@@ -17,7 +17,8 @@
     // Товар с GUID 1С: поля, которыми владеет 1С (Product::lockedFrom1c, SHOP_1C_MANAGED_FIELDS), —
     // только чтение с подписью «из 1С»
     $from1c = fn (string $field) => in_array($field, $product->lockedFrom1c(), true);
-    $lock = fn (string $field) => $locked || $from1c($field);
+    // У товара с GUID ещё и sku (Product::lockedFields): код сайта 1С хранит у себя
+    $lock = fn (string $field) => $locked || in_array($field, $product->lockedFields(), true);
     $hint1c = fn (string $field, ?string $hint = null) => $from1c($field) ? 'из 1С' : $hint;
     $form = 'product-form';
 
@@ -75,15 +76,14 @@
 
         <x-input name="name" label="Название (системное)" :value="$product->name" :hint="$hint1c('name')" :form="$form" :disabled="$lock('name')" :required="! $lock('name')" class="md:col-span-2" />
 
-        <x-input name="sku" label="Артикул (SKU)" :value="$product->sku" :hint="$hint1c('sku')" :form="$form" :disabled="$lock('sku')" :required="! $lock('sku')" />
+        {{-- Артикул — его видят и ищут покупатели; SKU — внутренний код обмена с 1С, на витрине не показывается --}}
+        <x-input name="article" label="Артикул" :value="$product->article" :hint="$hint1c('article', 'Артикул производителя без бренда — его видят покупатели. Пусто — показывается SKU')" :form="$form" :disabled="$lock('article')" />
+
+        <x-input name="sku" label="SKU" :value="$product->sku" :hint="$product->guid ? 'код обмена с 1С — не меняется' : 'Внутренний код сайта для обмена с 1С, покупателям не показывается'" :form="$form" :disabled="$lock('sku')" :required="! $lock('sku')" />
 
         <x-input name="brand" label="Бренд" :value="$product->brand" :hint="$hint1c('brand')" :form="$form" :disabled="$lock('brand')" />
 
-        {{-- Артикул производителя и единица в форму не входят: показываются, только когда их владелец — 1С --}}
-        @if($from1c('article'))
-            <x-input name="article" label="Артикул производителя" :value="$product->article" hint="из 1С" disabled />
-        @endif
-
+        {{-- Единица в форму не входит: показывается, только когда её владелец — 1С --}}
         @if($from1c('unit'))
             <x-input name="unit" label="Единица измерения" :value="$product->unit" hint="из 1С" disabled />
         @endif

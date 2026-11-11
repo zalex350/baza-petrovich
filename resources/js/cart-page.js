@@ -168,8 +168,10 @@ async function remove(form) {
 
 // «Добавить по артикулу»: ошибки — под полем; успех — новая/обновлённая строка подсвечивается,
 // поля очищаются, фокус — снова в артикул
-async function quickAdd(form) {
+async function quickAdd(form, submitter = null) {
     const fields = { sku: form.querySelector('input[name="sku"]'), qty: form.querySelector('input[name="qty"]') };
+    // Кнопка выбора товара (артикул у нескольких брендов) — её product_id; иначе — из подсказки
+    const productId = submitter?.name === 'product_id' ? submitter.value : (form.querySelector('[data-quick-product]')?.value ?? '');
 
     // Пока идёт добавление — повторный Enter не отправляет форму второй раз; пустые поля
     // (например, Enter сразу после успешного добавления и очистки) — ничего не делать, без ошибки
@@ -180,13 +182,19 @@ async function quickAdd(form) {
     form.dataset.busy = '';
 
     try {
-        await quickAddSend(form, fields);
+        await quickAddSend(form, fields, productId);
     } finally {
         delete form.dataset.busy;
     }
 }
 
-async function quickAddSend(form, fields) {
+async function quickAddSend(form, fields, productId) {
+    const choices = form.querySelector('[data-quick-choices]');
+    const setChoices = (html = '') => {
+        if (choices) {
+            choices.innerHTML = html;
+        }
+    };
 
     const showErrors = (errors = {}) => {
         for (const [name, input] of Object.entries(fields)) {
@@ -204,11 +212,12 @@ async function quickAddSend(form, fields) {
     };
 
     showErrors();
+    setChoices();
 
     let data;
 
     try {
-        data = await post(form.action, { sku: fields.sku.value, qty: fields.qty.value });
+        data = await post(form.action, { sku: fields.sku.value, qty: fields.qty.value, product_id: productId });
     } catch {
         form.submit();
 
@@ -217,6 +226,8 @@ async function quickAddSend(form, fields) {
 
     if (! data.ok) {
         showErrors(data.errors);
+        // Артикул у нескольких товаров: кнопки выбора с брендом (x-cart-quick-choices)
+        setChoices(data.choices_html ?? '');
         (data.errors?.qty && ! data.errors?.sku ? fields.qty : fields.sku).focus();
 
         return;
@@ -231,7 +242,12 @@ async function quickAddSend(form, fields) {
         return;
     }
 
-    document.querySelectorAll('form[data-quick-add]').forEach((f) => f.reset());
+    // reset() не очищает скрытое поле (value hidden-поля — его атрибут): product_id и выбор — вручную
+    document.querySelectorAll('form[data-quick-add]').forEach((f) => {
+        f.reset();
+        f.querySelectorAll('[data-quick-product]').forEach((input) => { input.value = ''; });
+        f.querySelectorAll('[data-quick-choices]').forEach((box) => { box.innerHTML = ''; });
+    });
     fields.sku.focus();
 
     await refresh();
@@ -280,7 +296,7 @@ document.addEventListener('submit', (event) => {
         queueQuantity(form, changeQuantity);
     } else if (form.matches('form[data-quick-add]')) {
         event.preventDefault();
-        quickAdd(form);
+        quickAdd(form, event.submitter);
     } else if (/\/order\/delete\/\d+$/.test(form.getAttribute('action') ?? '')) {
         event.preventDefault();
         remove(form);

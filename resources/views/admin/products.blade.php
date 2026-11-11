@@ -87,6 +87,10 @@
                 </th>
 
                 <th class="border p-3 text-left">
+                    Артикул
+                </th>
+
+                <th class="border p-3 text-left">
                     SKU
                 </th>
 
@@ -125,6 +129,10 @@
                         @unless($product->hasRealName())
                             <x-badge tone="warning">без названия</x-badge>
                         @endunless
+                    </td>
+
+                    <td class="border p-3">
+                        {{ $product->article ?: '—' }}
                     </td>
 
                     <td class="border p-3">

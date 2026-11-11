@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductClientCode;
 use App\Models\ProductImage;
+use App\Services\ArticleSearch;
 use App\Services\CartSummary;
 use App\Services\Catalog\KeyAttributes;
 use App\Services\ClientCodes;
@@ -21,7 +22,7 @@ class SearchController extends Controller
     /** Товаров на странице результатов */
     public const PER_PAGE = 24;
 
-    public function index(KeyAttributes $keyAttributes, CartSummary $cart, ClientCodes $codes)
+    public function index(KeyAttributes $keyAttributes, CartSummary $cart, ClientCodes $codes, ArticleSearch $articles)
     {
         $query = trim((string) request('q', ''));
 
@@ -47,6 +48,7 @@ class SearchController extends Controller
                         $like = '%'.mb_strtolower($word).'%';
 
                         $inner->whereRaw('LOWER(sku) LIKE ?', [$like])
+                            ->orWhereRaw('LOWER(article) LIKE ?', [$like])
                             ->orWhereRaw('LOWER(name) LIKE ?', [$like])
                             ->orWhereRaw('LOWER(display_name) LIKE ?', [$like])
                             ->orWhereRaw('LOWER(brand) LIKE ?', [$like])
@@ -78,10 +80,18 @@ class SearchController extends Controller
             'query' => $query,
             'products' => $products,
             'cartItems' => $cart->items(auth()->user()),
+            // Ничего не нашлось — «Возможно, вы искали L4755-2» (артикул без учёта дефисов)
+            'didYouMean' => $products->total() === 0 ? $articles->didYouMean($this->shown(), $query) : [],
         ]);
     }
 
-    public function suggest(ClientCodes $codes)
+    /** Товары, которые видит покупатель */
+    private function shown()
+    {
+        return Product::query()->where('is_active', 1)->where('is_published', true);
+    }
+
+    public function suggest(ClientCodes $codes, ArticleSearch $articles)
     {
         $query = trim((string) request('q', ''));
 
@@ -101,6 +111,7 @@ class SearchController extends Controller
                         $like = '%'.mb_strtolower($word).'%';
 
                         $inner->whereRaw('LOWER(sku) LIKE ?', [$like])
+                            ->orWhereRaw('LOWER(article) LIKE ?', [$like])
                             ->orWhereRaw('LOWER(name) LIKE ?', [$like])
                             ->orWhereRaw('LOWER(display_name) LIKE ?', [$like])
                             ->orWhereRaw('LOWER(brand) LIKE ?', [$like]);
@@ -116,7 +127,7 @@ class SearchController extends Controller
             ->orderBy('name')
             ->orderBy('id')
             ->limit(5)
-            ->get(['id', 'name', 'display_name', 'sku', 'brand', 'price', 'default_qty']);
+            ->get(['id', 'name', 'display_name', 'sku', 'article', 'brand', 'price', 'default_qty']);
 
         $codes->load($products);
 
@@ -134,10 +145,13 @@ class SearchController extends Controller
 
         return response()->json([
             'guest' => ! $withPrices,
+            'did_you_mean' => $products->isEmpty() ? $articles->didYouMean($this->shown(), $query) : [],
             'products' => $products->map(fn ($p) => [
                 'id' => $p->id,
                 'name' => $p->title(),
-                'sku' => $p->sku,
+                // Артикул для покупателя (артикул, без него — sku); сам sku клиенту не отдаётся
+                'article' => $p->displayArticle(),
+                'brand' => $p->brand,
                 // Код товара у организации пользователя (только своей) или null
                 'client_code' => $codes->codeFor($p),
                 // «Добавить по артикулу» в корзине подставляет количество товара по умолчанию
@@ -169,6 +183,7 @@ class SearchController extends Controller
             );
         }
 
-        $query->orderByRaw('CASE WHEN LOWER(sku) = ? THEN 0 ELSE 1 END', [mb_strtolower($text)]);
+        $text = mb_strtolower(trim($text));
+        $query->orderByRaw('CASE WHEN LOWER(TRIM(article)) = ? OR LOWER(TRIM(sku)) = ? THEN 0 ELSE 1 END', [$text, $text]);
     }
 }

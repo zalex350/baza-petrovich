@@ -75,7 +75,7 @@ class HomePageTest extends TestCase
         $promo = substr($html, strpos($html, 'aria-label="Акции"'), strpos($html, 'aria-label="Новинки"') - strpos($html, 'aria-label="Акции"'));
         $this->assertSame(10, substr_count($promo, 'data-product-card'));
         $this->assertStringContainsString('href="/promo"', $promo);
-        $this->assertStringContainsString('Код: ', $promo);
+        $this->assertStringContainsString('Арт. ', $promo);
     }
 
     public function test_order_slider_carousels_popular(): void
