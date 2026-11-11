@@ -56,7 +56,7 @@ class AdminProductController extends Controller
         $noCategory = fn ($q) => $q->where(fn ($q) => $q->whereNull('category_id')->orWhereIn('category_id', $hiddenIds));
         $matches = fn ($q) => $q->when($search !== '', fn ($q) => $q->where(function ($q) use ($search) {
             $like = '%'.$search.'%';
-            $q->where('sku', 'like', $like)->orWhere('name', 'like', $like)->orWhere('brand', 'like', $like);
+            $q->where('sku', 'like', $like)->orWhere('name', 'like', $like)->orWhere('display_name', 'like', $like)->orWhere('brand', 'like', $like);
         }));
 
         $products = Product::with('draft')

@@ -128,6 +128,15 @@ class SearchTest extends TestCase
         $this->assertStringNotContainsString('Mixer 24', $second);
     }
 
+    public function test_search_finds_site_display_name_when_name_is_from_1c(): void
+    {
+        // name — наименование 1С, display_name — название сайта (docs/1C_EXCHANGE_SPEC.md, раздел 4)
+        $this->createProduct(['name' => 'Smes. kuh. GR-100 hrom', 'display_name' => 'Grohe Start Kitchen', 'description' => null, 'is_published' => true]);
+
+        $this->get('/search?q=Kitchen')->assertOk()->assertSee('Grohe Start Kitchen');
+        $this->getJson('/search/suggest?q=Kitchen')->assertOk()->assertJsonPath('products.0.name', 'Grohe Start Kitchen');
+    }
+
     public function test_suggest_hides_price_from_guest(): void
     {
         $this->createProduct(['is_published' => true]);

@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Services\CatalogMenu;
 use App\Models\Product;
-use App\Models\ProductStock;
 use Illuminate\Console\Command;
 
 class FillTestCatalogData extends Command
@@ -15,19 +14,6 @@ class FillTestCatalogData extends Command
 
     public function handle(): int
     {
-        $path = storage_path('app/imports/catalog_import.json');
-
-        $articleBySku = [];
-
-        if (file_exists($path)) {
-            $data = json_decode(file_get_contents($path), true);
-            foreach ($data['products'] ?? [] as $item) {
-                if (!empty($item['sku'])) {
-                    $articleBySku[$item['sku']] = $item['article'] ?? null;
-                }
-            }
-        }
-
         $imported = Product::whereNull('price')->get();
 
         $this->info('Filling test price/stock for ' . $imported->count() . ' products...');
@@ -46,15 +32,6 @@ class FillTestCatalogData extends Command
                 $product->stock = $stock;
                 $product->is_active = true;
                 $product->save();
-
-                ProductStock::updateOrCreate(
-                    ['sku' => $product->sku],
-                    [
-                        'article' => $articleBySku[$product->sku] ?? null,
-                        'name' => $product->name,
-                        'stock' => $stock,
-                    ]
-                );
 
                 $bar->advance();
             }

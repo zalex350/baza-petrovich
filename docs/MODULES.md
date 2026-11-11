@@ -89,7 +89,7 @@
 | BR-061, BR-062 | Характеристики в заданном порядке, пустые не выводятся |
 | Наличие | `x-stock`: «Много» / «Мало» / «N шт.» по порогам `shop.stock_many` и `shop.stock_few`; при нуле — «Под заказ» (`on_order`) или «Нет в наличии» |
 | Описание | Сгенерированное импортом (`description_generated`) на сайте не показывается до одобрения |
-| Название | `display_name` → `name` → «БРЕНД артикул» (`Product::title()`) |
+| Название | `display_name` (название сайта) → `name` (наименование 1С) → «БРЕНД артикул» (`Product::title()`); поиск — по обоим |
 | Крошки | Цепочка категории самого товара (BR-084) |
 
 Тесты: `Storefront/ProductPageTest`, `ProductImageStorefrontTest`, `ProductVatTest`.
@@ -425,6 +425,7 @@
 | Команда | `catalog:import-db <path> --dry-run` (отчёт `docs/catalog/import-report.md` + `uncategorized.csv`), боевой — `--backup=<дамп>` |
 | Сервисы | `CatalogImport\CatalogImportPlanner` (только чтение, строит план), `CatalogImportPlan`, `CatalogImportApplier` (применяет), `CatalogImportReport`, `CatalogMapping`, `ColumnLimits` |
 | Маппинги | `database/data/catalog/`: `brands.php`, `categories.php` (`map`, `rules`, `split`, `products`), `attributes.php`, `filters.php`, `cleanup.php` |
+| Артикулы | `catalog:fill-articles <path> [--dry-run]`: `products.article` из `catalog.db.article` (по sku) и ключ сопоставления с 1С `match_key`; идемпотентна, отчёт — `docs/catalog/articles-report.md` |
 | Прочие команды | `attributes:from-specifications` (текст `specifications` → справочник), `catalog:import`, `catalog:fill-test-data` (наследие), `demo:clear` |
 
 | Правило | Суть |

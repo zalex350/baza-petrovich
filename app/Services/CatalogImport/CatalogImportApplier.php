@@ -165,6 +165,8 @@ class CatalogImportApplier
 
             if (isset($change['brand'])) {
                 $update['brand'] = $change['brand'][1];
+                // Обновление мимо модели: ключ сопоставления с 1С — тем же правилом, что Product::saving
+                $update['match_key'] = Product::matchKey($update['brand'], Product::withTrashed()->whereKey($id)->value('article'));
             }
             if (isset($change['category'])) {
                 $update['category_id'] = $this->categoryIds[$change['category'][1]];
@@ -230,7 +232,7 @@ class CatalogImportApplier
     private function createProducts(array $chunk): void
     {
         foreach ($chunk as $new) {
-            $product = Product::create([
+            $product = new Product([
                 'name' => $new['name'],
                 'sku' => $new['sku'],
                 'brand' => $new['brand'],
@@ -244,6 +246,9 @@ class CatalogImportApplier
                 'is_active' => true,
                 'is_published' => false,
             ]);
+            // Артикул — поле номенклатуры 1С, не в $fillable; match_key считает Product::saving
+            $product->article = $new['article'] ?? null;
+            $product->save();
 
             $this->writeAttributes($product->id, $new['attributes']);
         }

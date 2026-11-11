@@ -207,9 +207,12 @@ erDiagram
     products {
         bigint id
         string sku
+        string article "1С, без бренда"
+        string match_key "бренд + артикул"
         string guid "1С"
-        string name
-        string display_name
+        string name "наименование 1С"
+        string display_name "название сайта"
+        string unit "1С"
         decimal price "без НДС"
         decimal vat_rate
         int stock
@@ -318,7 +321,6 @@ erDiagram
 | `order_invoices` | Счёт на оплату, один на заказ: PDF в закрытом хранилище, `source` (`manual` / `erp`), `external_id` (номер в 1С), `uploaded_by` |
 | `product_documents` | Документы товара: PDF на диске фото (публичная ссылка), `type` (`ProductDocumentType`), `title`, `size`, `sort_order` |
 | `user_invitation_tokens` | Брокер приглашений: токен хешем, рядом `token_encrypted` (APP_KEY) для показа ссылки |
-| `product_stocks` | Наследие тестовых данных (`catalog:fill-test-data`), в логике магазина не используется |
 | `categories.image` | Картинка категории (webp) — плитки подкатегорий; в дереве меню (`CatalogMenu`) — поле `image` |
 | `banners` | Слайдер главной: `image_desktop`, `image_mobile`, `url`, `sort_order`, `is_active` |
 | `pages` | Информационные страницы: `slug`, `body` (HTML из Trix, при выводе очищается), SEO, `is_published`. Три страницы меню создаёт миграция с `[ЗАПОЛНИТЬ]` |
@@ -333,6 +335,7 @@ erDiagram
 |---|---|---|
 | Название, артикул, бренд, цена, НДС, остаток, «под заказ», кратность (`min_qty`, `qty_step`, `default_qty`) | **1С** (пока вводятся в админке) | `AdminProductController::ERP_FIELDS`. При `SHOP_CATALOG_MANUAL_PRODUCTS=false` поля только для чтения, создание товара — 403 |
 | `products.guid`, `organizations.guid` | **1С** | Не в `$fillable`, в админке только чтение, пока не заполняются |
+| Поля номенклатуры 1С: `article` (артикул без бренда), `unit`, `barcode`, `group_1c`, отметки обмена `synced_at` / `price_synced_at` / `stock_synced_at` | **1С** | Не в `$fillable`. `article` пока заполняет `catalog:fill-articles` из `catalog.db`; `match_key` (`Product::matchKey`: бренд + артикул без регистра, пробелов и дефисов) — ключ первичного сопоставления, пересчитывается при сохранении товара. `name` — наименование 1С, название сайта — `display_name` (`docs/1C_EXCHANGE_SPEC.md`) |
 | Статусы заказа после «Передан в 1С» | **1С** (пока вручную) | При `SHOP_ORDERS_MANUAL_STATUS=false` ручная смена статусов отключена |
 | Категория, адрес страницы (slug), «ХИТ», «НОВИНКА», «Акция» | **Сайт** | `DIRECT_SITE_FIELDS`, применяются сразу (SRS §11.3) |
 | Отображаемое название, описание, характеристики (текст), комплектация | **Сайт** | `DRAFT_FIELDS`: через черновик (`product_drafts`) и «Опубликовать» |
