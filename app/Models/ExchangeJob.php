@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ExchangeJobStatus;
 use App\Enums\ExchangeJobType;
+use App\Support\ColumnLength;
 use App\Support\ExchangeTime;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -25,6 +26,16 @@ class ExchangeJob extends Model
     public const SOURCE_API = 'api';
 
     public const SOURCE_MANUAL = 'manual';
+
+    /**
+     * Длины строковых колонок (миграции create_exchange_tables, widen_exchange_jobs_content_type):
+     * перед записью значения обрезаются — любой MIME или адрес не уронит приём файла.
+     * message — TEXT, запас в символах.
+     */
+    public const LENGTHS = [
+        'type' => 30, 'direction' => 10, 'source' => 10, 'mode' => 10, 'status' => 20,
+        'exchange_id' => 64, 'ip' => 45, 'file_path' => 255, 'content_type' => 255, 'message' => 2000,
+    ];
 
     protected $attributes = [
         'source' => self::SOURCE_API,
@@ -51,6 +62,12 @@ class ExchangeJob extends Model
         'finished_at' => 'datetime',
         'file_pruned_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        // Сырые значения (enum-касты уже приведены к строкам)
+        static::saving(fn (ExchangeJob $job) => $job->attributes = ColumnLength::fit($job->attributes, self::LENGTHS));
+    }
 
     public function errors()
     {

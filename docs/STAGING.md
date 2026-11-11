@@ -39,6 +39,39 @@
 `.env` — `deploy:www-data`, `640`; `storage/` в папке проекта после перехода тоже
 не используется (данные — в томе `smesitel_by_storage`).
 
+### Владелец storage внутри контейнеров — www-data
+
+php-fpm, `queue` и `scheduler` работают от **www-data** и пишут в том storage: лог
+`storage/logs/laravel.log`, сессии, скомпилированные шаблоны, архив обмена с 1С.
+Контейнеры по умолчанию запускаются от root, поэтому `docker compose exec -u www-data php php artisan …`
+от root создаёт файлы с владельцем root. Так на стенде `laravel.log` стал файлом root:
+приложение не могло писать лог, и ошибки (500 при загрузке цен) терялись.
+
+Что сделано:
+
+- `deploy.sh` запускает artisan только от www-data (`exec -u www-data`, `run --user www-data`).
+  После кэшей шаг «Права storage и bootstrap/cache» выполняет
+  `chown -R www-data:www-data storage bootstrap/cache` и проверяет, что файлов другого
+  владельца не осталось. Если остались — деплой завершается ошибкой;
+- `queue` и `scheduler` в `docker-compose.staging.yml` — `user: www-data`;
+- entrypoint контейнера `php` при каждом старте чинит владельца (до и после кэшей)
+  и собирает кэши от www-data.
+
+Ручные команды на сервере — тоже от www-data:
+
+```bash
+docker compose -f docker-compose.staging.yml exec -u www-data php php artisan about
+```
+
+Если лог или кэши уже стали файлами root (artisan запускали без `-u www-data`):
+
+```bash
+docker compose -f docker-compose.staging.yml exec -u root php chown -R www-data:www-data storage bootstrap/cache
+docker compose -f docker-compose.staging.yml exec -u root php find storage bootstrap/cache ! -user www-data   # пусто — порядок
+```
+
+Или просто `./deploy.sh` (с `SKIP_PULL=1` — без обновления кода).
+
 ## Обновление
 
 ```bash
@@ -224,7 +257,7 @@ docker compose ps --services --status running    # до деплоя этапа 
 crontab -l                                         # в cron только бэкап (deploy.sh install-cron), schedule:run нет
 ./deploy.sh                                        # поднимет scheduler; шаг «Планировщик» проверит, что он запущен
 docker compose ps scheduler
-docker compose exec php php artisan schedule:list  # exchange:prune, exchange:check
+docker compose exec -u www-data php php artisan schedule:list  # exchange:prune, exchange:check
 docker compose logs --tail=50 scheduler
 ```
 
@@ -252,7 +285,7 @@ curl -s https://test.smesitel.by/api/1c/v1/jobs/<job_id> -H "Authorization: Bear
 ## Демо-данные
 
 ```bash
-docker compose exec php php artisan db:seed --class=DemoSeeder --force
+docker compose exec -u www-data php php artisan db:seed --class=DemoSeeder --force
 ```
 
 Создаёт (повторный запуск не дублирует): администратора, две организации с адресами,
@@ -264,8 +297,8 @@ docker compose exec php php artisan db:seed --class=DemoSeeder --force
 демо-товары и категорию «Демо-товары»; каталог и остальные данные не трогаются):
 
 ```bash
-docker compose exec php php artisan demo:clear          # покажет, что удалит, и спросит
-docker compose exec php php artisan demo:clear --force  # без вопроса
+docker compose exec -u www-data php php artisan demo:clear          # покажет, что удалит, и спросит
+docker compose exec -u www-data php php artisan demo:clear --force  # без вопроса
 ```
 
 ## Бэкап и восстановление БД
@@ -292,7 +325,7 @@ tail -n 50 ~/backups/backup.log
 ```bash
 gunzip -c /home/deploy/backups/<файл>.sql.gz \
   | docker compose exec -T mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"'
-docker compose exec php php artisan cache:clear
+docker compose exec -u www-data php php artisan cache:clear
 ```
 
 Фото и другие загруженные файлы — в томе `smesitel_by_storage`, бэкап тома:
@@ -329,8 +362,8 @@ docker compose exec php tail -n 200 -f storage/logs/laravel.log   # лог пр�
 docker compose exec php grep -n "reset-password" storage/logs/laravel.log | tail   # ссылки из писем
 docker compose logs --tail=100 php nginx     # php-fpm и nginx контейнера
 docker compose logs --tail=100 -f queue      # воркер очереди: какие задачи выполнены / упали
-docker compose exec php php artisan queue:failed      # неудачные задачи
-docker compose exec php php artisan queue:retry all   # повторить их
+docker compose exec -u www-data php php artisan queue:failed      # неудачные задачи
+docker compose exec -u www-data php php artisan queue:retry all   # повторить их
 docker compose logs --tail=100 mysql
 sudo tail -f /var/log/nginx/access.log /var/log/nginx/error.log   # nginx сервера
 ```
@@ -352,7 +385,7 @@ sudo tail -f /var/log/nginx/access.log /var/log/nginx/error.log   # nginx сер
 
 ```bash
 cd /home/deploy/smesitel_by
-docker compose exec php php artisan migrate:status | grep -E "video_url|widen_product_attribute"   # обе — Ran
+docker compose exec -u www-data php php artisan migrate:status | grep -E "video_url|widen_product_attribute"   # обе — Ran
 ```
 
 Всё ниже — от deploy в `/home/deploy/smesitel_by`. Код на стенде — в образе, без bind-mount:
@@ -401,7 +434,7 @@ docker compose exec php tail -1 /tmp/backup_catalog_import.sql      # -- Dump co
 **4. Dry-run** — база не меняется; отчёт — в `/tmp` контейнера, затем на сервер:
 
 ```bash
-docker compose exec php php artisan catalog:import-db /tmp/catalog.db --dry-run --report-dir=/tmp/catalog-import
+docker compose exec -u www-data php php artisan catalog:import-db /tmp/catalog.db --dry-run --report-dir=/tmp/catalog-import
 docker compose cp php:/tmp/catalog-import ~/imports/report-before
 less ~/imports/report-before/import-report.md      # и uncategorized.csv (на проверку)
 ```
@@ -415,23 +448,23 @@ less ~/imports/report-before/import-report.md      # и uncategorized.csv (на 
 **5. Боевой прогон** (локально — ~30 с, пачками в транзакциях):
 
 ```bash
-docker compose exec php php artisan catalog:import-db /tmp/catalog.db --backup=/tmp/backup_catalog_import.sql --report-dir=/tmp/catalog-import
+docker compose exec -u www-data php php artisan catalog:import-db /tmp/catalog.db --backup=/tmp/backup_catalog_import.sql --report-dir=/tmp/catalog-import
 ```
 
 Последняя строка — «Импорт выполнен». Меню каталога сбрасывается командой; на всякий
-случай — `docker compose exec php php artisan cache:clear`.
+случай — `docker compose exec -u www-data php php artisan cache:clear`.
 
 Если прогон упал — вернуть БД из бэкапа шага 3 (не продолжать с частично применённым):
 
 ```bash
 gunzip -c "$B" | docker compose exec -T mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"'
-docker compose exec php php artisan cache:clear
+docker compose exec -u www-data php php artisan cache:clear
 ```
 
 **6. Повторный dry-run** — должно быть «Товаров изменится: 0»:
 
 ```bash
-docker compose exec php php artisan catalog:import-db /tmp/catalog.db --dry-run --report-dir=/tmp/catalog-import
+docker compose exec -u www-data php php artisan catalog:import-db /tmp/catalog.db --dry-run --report-dir=/tmp/catalog-import
 docker compose cp php:/tmp/catalog-import ~/imports/report-after
 grep -E "^\| (Товаров изменится|Категорий:)" ~/imports/report-after/import-report.md
 ```
@@ -448,9 +481,9 @@ docker compose exec php rm -rf /tmp/catalog.db /tmp/backup_catalog_import.sql /t
 
 ```bash
 docker compose ps                                   # состояние контейнеров
-docker compose exec php php artisan about           # версия, окружение, кэши
-docker compose exec php php artisan migrate:status  # миграции
-docker compose exec php php artisan tinker          # консоль Laravel
+docker compose exec -u www-data php php artisan about           # версия, окружение, кэши
+docker compose exec -u www-data php php artisan migrate:status  # миграции
+docker compose exec -u www-data php php artisan tinker          # консоль Laravel
 docker compose exec mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"'   # консоль MySQL
 docker compose restart php nginx                    # перезапуск без пересборки
 ```
@@ -465,11 +498,11 @@ docker compose restart php nginx                    # перезапуск бе�
 ```bash
 docker compose exec php mkdir -p storage/app/imports
 docker compose cp catalog_import.json php:/var/www/storage/app/imports/catalog_import.json
-docker compose exec php php artisan catalog:import
+docker compose exec -u www-data php php artisan catalog:import
 ```
 
 ### Пользователь-администратор вручную
 
 ```bash
-docker compose exec php php artisan user:create "Имя Фамилия" admin@example.com --role=admin --generate-password
+docker compose exec -u www-data php php artisan user:create "Имя Фамилия" admin@example.com --role=admin --generate-password
 ```

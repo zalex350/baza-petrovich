@@ -40,6 +40,13 @@ docker-compose exec php php artisan test tests/Feature/CatalogFiltersTest.php # 
 docker-compose exec php php artisan test tests/Feature/Auth                   # модуль (папка)
 docker-compose exec php php artisan test --parallel                           # полный прогон, ~20 с
 ```
+**Тесты обмена на MySQL.** SQLite не проверяет длину `VARCHAR` — «Data too long» ловит только MySQL. Перед мержем изменений в записи обмена (`exchange_*`, `orders`) прогнать набор на отдельной базе `smesitel_test` (рабочую `RefreshDatabase` очистил бы):
+```bash
+docker-compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS smesitel_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL ON smesitel_test.* TO \`$MYSQL_USER\`@\`%\`"'   # один раз
+docker-compose exec -e DB_CONNECTION=mysql -e DB_DATABASE=smesitel_test php php artisan test tests/Feature/Exchange
+```
+`ColumnLengthsTest` на MySQL сверяет `ExchangeJob::LENGTHS` и `ExchangeJobError::LENGTHS` с реальной схемой (на SQLite этот тест пропускается).
+
 SQLite `:memory:`, `BCRYPT_ROUNDS=4`, скомпилированные шаблоны — в `/tmp` контейнера, лог тестов — `null` (`phpunit.xml`). Полный прогон последовательно — ~1 мин, `--parallel` (paratest, по процессу на ядро) — ~20 с; при нехватке памяти — `--parallel --processes=4`.
 
 > **Правила запуска тестов:**
