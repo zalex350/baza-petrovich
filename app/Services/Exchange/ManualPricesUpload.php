@@ -132,7 +132,7 @@ class ManualPricesUpload
         $writer = new Writer;
         $writer->openToFile($path);
         $writer->addRow(Row::fromValues(['guid', 'sku', 'price', 'stock', 'stock_status', 'updated_at']));
-        $writer->addRow(Row::fromValues(['5f1c2b8a-3d4e-11ef-9a1b-0050569a1c01', 'L4755-2', '832.26', '7', 'in_stock', now()->setTimezone('Europe/Minsk')->format('Y-m-d\TH:i:sP')]));
+        $writer->addRow(Row::fromValues(['5f1c2b8a-3d4e-11ef-9a1b-0050569a1c01', 'LEDEME-L4755-2', '832.26', '7', 'in_stock', now()->setTimezone('Europe/Minsk')->format('Y-m-d\TH:i:sP')]));
         $writer->addRow(Row::fromValues(['', 'TIM-BL5800', '', '0', 'on_order', now()->setTimezone('Europe/Minsk')->format('Y-m-d\TH:i:sP')]));
         $writer->close();
 

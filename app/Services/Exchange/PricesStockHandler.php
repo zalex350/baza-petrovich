@@ -24,8 +24,9 @@ use OpenSpout\Reader\XLSX\Reader as XlsxReader;
  * ручная загрузка из админки (CSV или .xlsx, первый лист).
  *
  * Файл (колонки по заголовку в любом порядке) читает openspout. plan() — без записи:
- *  1. разбор и проверка всех строк: товар — по guid, иначе по sku (артикул или sku сайта
- *     без учёта регистра и пробелов, только у товара без другого GUID); цена (точка,
+ *  1. разбор и проверка всех строк: товар — по guid, иначе по sku (код сайта: точное
+ *     совпадение без учёта регистра и пробелов по краям, только у товара без другого GUID;
+ *     по артикулу — если включено SHOP_1C_MATCH_BY_ARTICLE); цена (точка,
  *     до 2 знаков, ≥ 0, пусто — «Цена уточняется»), остаток (целое ≥ 0), stock_status,
  *     updated_at (ExchangeTime::parse, любое смещение; дата .xlsx без пояса — по Минску).
  *     Строка старше уже применённого (отдельно для цены — price_synced_at и остатка —
@@ -45,6 +46,9 @@ class PricesStockHandler implements ExchangeHandler
 
     /** @var array<int, string> id товара => его guid (в нижнем регистре) */
     private array $guids = [];
+
+    /** @var array<string, list<int>> артикул => товары без GUID (SHOP_1C_MATCH_BY_ARTICLE) */
+    private array $byArticle = [];
 
     public function __construct(private readonly StockReserve $reserve) {}
 
@@ -170,7 +174,9 @@ class PricesStockHandler implements ExchangeHandler
      */
     private function rows(string $path): \Generator
     {
-        if (strtolower(pathinfo($path, PATHINFO_EXTENSION)) === 'xlsx') {
+        $xlsx = strtolower(pathinfo($path, PATHINFO_EXTENSION)) === 'xlsx';
+
+        if ($xlsx) {
             $options = new XlsxOptions;
             $options->SHOULD_PRESERVE_EMPTY_ROWS = true;
             $reader = new XlsxReader($options);
@@ -214,6 +220,11 @@ class PricesStockHandler implements ExchangeHandler
                         $values[$name] = $cells[$i] ?? '';
                     }
 
+                    // .xlsx: дата без формата даты — серийный номер Excel (46336.77) → минское время
+                    if ($xlsx && isset($values['updated_at'])) {
+                        $values['updated_at'] = self::excelSerial($values['updated_at']) ?? $values['updated_at'];
+                    }
+
                     yield $line => $values;
                 }
 
@@ -222,6 +233,21 @@ class PricesStockHandler implements ExchangeHandler
         } finally {
             $reader->close();
         }
+    }
+
+    /**
+     * Серийный номер даты Excel (дни с 30.12.1899, дробная часть — время) → ISO без смещения,
+     * то есть минское время (ExchangeTime). Не число или вне 1954–2119 гг. — null.
+     */
+    private static function excelSerial(string $value): ?string
+    {
+        if (! preg_match('/^\d{5}(\.\d+)?$/', $value) || (float) $value < 20000 || (float) $value > 80000) {
+            return null;
+        }
+
+        $seconds = (int) round((float) $value * 86400);
+
+        return Carbon::create(1899, 12, 30, 0, 0, 0, 'UTC')->addSeconds($seconds)->format('Y-m-d\TH:i:s');
     }
 
     /**
@@ -243,8 +269,8 @@ class PricesStockHandler implements ExchangeHandler
     }
 
     /**
-     * Товары сайта (и удалённые мягко — могут вернуть): по guid, по ключу sku / article,
-     * текущие значения и отметки обмена.
+     * Товары сайта (и удалённые мягко — могут вернуть): по guid, по sku (и по артикулу, если
+     * включено shop.exchange_1c.match_by_article), текущие значения и отметки обмена.
      *
      * @return array{0: array<string, int>, 1: array<string, list<int>>, 2: array<int, array<string, mixed>>}
      */
@@ -253,17 +279,24 @@ class PricesStockHandler implements ExchangeHandler
         $byGuid = [];
         $bySku = [];
         $state = [];
+        $this->byArticle = [];
+        $byArticle = (bool) config('shop.exchange_1c.match_by_article', false);
 
         DB::table('products')->orderBy('id')
             ->select(['id', 'guid', 'sku', 'article', 'price', 'stock_1c', 'on_order', 'price_synced_at', 'stock_synced_at', 'deleted_at'])
             ->lazy(2000)
-            ->each(function ($p) use (&$byGuid, &$bySku, &$state) {
+            ->each(function ($p) use (&$byGuid, &$bySku, &$state, $byArticle) {
                 if ($p->guid !== null && $p->guid !== '') {
                     $byGuid[strtolower($p->guid)] = $p->id;
                 }
 
-                foreach (array_unique(array_filter([self::skuKey($p->sku), self::skuKey($p->article)])) as $key) {
+                if (($key = self::key($p->sku)) !== '') {
                     $bySku[$key][] = $p->id;
+                }
+
+                // Артикул — только у товаров без GUID: товар с GUID 1С находит по GUID
+                if ($byArticle && ($p->guid === null || $p->guid === '') && ($key = self::key($p->article)) !== '') {
+                    $this->byArticle[$key][] = $p->id;
                 }
 
                 $state[$p->id] = [
@@ -285,12 +318,17 @@ class PricesStockHandler implements ExchangeHandler
     }
 
     /**
+     * Товар строки: guid → точное совпадение sku (код сайта; без учёта регистра и пробелов
+     * по краям, внутренние пробелы значимы) среди товаров без другого GUID → артикул
+     * (только если включено SHOP_1C_MATCH_BY_ARTICLE, только товары без GUID).
+     * Несколько совпадений — ошибка строки.
+     *
      * @param  list<string>  $errors
      */
     private function find(string $guid, string $sku, array $byGuid, array $bySku, array &$errors): ?int
     {
         if ($guid === '' && $sku === '') {
-            $errors[] = 'Нет GUID и артикула';
+            $errors[] = 'Нет GUID и SKU';
 
             return null;
         }
@@ -299,27 +337,47 @@ class PricesStockHandler implements ExchangeHandler
             return $byGuid[strtolower($guid)];
         }
 
-        $ids = $sku !== '' ? array_values(array_unique($bySku[self::skuKey($sku)] ?? [])) : [];
-        // Товар с другим GUID — это другой товар 1С, а не пара по артикулу
+        $key = self::key($sku);
+        $ids = $key !== '' ? array_values(array_unique($bySku[$key] ?? [])) : [];
+        // Товар с другим GUID — это другой товар 1С, а не пара по SKU
         $free = array_values(array_filter($ids, fn ($id) => ! isset($this->guids[$id])));
 
         if (count($free) === 1) {
             return $free[0];
         }
 
+        if (count($free) > 1) {
+            $errors[] = "Товар с таким GUID не найден, SKU «{$sku}» есть у нескольких товаров сайта";
+
+            return null;
+        }
+
+        if ($ids === [] && $key !== '' && isset($this->byArticle[$key])) {
+            $byArticle = array_values(array_unique($this->byArticle[$key]));
+
+            if (count($byArticle) === 1) {
+                return $byArticle[0];
+            }
+
+            $errors[] = "Товар с таким GUID не найден, артикул «{$sku}» есть у нескольких товаров сайта";
+
+            return null;
+        }
+
         $errors[] = match (true) {
-            count($free) > 1 => "Товар с таким GUID не найден, артикул «{$sku}» есть у нескольких товаров сайта",
-            $ids !== [] => "Товар с таким GUID не найден, артикул «{$sku}» — у товара с другим GUID",
-            $guid === '' => "Товар с артикулом «{$sku}» не найден",
+            $ids !== [] => "Товар с таким GUID не найден, SKU «{$sku}» — у товара с другим GUID",
+            $guid === '' => "Товар с SKU «{$sku}» не найден",
             default => 'Товар с таким GUID не найден',
         };
 
         return null;
     }
 
-    private static function skuKey(?string $value): string
+    /** Ключ сравнения SKU / артикула: без учёта регистра и пробелов по краям */
+    private static function key(?string $value): string
     {
-        return mb_strtoupper((string) preg_replace('/[\s\p{Z}]+/u', '', (string) $value));
+        // Пробелы по краям, в том числе неразрывные; trim() побайтный — портил бы кириллицу
+        return mb_strtoupper((string) preg_replace('/^[\s\p{Z}]+|[\s\p{Z}]+$/u', '', (string) $value));
     }
 
     /**

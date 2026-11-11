@@ -15,7 +15,9 @@ use PDO;
  * Отчёт (docs/catalog/articles-report.md) пишется всегда: «нестандартные» строки каталога
  * (sku ≠ «БРЕНД-артикул»), товары сайта без пары в каталоге и без ключа, одинаковые ключи.
  * Группы с одинаковым ключом — ещё и docs/catalog/duplicate-keys.csv для заказчика
- * (ключ; sku; название; бренд; категория; опубликован), UTF-8 с BOM, разделитель «;».
+ * (группа; ключ; sku; название; бренд; категория; опубликован), UTF-8 с BOM, разделитель «;».
+ * Группы: «бренд + артикул» — одинаковый match_key; «различие в пробелах» — sku товаров
+ * отличаются только пробелами или регистром (цены 1С по SKU таким товарам не сопоставить).
  */
 class CatalogFillArticles extends Command
 {
@@ -81,7 +83,7 @@ class CatalogFillArticles extends Command
         $dir = $this->option('report-dir') ?: base_path('docs/catalog');
         File::ensureDirectoryExists($dir);
         File::put("{$dir}/articles-report.md", $this->report($path, $catalog, $live, $updates, $nonStandard, $withoutPair, $notOnSite, $duplicates));
-        File::put("{$dir}/duplicate-keys.csv", $this->duplicatesCsv($duplicates));
+        File::put("{$dir}/duplicate-keys.csv", $this->duplicatesCsv($duplicates, $this->spacingDuplicates($live)));
 
         if ($this->option('dry-run')) {
             $this->info("Dry-run: база не менялась. Отчёт — {$dir}/articles-report.md, одинаковые ключи — {$dir}/duplicate-keys.csv");
@@ -130,27 +132,32 @@ class CatalogFillArticles extends Command
     /**
      * Группы с одинаковым ключом: строка на товар, группы — по ключу, внутри — по sku.
      */
-    private function duplicatesCsv($duplicates): string
+    private function duplicatesCsv($duplicates, $spacing): string
     {
-        $products = Product::with('category.parent')->whereIn('id', $duplicates->flatten(1)->pluck('id'))->get()->keyBy('id');
+        $groups = ['бренд + артикул' => $duplicates, 'различие в пробелах' => $spacing];
+        $ids = collect($groups)->flatMap(fn ($group) => $group->flatten(1)->pluck('id'));
+        $products = Product::with('category.parent')->whereIn('id', $ids)->get()->keyBy('id');
 
         $out = fopen('php://temp', 'r+');
         fwrite($out, "\u{FEFF}");
-        fputcsv($out, ['ключ', 'sku', 'название', 'бренд', 'категория', 'опубликован'], ';');
+        fputcsv($out, ['группа', 'ключ', 'sku', 'название', 'бренд', 'категория', 'опубликован'], ';');
 
-        foreach ($duplicates->sortKeys() as $key => $group) {
-            foreach ($group->sortBy('sku') as $row) {
-                $product = $products->get($row->id);
-                $category = $product?->category;
+        foreach ($groups as $label => $set) {
+            foreach ($set->sortKeys() as $key => $group) {
+                foreach ($group->sortBy('sku') as $row) {
+                    $product = $products->get($row->id);
+                    $category = $product?->category;
 
-                fputcsv($out, [
-                    $key,
-                    $row->sku,
-                    $product?->title(),
-                    $row->brand,
-                    $category ? ($category->parent ? $category->parent->name.' / ' : '').$category->name : '',
-                    $product?->is_published ? 'да' : 'нет',
-                ], ';');
+                    fputcsv($out, [
+                        $label,
+                        $key,
+                        $row->sku,
+                        $product?->title(),
+                        $row->brand,
+                        $category ? ($category->parent ? $category->parent->name.' / ' : '').$category->name : '',
+                        $product?->is_published ? 'да' : 'нет',
+                    ], ';');
+                }
             }
         }
 
@@ -159,6 +166,17 @@ class CatalogFillArticles extends Command
         fclose($out);
 
         return $csv;
+    }
+
+    /**
+     * Товары, чьи sku отличаются только пробелами или регистром: ключ — sku без пробелов
+     * в верхнем регистре, группа — больше одного разного sku.
+     */
+    private function spacingDuplicates($live)
+    {
+        return $live->filter(fn ($p) => trim((string) $p->sku) !== '')
+            ->groupBy(fn ($p) => mb_strtoupper((string) preg_replace('/[\s\p{Z}]+/u', '', (string) $p->sku)))
+            ->filter(fn ($group) => $group->pluck('sku')->unique()->count() > 1);
     }
 
     private static function skuKey(?string $sku): string

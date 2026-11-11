@@ -138,35 +138,74 @@ class PricesStockTest extends TestCase
 
     // --- Поиск по артикулу ---
 
-    public function test_falls_back_to_sku_case_and_space_insensitive(): void
+    public function test_falls_back_to_exact_sku_case_and_edge_spaces_insensitive(): void
     {
-        $byArticle = $this->product('LEDEME-L4755-2');
-        $byArticle->forceFill(['article' => 'L4755-2'])->save();
-        $bySku = $this->product('FLX-050-12');
+        $exact = $this->product('LEDEME-L4755-2');
+        $exact->forceFill(['article' => 'L4755-2'])->save();
+        $spaced = $this->product('TIM-AM-GVS 15-04');
+        $this->product('TIM-AM-GVS15-04');
         $foreign = $this->product('SAVOL-S1', 'other-guid');
-        $foreign->forceFill(['article' => 'S1'])->save();
-        $this->product('DUP-1', null, ['brand' => 'A'])->forceFill(['article' => 'X-1'])->save();
-        $this->product('DUP-2', null, ['brand' => 'B'])->forceFill(['article' => 'X-1'])->save();
 
         $job = $this->import(self::HEAD
-            ."new-guid;l 4755-2;10.00;1;;2026-11-10T18:30:00+03:00\n"
-            .";flx-050-12;20.00;2;;2026-11-10T18:30:00+03:00\n"
-            ."g-x;S1;30.00;3;;2026-11-10T18:30:00+03:00\n"
-            ."g-y;X-1;40.00;4;;2026-11-10T18:30:00+03:00\n"
-            ."g-z;NOPE;50.00;5;;2026-11-10T18:30:00+03:00\n");
+            ."new-guid; ledeme-l4755-2 ;10.00;1;;2026-11-10T18:30:00+03:00\n"   // регистр и пробелы по краям — не важны
+            .";TIM-AM-GVS 15-04;20.00;2;;2026-11-10T18:30:00+03:00\n"           // внутренний пробел значим
+            ."g-x;SAVOL-S1;30.00;3;;2026-11-10T18:30:00+03:00\n"
+            ."g-y;L4755-2;40.00;4;;2026-11-10T18:30:00+03:00\n"                 // артикул — не ищется
+            .";TIM-AM-GVS 1504;50.00;5;;2026-11-10T18:30:00+03:00\n");
 
-        $this->assertSame(['10.00', 1], [self::money($byArticle->fresh()->price), $byArticle->fresh()->stock_1c]);
-        $this->assertSame(['20.00', 2], [self::money($bySku->fresh()->price), $bySku->fresh()->stock_1c]);
-        // GUID по цене не присваивается — это делает поток номенклатуры
-        $this->assertNull($byArticle->fresh()->guid);
+        $this->assertSame(['10.00', 1], [self::money($exact->fresh()->price), $exact->fresh()->stock_1c]);
+        $this->assertSame(['20.00', 2], [self::money($spaced->fresh()->price), $spaced->fresh()->stock_1c]);
+        $this->assertSame(['100.00', 5], [self::money(Product::where('sku', 'TIM-AM-GVS15-04')->value('price')), Product::where('sku', 'TIM-AM-GVS15-04')->value('stock_1c')]);
+        // GUID по ценам не присваивается — это делает поток номенклатуры
+        $this->assertNull($exact->fresh()->guid);
         $this->assertSame('100.00', self::money($foreign->fresh()->price));
 
         $this->assertSame([
-            4 => 'Товар с таким GUID не найден, артикул «S1» — у товара с другим GUID',
-            5 => 'Товар с таким GUID не найден, артикул «X-1» есть у нескольких товаров сайта',
-            6 => 'Товар с таким GUID не найден',
+            4 => 'Товар с таким GUID не найден, SKU «SAVOL-S1» — у товара с другим GUID',
+            5 => 'Товар с таким GUID не найден',
+            6 => 'Товар с SKU «TIM-AM-GVS 1504» не найден',
         ], $this->errors($job));
         $this->assertSame([5, 2, 3], [$job->rows_total, $job->rows_ok, $job->rows_error]);
+    }
+
+    public function test_sku_differing_only_in_case_is_ambiguous(): void
+    {
+        $this->product('abc-1');
+        $this->product('ABC-1');
+
+        $job = $this->import(self::HEAD.";Abc-1;1.00;1;;2026-11-10T18:30:00+03:00\n");
+
+        $this->assertSame([2 => 'Товар с таким GUID не найден, SKU «Abc-1» есть у нескольких товаров сайта'], $this->errors($job));
+    }
+
+    public function test_match_by_article_only_when_enabled_and_only_without_guid(): void
+    {
+        $free = $this->product('LEDEME-L4755-2');
+        $free->forceFill(['article' => 'L4755-2'])->save();
+        $linked = $this->product('SAVOL-S1', 'g-s1');
+        $linked->forceFill(['article' => 'S1'])->save();
+        $this->product('A-X1')->forceFill(['article' => 'X-1'])->save();
+        $this->product('B-X1')->forceFill(['article' => 'X-1'])->save();
+
+        $csv = self::HEAD
+            .";l4755-2;10.00;1;;2026-11-10T18:30:00+03:00\n"
+            .";S1;20.00;2;;2026-11-10T18:30:00+03:00\n"
+            .";X-1;30.00;3;;2026-11-10T18:30:00+03:00\n";
+
+        // Выключено по умолчанию: артикул не ищется
+        $this->assertSame(3, $this->import($csv)->rows_error);
+        $this->assertSame('100.00', self::money($free->fresh()->price));
+
+        config(['shop.exchange_1c.match_by_article' => true]);
+        $job = $this->import($csv);
+
+        $this->assertSame('10.00', self::money($free->fresh()->price));
+        // Товар с GUID по артикулу не находится; два товара с артикулом — ошибка
+        $this->assertSame('100.00', self::money($linked->fresh()->price));
+        $this->assertSame([
+            3 => 'Товар с SKU «S1» не найден',
+            4 => 'Товар с таким GUID не найден, артикул «X-1» есть у нескольких товаров сайта',
+        ], $this->errors($job));
     }
 
     // --- Ошибки строк ---
@@ -195,7 +234,7 @@ class PricesStockTest extends TestCase
             7 => 'Остаток «1.5»: ожидается целое число ≥ 0',
             8 => 'Дата «10.11.2026 18:30»: ожидается ISO 8601, например 2026-11-10T18:30:00+03:00',
             9 => 'Признак наличия «maybe»: ожидается in_stock, on_order или none',
-            10 => 'Нет GUID и артикула',
+            10 => 'Нет GUID и SKU',
             11 => 'Товар с таким GUID не найден; Цена «abc»: ожидается число до 2 знаков после точки, без пробелов; Нет остатка; Дата «»: ожидается ISO 8601, например 2026-11-10T18:30:00+03:00',
         ], $this->errors($job));
         $this->assertSame([9, 0, 0, 9], [$job->rows_total, $job->rows_ok, $job->rows_skipped, $job->rows_error]);

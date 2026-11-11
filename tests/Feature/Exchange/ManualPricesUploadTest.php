@@ -153,6 +153,25 @@ class ManualPricesUploadTest extends TestCase
         $this->assertStringEndsWith('.xlsx', ExchangeJob::sole()->file_path);
     }
 
+    public function test_xlsx_date_as_excel_serial_number_is_minsk_time(): void
+    {
+        $product = $this->product('A-1', 'g-1');
+
+        // 46336.770833… = 10.11.2026 18:30 (ячейка без формата даты); текстом — как раньше ISO
+        $this->upload($this->xlsx([
+            ['guid', 'sku', 'price', 'stock', 'updated_at'],
+            ['g-1', 'A-1', 10, 3, 46336 + (18 * 60 + 30) / 1440],
+        ]));
+        $this->actingAs($this->admin)->post('/admin/exchange/prices/apply');
+
+        $this->assertSame('2026-11-10 15:30:00', $product->fresh()->getRawOriginal('stock_synced_at'));
+        $this->assertSame(0, ExchangeJob::sole()->rows_error);
+
+        // Число вне диапазона дат — ошибка строки
+        $this->upload($this->xlsx([['guid', 'sku', 'price', 'stock', 'updated_at'], ['g-1', 'A-1', 10, 3, 123]]));
+        $this->actingAs($this->admin)->get('/admin/exchange/prices/preview')->assertSee('Дата «123»: ожидается ISO 8601');
+    }
+
     public function test_cp1251_csv_from_excel_is_converted(): void
     {
         $product = $this->product('Смеситель-1', 'g-1');
@@ -237,7 +256,7 @@ class ManualPricesUploadTest extends TestCase
         $reader->close();
 
         $this->assertSame(['guid', 'sku', 'price', 'stock', 'stock_status', 'updated_at'], $rows[0]);
-        $this->assertSame('L4755-2', $rows[1][1]);
+        $this->assertSame('LEDEME-L4755-2', $rows[1][1]);
         $this->assertStringEndsWith('+03:00', $rows[1][5]);
     }
 

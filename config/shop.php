@@ -92,6 +92,9 @@ return [
         'archive_days' => (int) env('SHOP_1C_ARCHIVE_DAYS', 90),
         // Пояс времени в ответах API (ISO 8601 со смещением); на входе — любое смещение (App\Support\ExchangeTime)
         'timezone' => env('SHOP_1C_TIMEZONE', 'Europe/Minsk'),
+        // Цены и остатки: товар — по guid, затем точно по SKU сайта. true — ещё и по артикулу
+        // (products.article), только среди товаров без GUID; неоднозначность — ошибка строки
+        'match_by_article' => (bool) env('SHOP_1C_MATCH_BY_ARTICLE', false),
     ],
 
     'orders' => [
