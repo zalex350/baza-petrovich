@@ -118,7 +118,7 @@ class ClientCodesAdminTest extends TestCase
         $this->actingAs($this->admin)
             ->from("/admin/product/{$this->a->id}")
             ->post("/admin/product/{$this->a->id}/client-codes", ['client_code_organization' => $this->org->id, 'client_code' => 'x-1'])
-            ->assertSessionHasErrors(['client_code' => 'Код «x-1» у этого клиента уже занят товаром HG-002 — Смеситель Hansgrohe.']);
+            ->assertSessionHasErrors(['client_code' => 'Код «x-1» у этого клиента уже занят товаром Арт. HG-002 — Смеситель Hansgrohe.']);
 
         $html = $this->actingAs($this->admin)->get("/admin/product/{$this->a->id}")->getContent();
         $this->assertMatchesRegularExpression('#id="f-client_code-error"[^>]*data-field-error>\s*Код «x-1» у этого клиента уже занят#u', $html);
@@ -228,7 +228,7 @@ class ClientCodesAdminTest extends TestCase
         $reader->open($path);
         foreach ($reader->getSheetIterator() as $sheet) {
             foreach ($sheet->getRowIterator() as $row) {
-                $this->assertSame(['Наш артикул', 'Код клиента'], $row->toArray());
+                $this->assertSame(['Ваш код', 'Артикул', 'Бренд'], $row->toArray());
                 break;
             }
         }
@@ -243,7 +243,7 @@ class ClientCodesAdminTest extends TestCase
         unlink($path);
 
         $this->assertMatchesRegularExpression('/<xf[^>]*numFmtId="49"/', $styles);
-        $this->assertStringContainsString('<c r="B1000"', $sheet);
+        $this->assertStringContainsString('<c r="C1000"', $sheet);
     }
 
     public function test_preview_shows_add_update_and_row_errors_without_changing_db(): void
@@ -275,8 +275,8 @@ class ClientCodesAdminTest extends TestCase
         $errors = substr($html, strpos($html, 'data-section="errors"'));
         $errors = substr($errors, 0, strpos($errors, '</section>'));
         $this->assertStringContainsString('Артикул не найден в каталоге.', $errors);
-        $this->assertStringContainsString('Пустое поле «Код клиента».', $errors);
-        $this->assertStringContainsString('Пустое поле «Наш артикул».', $errors);
+        $this->assertStringContainsString('Пустое поле «Ваш код».', $errors);
+        $this->assertStringContainsString('Пустое поле «Артикул».', $errors);
 
         // База не менялась
         $this->assertSame([$this->a->id => 'OLD-A', $this->c->id => 'BUSY'], $this->codes());
@@ -303,7 +303,7 @@ class ClientCodesAdminTest extends TestCase
         // Занятый код — отдельной проверкой
         $this->upload($this->csv("Наш артикул;Код клиента\nGR-001;busy\n"));
         $this->actingAs($this->admin)->get("/admin/organization/{$this->org->id}/codes/import")
-            ->assertSee('Код уже занят другим товаром: OR-003 — Смеситель Oras.');
+            ->assertSee('Код уже занят другим товаром: Арт. OR-003 — Смеситель Oras.');
     }
 
     public function test_apply_add_mode_skips_errors_and_shows_report(): void
@@ -386,8 +386,8 @@ class ClientCodesAdminTest extends TestCase
         // GR-001 → BUSY — ошибка, и у GR-001 остаётся X; значит, HG-002 → X тоже нельзя
         $this->upload($this->csv("Наш артикул;Код клиента\nGR-001;BUSY\nHG-002;X\n"));
         $this->actingAs($this->admin)->get("/admin/organization/{$this->org->id}/codes/import")
-            ->assertSee('Код уже занят другим товаром: OR-003 — Смеситель Oras.')
-            ->assertSee('Код уже занят другим товаром: GR-001 — Смеситель Grohe.')
+            ->assertSee('Код уже занят другим товаром: Арт. OR-003 — Смеситель Oras.')
+            ->assertSee('Код уже занят другим товаром: Арт. GR-001 — Смеситель Grohe.')
             ->assertDontSee('data-import-apply', false);
 
         $this->actingAs($this->admin)->post("/admin/organization/{$this->org->id}/codes/import/apply")->assertSessionHas('error');
@@ -455,10 +455,10 @@ class ClientCodesAdminTest extends TestCase
 
         // Номера строк — как в файле; числа без «.0»; формула — значение; второй лист не читается
         $this->assertSame([
-            ['row' => 4, 'sku' => 'GR-001', 'code' => '00777'],
-            ['row' => 5, 'sku' => '12345', 'code' => '5'],
-            ['row' => 7, 'sku' => 'HG-002', 'code' => 'HG-B1'],
-            ['row' => 8, 'sku' => 'OR-003', 'code' => 'Код-Ё'],
+            ['row' => 4, 'article' => 'GR-001', 'brand' => '', 'code' => '00777'],
+            ['row' => 5, 'article' => '12345', 'brand' => '', 'code' => '5'],
+            ['row' => 7, 'article' => 'HG-002', 'brand' => '', 'code' => 'HG-B1'],
+            ['row' => 8, 'article' => 'OR-003', 'brand' => '', 'code' => 'Код-Ё'],
         ], session("client_codes_import.{$this->org->id}.rows"));
 
         $this->actingAs($this->admin)->get("/admin/organization/{$this->org->id}/codes/import")
@@ -489,7 +489,7 @@ class ClientCodesAdminTest extends TestCase
     {
         $this->upload($this->csv("Артикул;Код\nGR-001;A\n"))
             ->assertRedirect("/admin/organization/{$this->org->id}?tab=codes")
-            ->assertSessionHasErrors(['file' => 'В файле нет столбцов «Наш артикул» и «Код клиента» — скачайте шаблон и заполните его.']);
+            ->assertSessionHasErrors(['file' => 'В файле нет столбцов «Ваш код» и «Артикул» — скачайте шаблон или выгрузку ассортимента и заполните её.']);
 
         $this->upload($this->csv("Наш артикул;Код клиента\n"))->assertSessionHasErrors('file');
         $this->upload($this->csv('x', 'codes.xls'))->assertSessionHasErrors(['file' => 'Нужен файл Excel (.xlsx), LibreOffice (.ods) или CSV.']);
@@ -515,13 +515,15 @@ class ClientCodesAdminTest extends TestCase
         $this->assertSame([], $this->codes());
     }
 
-    public function test_ambiguous_sku_is_error(): void
+    public function test_ambiguous_article_is_row_error_with_brands(): void
     {
-        $this->product('GR-001', 'Дубль артикула');
+        $this->product('LEDEME-A-100', 'Смеситель Ledeme')->forceFill(['brand' => 'Ledeme', 'article' => 'A-100'])->save();
+        $this->product('TIM-A-100', 'Смеситель Tim')->forceFill(['brand' => 'TIM', 'article' => 'A-100'])->save();
 
-        $this->upload($this->csv("Наш артикул;Код клиента\nGR-001;A\n"));
+        $this->upload($this->csv("Ваш код;Артикул\nK-1;a-100\n"));
         $this->actingAs($this->admin)->get("/admin/organization/{$this->org->id}/codes/import")
-            ->assertSee('Артикул есть у нескольких товаров');
+            ->assertSee('Артикул «a-100» есть у нескольких товаров: LEDEME · Арт. A-100, TIM · Арт. A-100 — укажите бренд в столбце «Бренд» или задайте код в карточке нужного товара.');
+        $this->assertSame([], $this->codes());
     }
 
     /**

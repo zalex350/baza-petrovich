@@ -37,7 +37,7 @@ class AdminOrganizationController extends Controller
 
     public function create()
     {
-        return view('admin.organization_form', ['organization' => new Organization()]);
+        return view('admin.organization_form', ['organization' => new Organization]);
     }
 
     public function store()
@@ -68,7 +68,7 @@ class AdminOrganizationController extends Controller
     {
         return ProductClientCode::query()
             ->select('product_client_codes.*')
-            ->with('product:id,sku,name,display_name')
+            ->with('product:id,sku,article,brand,name,display_name')
             ->leftJoin('products', 'products.id', '=', 'product_client_codes.product_id')
             ->where('product_client_codes.organization_id', $organization->id)
             ->when($search !== '', function ($query) use ($search) {
@@ -77,6 +77,7 @@ class AdminOrganizationController extends Controller
                 $query->where(function ($q) use ($like) {
                     $q->where('product_client_codes.code', 'like', $like)
                         ->orWhere('products.sku', 'like', $like)
+                        ->orWhere('products.article', 'like', $like)
                         ->orWhere('products.name', 'like', $like)
                         ->orWhere('products.display_name', 'like', $like);
                 });

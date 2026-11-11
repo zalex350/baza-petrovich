@@ -23,8 +23,16 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Загрузка кодов товаров клиента из Excel / CSV: столбцы «Наш артикул» и «Код клиента»
- * (строка заголовков — любая из первых 10, порядок столбцов любой). Файлы читает и шаблон
+ * Загрузка кодов товаров клиента из Excel / CSV: столбцы «Ваш код», «Артикул» и необязательный
+ * «Бренд» — как в выгрузке ассортимента (AssortmentExport), её файл принимается как есть;
+ * прежние заголовки «Код клиента» и «Наш артикул» тоже понимаются. Строка заголовков — любая
+ * из первых 10, порядок столбцов любой.
+ *
+ * Товар по строке (match): 1) SKU сайта — точно (без регистра и пробелов по краям);
+ * 2) есть бренд — «бренд + артикул» через match_key (Product::matchKey); 3) артикул без бренда
+ * (нормализация как в match_key) — только если он у одного товара. Несколько совпадений —
+ * ошибка строки с перечнем «БРЕНД · Арт. …». Бренд в файле не совпал с брендом единственного
+ * товара с таким артикулом — тоже ошибка: код не должен уйти чужому товару. Файлы читает и шаблон
  * пишет openspout/openspout (нужно расширение zip): .xlsx и .ods (LibreOffice) — первый
  * лист, формулы — их вычисленное значение; CSV — UTF-8 (с BOM или без) или cp1251, разделитель «;», «,» или Tab.
  *
@@ -49,9 +57,15 @@ class ClientCodeImport
         self::MODE_REPLACE => 'Заменить полностью',
     ];
 
-    public const SKU_HEADER = 'Наш артикул';
+    /** Заголовки — как в выгрузке ассортимента (AssortmentExport::HEADERS) */
+    public const CODE_HEADER = 'Ваш код';
 
-    public const CODE_HEADER = 'Код клиента';
+    public const ARTICLE_HEADER = 'Артикул';
+
+    public const BRAND_HEADER = 'Бренд';
+
+    /** Прежние заголовки шаблона — тоже принимаются */
+    public const LEGACY_HEADERS = ['Код клиента' => self::CODE_HEADER, 'Наш артикул' => self::ARTICLE_HEADER];
 
     public const MAX_ROWS = 10000;
 
@@ -61,10 +75,10 @@ class ClientCodeImport
     public const TEMPLATE_ROWS = 1000;
 
     /**
-     * Строки файла: [['row' => номер строки в файле, 'sku' => …, 'code' => …], …], без строки
-     * заголовков и полностью пустых строк.
+     * Строки файла: [['row' => номер строки в файле, 'article' => …, 'brand' => …, 'code' => …], …],
+     * без строки заголовков и строк без артикула и кода.
      *
-     * @return list<array{row: int, sku: string, code: string}>
+     * @return list<array{row: int, article: string, brand: string, code: string}>
      *
      * @throws RuntimeException файл не читается или нет нужных столбцов — текст для пользователя
      */
@@ -72,23 +86,24 @@ class ClientCodeImport
     {
         $rows = $this->rows($path, $extension);
 
-        [$headerIndex, $skuColumn, $codeColumn] = $this->columns($rows);
+        [$headerIndex, $articleColumn, $codeColumn, $brandColumn] = $this->columns($rows);
 
         $result = [];
 
         foreach (array_slice($rows, $headerIndex + 1, null, true) as $index => $cells) {
-            $sku = trim((string) ($cells[$skuColumn] ?? ''));
+            $article = trim((string) ($cells[$articleColumn] ?? ''));
             $code = trim((string) ($cells[$codeColumn] ?? ''));
+            $brand = $brandColumn === null ? '' : trim((string) ($cells[$brandColumn] ?? ''));
 
-            if ($sku === '' && $code === '') {
+            if ($article === '' && $code === '') {
                 continue;
             }
 
-            $result[] = ['row' => $index + 1, 'sku' => $sku, 'code' => $code];
+            $result[] = ['row' => $index + 1, 'article' => $article, 'brand' => $brand, 'code' => $code];
         }
 
         if ($result === []) {
-            throw new RuntimeException('В файле нет строк с кодами под заголовками «'.self::SKU_HEADER.'» и «'.self::CODE_HEADER.'».');
+            throw new RuntimeException('В файле нет строк с кодами под заголовками «'.self::CODE_HEADER.'» и «'.self::ARTICLE_HEADER.'».');
         }
 
         if (count($result) > self::MAX_ROWS) {
@@ -109,19 +124,20 @@ class ClientCodeImport
         $path = tempnam(sys_get_temp_dir(), 'codes-template');
 
         $options = new WriterOptions;
-        $options->setColumnWidth(24, 1, 2);
+        $options->setColumnWidth(24, 1, 2, 3);
 
         $writer = new XlsxWriter($options);
         $writer->openToFile($path);
         $writer->getCurrentSheet()->setName('Коды');
-        $writer->addRow(Row::fromValues([self::SKU_HEADER, self::CODE_HEADER], (new Style)->setFormat('@')->setFontBold()));
+        // Столбцы — как в выгрузке ассортимента: её можно заполнить и загрузить обратно
+        $writer->addRow(Row::fromValues([self::CODE_HEADER, self::ARTICLE_HEADER, self::BRAND_HEADER], (new Style)->setFormat('@')->setFontBold()));
 
         // Формат хранится в ячейке, а пустые ячейки и строки openspout не записывает —
         // поэтому ячейки с пустым текстом
         $text = (new Style)->setFormat('@');
 
         for ($i = 0; $i < self::TEMPLATE_ROWS; $i++) {
-            $writer->addRow(new Row([new Cell\StringCell('', $text), new Cell\StringCell('', $text)]));
+            $writer->addRow(new Row([new Cell\StringCell('', $text), new Cell\StringCell('', $text), new Cell\StringCell('', $text)]));
         }
 
         $writer->close();
@@ -133,18 +149,18 @@ class ClientCodeImport
      * Что изменится: add — новые коды, update — было → стало, delete — коды, которые режим
      * replace удалит, unchanged — число строк без изменений, errors — ошибки по строкам.
      *
-     * @param  list<array{row: int, sku: string, code: string}>  $rows
+     * @param  list<array{row: int, article: string, brand: string, code: string}>  $rows
      */
     public function preview(Organization $organization, array $rows, string $mode): array
     {
-        $existing = ProductClientCode::with('product:id,sku,name')
+        $existing = ProductClientCode::with('product:id,sku,article,brand,name,display_name')
             ->where('organization_id', $organization->id)
             ->get()
             ->keyBy('product_id')
             // except() у Eloquent-коллекции — по id моделей, здесь нужен по ключу product_id
             ->toBase();
 
-        $products = $this->products(array_column($rows, 'sku'));
+        $catalog = $this->catalog();
 
         $errors = [];
         $valid = [];
@@ -154,16 +170,15 @@ class ClientCodeImport
         // Проверки строки по самому файлу
         foreach ($rows as $row) {
             $message = match (true) {
-                $row['sku'] === '' && $row['code'] === '' => null,
-                $row['sku'] === '' => 'Пустое поле «'.self::SKU_HEADER.'».',
+                $row['article'] === '' => 'Пустое поле «'.self::ARTICLE_HEADER.'».',
                 $row['code'] === '' => 'Пустое поле «'.self::CODE_HEADER.'».',
                 mb_strlen($row['code']) > 100 => 'Код длиннее 100 символов.',
-                ! isset($products[self::key($row['sku'])]) => 'Артикул не найден в каталоге.',
-                count($products[self::key($row['sku'])]) > 1 => 'Артикул есть у нескольких товаров: '
-                    .collect($products[self::key($row['sku'])])->map(fn ($product) => '«'.$product->name.'»')->implode(', ')
-                    .' — код задайте в карточке нужного товара.',
                 default => null,
             };
+
+            if ($message === null) {
+                [$product, $message] = $this->match($catalog, $row['article'], $row['brand']);
+            }
 
             if ($message !== null) {
                 $errors[] = $this->error($row, $message);
@@ -171,7 +186,7 @@ class ClientCodeImport
                 continue;
             }
 
-            $row['product'] = $products[self::key($row['sku'])][0];
+            $row['product'] = $product;
             $valid[] = $row;
             $byCode[self::key($row['code'])][] = $row['row'];
             $byProduct[$row['product']->id][] = $row['row'];
@@ -258,7 +273,7 @@ class ClientCodeImport
      * Применение в транзакции. Проверка — заново по текущей базе (между предпросмотром
      * и «Применить» коды могли изменить в карточке товара).
      *
-     * @param  list<array{row: int, sku: string, code: string}>  $rows
+     * @param  list<array{row: int, article: string, brand: string, code: string}>  $rows
      * @return array preview() — что применено
      *
      * @throws RuntimeException применить нельзя (replace с ошибками или нечего менять)
@@ -313,30 +328,126 @@ class ClientCodeImport
 
     public function productLabel(?Product $product): string
     {
-        return $product ? trim(($product->sku ?? '—').' — '.$product->name) : 'удалённый товар';
+        if (! $product) {
+            return 'удалённый товар';
+        }
+
+        $brand = trim((string) $product->brand);
+
+        return ($brand !== '' ? mb_strtoupper($brand).' · ' : '').'Арт. '.$product->displayArticle().' — '.$product->title();
+    }
+
+    /** «БРЕНД · Арт. L4755-2» — в перечне неоднозначных совпадений */
+    public static function choiceLabel(Product $product): string
+    {
+        return (trim((string) $product->brand) !== '' ? mb_strtoupper(trim($product->brand)) : 'Без бренда').' · Арт. '.$product->displayArticle();
     }
 
     /**
-     * Строка заголовков и номера столбцов «Наш артикул», «Код клиента».
+     * Перечень «БРЕНД · Арт. …» через запятую; одинаковые подписи (дубль в каталоге) —
+     * с названием товара: «SAVOL · Арт. X-1 («Сифон»)».
+     *
+     * @param  list<Product>  $products
+     */
+    private static function choiceList(array $products): string
+    {
+        $labels = array_map(fn (Product $p) => self::choiceLabel($p), $products);
+        $counts = array_count_values($labels);
+
+        return implode(', ', array_map(
+            fn (Product $p, string $label) => $counts[$label] > 1 ? $label.' («'.$p->title().'»)' : $label,
+            $products,
+            $labels,
+        ));
+    }
+
+    /**
+     * Товар по артикулу (и бренду) строки: [товар, null] или [null, текст ошибки].
+     *
+     * @param  array{sku: array, key: array, article: array}  $catalog
+     * @return array{?Product, ?string}
+     */
+    private function match(array $catalog, string $article, string $brand): array
+    {
+        $several = fn (array $products) => [null, 'Артикул «'.$article.'» есть у нескольких товаров: '
+            .self::choiceList($products)
+            .($brand === '' ? ' — укажите бренд в столбце «'.self::BRAND_HEADER.'»' : '')
+            .' или задайте код в карточке нужного товара.'];
+
+        // 1. SKU сайта — точно
+        if ($product = $catalog['sku'][self::key($article)] ?? null) {
+            return [$product, null];
+        }
+
+        // 2. Бренд + артикул
+        if ($brand !== '' && ($key = Product::matchKey($brand, $article)) !== null) {
+            $found = $catalog['key'][$key] ?? [];
+
+            if (count($found) === 1) {
+                return [$found[0], null];
+            }
+
+            if (count($found) > 1) {
+                return $several($found);
+            }
+        }
+
+        // 3. Артикул без бренда — только у одного товара
+        $found = $catalog['article'][Product::normalizeKeyPart($article)] ?? [];
+
+        if ($found === []) {
+            return [null, $brand !== '' ? 'Товар с брендом «'.$brand.'» и артикулом «'.$article.'» не найден в каталоге.' : 'Артикул не найден в каталоге.'];
+        }
+
+        if (count($found) > 1) {
+            return $several($found);
+        }
+
+        // Бренд в файле есть, но не тот: код не должен уйти чужому товару
+        if ($brand !== '' && Product::normalizeKeyPart($brand) !== Product::normalizeKeyPart($found[0]->brand)) {
+            return [null, 'Артикул «'.$article.'» есть только у товара '.self::choiceLabel($found[0]).', а в файле бренд «'.$brand.'».'];
+        }
+
+        return [$found[0], null];
+    }
+
+    /**
+     * Строка заголовков и номера столбцов «Артикул», «Ваш код» и «Бренд» (нет — null);
+     * прежние «Наш артикул», «Код клиента» — тоже.
      *
      * @param  list<list<string>>  $rows
-     * @return array{int, int, int}
+     * @return array{int, int, int, ?int}
      */
     private function columns(array $rows): array
     {
         $normalize = fn ($value) => str_replace('ё', 'е', mb_strtolower(preg_replace('/\s+/u', ' ', trim((string) $value))));
+        $aliases = [];
+
+        foreach ([self::CODE_HEADER, self::ARTICLE_HEADER, self::BRAND_HEADER] as $header) {
+            $aliases[$normalize($header)] = $header;
+        }
+
+        foreach (self::LEGACY_HEADERS as $legacy => $header) {
+            $aliases[$normalize($legacy)] = $header;
+        }
 
         foreach (array_slice($rows, 0, 10, true) as $index => $cells) {
-            $cells = array_map($normalize, $cells);
-            $sku = array_search($normalize(self::SKU_HEADER), $cells, true);
-            $code = array_search($normalize(self::CODE_HEADER), $cells, true);
+            $found = [];
 
-            if ($sku !== false && $code !== false) {
-                return [$index, $sku, $code];
+            foreach ($cells as $column => $cell) {
+                $header = $aliases[$normalize($cell)] ?? null;
+
+                if ($header !== null && ! isset($found[$header])) {
+                    $found[$header] = $column;
+                }
+            }
+
+            if (isset($found[self::ARTICLE_HEADER], $found[self::CODE_HEADER])) {
+                return [$index, $found[self::ARTICLE_HEADER], $found[self::CODE_HEADER], $found[self::BRAND_HEADER] ?? null];
             }
         }
 
-        throw new RuntimeException('В файле нет столбцов «'.self::SKU_HEADER.'» и «'.self::CODE_HEADER.'» — скачайте шаблон и заполните его.');
+        throw new RuntimeException('В файле нет столбцов «'.self::CODE_HEADER.'» и «'.self::ARTICLE_HEADER.'» — скачайте шаблон или выгрузку ассортимента и заполните её.');
     }
 
     /**
@@ -445,28 +556,32 @@ class ClientCodeImport
     }
 
     /**
-     * Товары по артикулам: ключ — артикул без регистра, значение — список (артикул в каталоге
-     * не уникален). Удалённые товары не участвуют.
+     * Каталог для сопоставления одной выборкой (удалённые не участвуют): sku → товар,
+     * match_key → товары, нормализованный артикул (как в match_key) → товары.
      *
-     * @param  list<string>  $skus
-     * @return array<string, list<Product>>
+     * @return array{sku: array<string, Product>, key: array<string, list<Product>>, article: array<string, list<Product>>}
      */
-    private function products(array $skus): array
+    private function catalog(): array
     {
-        $skus = array_values(array_unique(array_filter(array_map('trim', $skus), fn ($sku) => $sku !== '')));
-        $products = [];
+        $catalog = ['sku' => [], 'key' => [], 'article' => []];
 
-        foreach (array_chunk($skus, 500) as $chunk) {
-            foreach (Product::whereIn('sku', $chunk)->get(['id', 'sku', 'name']) as $product) {
-                $products[self::key($product->sku)][] = $product;
+        foreach (Product::query()->select(['id', 'sku', 'article', 'brand', 'name', 'display_name', 'match_key'])->lazyById(2000) as $product) {
+            $catalog['sku'][self::key((string) $product->sku)] ??= $product;
+
+            if ($product->match_key !== null) {
+                $catalog['key'][$product->match_key][] = $product;
+            }
+
+            if (($article = Product::normalizeKeyPart($product->article)) !== '') {
+                $catalog['article'][$article][] = $product;
             }
         }
 
-        return $products;
+        return $catalog;
     }
 
     private function error(array $row, string $message): array
     {
-        return ['row' => $row['row'], 'sku' => $row['sku'], 'code' => $row['code'], 'message' => $message];
+        return ['row' => $row['row'], 'article' => $row['article'], 'brand' => $row['brand'] ?? '', 'code' => $row['code'], 'message' => $message];
     }
 }
