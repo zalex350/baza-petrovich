@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ExchangeJob;
 use App\Services\Exchange\ExchangeJobs;
 use App\Services\Exchange\ExchangeUpload;
+use App\Support\ExchangeTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -27,7 +28,7 @@ class ExchangeController extends Controller
     {
         return response()->json([
             'status' => 'ok',
-            'server_time' => now()->toIso8601String(),
+            'server_time' => ExchangeTime::format(now()),
             'token' => $request->attributes->get('exchange_token')->name,
             'ip' => $request->ip(),
         ], 200, [], JSON_UNESCAPED_UNICODE);

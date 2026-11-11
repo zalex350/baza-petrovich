@@ -90,6 +90,8 @@ return [
         'max_body_mb' => (int) env('SHOP_1C_MAX_BODY_MB', 50),
         'rate_limit_per_minute' => (int) env('SHOP_1C_RATE_LIMIT', 60),
         'archive_days' => (int) env('SHOP_1C_ARCHIVE_DAYS', 90),
+        // Пояс времени в ответах API (ISO 8601 со смещением); на входе — любое смещение (App\Support\ExchangeTime)
+        'timezone' => env('SHOP_1C_TIMEZONE', 'Europe/Minsk'),
     ],
 
     'orders' => [

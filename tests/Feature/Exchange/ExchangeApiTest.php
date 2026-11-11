@@ -7,7 +7,9 @@ use App\Enums\ExchangeJobType;
 use App\Models\ExchangeIp;
 use App\Models\ExchangeJob;
 use App\Models\ExchangeToken;
+use App\Support\ExchangeTime;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -247,6 +249,25 @@ class ExchangeApiTest extends TestCase
         $this->assertError($this->api('GET', '/jobs/0193f2a1-0000-7000-8000-000000000000'), 404, 'not_found');
         $this->assertError($this->api('GET', '/nope'), 404, 'not_found');
         $this->assertError($this->api('GET', '/catalog'), 405, 'method_not_allowed');
+    }
+
+    public function test_times_are_minsk_in_responses_and_any_offset_on_input(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-10 15:30:00', 'UTC'));
+
+        $this->api('GET', '/ping')->assertOk()->assertJsonPath('server_time', '2026-11-10T18:30:00+03:00');
+
+        $id = $this->postCsv('/catalog', self::CSV)->json('job_id');
+        $this->api('GET', "/jobs/{$id}")->assertJsonPath('received_at', '2026-11-10T18:30:00+03:00');
+        // В БД — UTC, как всё приложение
+        $this->assertSame('2026-11-10 15:30:00', ExchangeJob::find($id)->getRawOriginal('received_at'));
+
+        foreach (['2026-11-10T18:30:00+03:00', '2026-11-10T15:30:00Z', '2026-11-10T15:30:00+00:00', '2026-11-10T17:30:00+0200', '2026-11-10T18:30:00'] as $input) {
+            $this->assertSame('2026-11-10 15:30:00', ExchangeTime::parse($input)?->format('Y-m-d H:i:s'), $input);
+        }
+        foreach (['10.11.2026 18:30', '2026-13-40T99:00:00+03:00', '', 'вчера'] as $bad) {
+            $this->assertNull(ExchangeTime::parse($bad), $bad);
+        }
     }
 
     public function test_job_errors_are_listed_in_api(): void

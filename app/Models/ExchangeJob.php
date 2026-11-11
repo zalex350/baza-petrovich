@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ExchangeJobStatus;
 use App\Enums\ExchangeJobType;
+use App\Support\ExchangeTime;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
@@ -76,8 +77,8 @@ class ExchangeJob extends Model
             'job_id' => $this->id,
             'type' => $this->type->value,
             'status' => $this->status->value,
-            'received_at' => $this->received_at?->toIso8601String(),
-            'finished_at' => $this->finished_at?->toIso8601String(),
+            'received_at' => ExchangeTime::format($this->received_at),
+            'finished_at' => ExchangeTime::format($this->finished_at),
             'rows_total' => $this->rows_total,
             'rows_ok' => $this->rows_ok,
             'rows_skipped' => $this->rows_skipped,
