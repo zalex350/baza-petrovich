@@ -1,5 +1,6 @@
 {{--
-    Задание обмена с 1С: сведения, ошибки по строкам (по 50), скачивание исходного файла.
+    Задание обмена с 1С: сведения, отчёт номенклатуры (partials/exchange_report: сводка, созданные,
+    предупреждения, товары без пары), ошибки по строкам (по 50), скачивание исходного файла.
     Данные: $job, $rowErrors (пагинатор ExchangeJobError).
 --}}
 @extends('layouts.admin')
@@ -14,7 +15,8 @@
 
 <div class="mb-6 rounded-card border border-line bg-surface p-card" data-exchange-job-card>
     <dl class="grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-        <div><dt class="text-meta text-ink-muted">Статус</dt><dd><x-badge :tone="$job->statusTone()" data-job-status>{{ $job->statusLabel() }}</x-badge></dd></div>
+        <div><dt class="text-meta text-ink-muted">Статус</dt><dd><x-badge :tone="$job->statusTone()" data-job-status>{{ $job->statusLabel() }}</x-badge>
+            @if($job->dry_run)<x-badge tone="info" data-job-dry-run>Пробный прогон — данные не менялись</x-badge>@endif</dd></div>
         <div><dt class="text-meta text-ink-muted">Операция</dt><dd>{{ $job->direction === 'export' ? 'Экспорт (сайт → 1С)' : 'Импорт (1С → сайт)' }}@if($job->mode), {{ $job->mode }}@endif</dd></div>
         <div><dt class="text-meta text-ink-muted">Задание</dt><dd><code class="break-all">{{ $job->id }}</code></dd></div>
         <div><dt class="text-meta text-ink-muted">Строк</dt><dd>всего {{ $job->rows_total }}, принято {{ $job->rows_ok }}, пропущено {{ $job->rows_skipped }}, с ошибкой {{ $job->rows_error }}</dd></div>
@@ -53,6 +55,10 @@
         @endif
     @endif
 </div>
+
+@if($job->report)
+    @include('admin.partials.exchange_report', ['report' => $job->report])
+@endif
 
 <h2 class="text-xl font-semibold mb-4">Ошибки по строкам</h2>
 

@@ -7,6 +7,7 @@ use App\Enums\ExchangeJobType;
 use App\Models\ExchangeIp;
 use App\Models\ExchangeJob;
 use App\Models\ExchangeToken;
+use App\Models\Product;
 use App\Support\ExchangeTime;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -137,8 +138,9 @@ class ExchangeApiTest extends TestCase
 
     // --- Приём файла и задание ---
 
-    public function test_csv_is_archived_queued_and_stub_processed(): void
+    public function test_csv_is_archived_queued_and_processed(): void
     {
+        $product = Product::create(['name' => 'Смеситель', 'sku' => 'LEDEME-L4755-2', 'price' => 1, 'stock' => 1]);
         $response = $this->postCsv('/catalog?mode=full', self::CSV)->assertStatus(202)->assertJsonPath('status', 'queued');
 
         $job = ExchangeJob::findOrFail($response->json('job_id'));
@@ -147,15 +149,17 @@ class ExchangeApiTest extends TestCase
         $this->assertSame($job->received_at->format('Y/m').'/'.$job->id.'.csv', $job->file_path);
         $this->assertSame(self::CSV, Storage::disk('exchange')->get($job->file_path));
 
-        // Заглушка обработчика (этапы 3–5): сразу done, 0 строк
+        // Очередь в тестах синхронная — задание уже обработано (CatalogHandler): товар найден по SKU
         $this->assertSame(ExchangeJobStatus::Done, $job->status);
-        $this->assertSame(0, $job->rows_total);
+        $this->assertSame(1, $job->rows_total);
         $this->assertNotNull($job->finished_at);
+        $this->assertSame('5f1c2b8a-3d4e-11ef-9a1b-0050569a1c01', $product->fresh()->guid);
 
         $this->api('GET', "/jobs/{$job->id}")->assertOk()->assertJson([
-            'job_id' => $job->id, 'type' => 'catalog', 'status' => 'done',
-            'rows_total' => 0, 'rows_ok' => 0, 'rows_skipped' => 0, 'rows_error' => 0, 'errors' => [],
-        ])->assertJsonStructure(['received_at', 'finished_at']);
+            'job_id' => $job->id, 'type' => 'catalog', 'status' => 'done', 'dry_run' => false,
+            'rows_total' => 1, 'rows_ok' => 1, 'rows_skipped' => 0, 'rows_error' => 0, 'errors' => [],
+            'created' => [], 'warnings' => [], 'missing' => [],
+        ])->assertJsonPath('summary.matched_by_sku', 1)->assertJsonStructure(['received_at', 'finished_at']);
     }
 
     public function test_prices_stock_and_default_mode(): void
@@ -279,6 +283,7 @@ class ExchangeApiTest extends TestCase
 
     public function test_job_errors_are_listed_in_api(): void
     {
+        Product::create(['name' => 'Смеситель', 'sku' => 'LEDEME-L4755-2', 'price' => 1, 'stock' => 1]);
         $id = $this->postCsv('/catalog', self::CSV)->json('job_id');
         $job = ExchangeJob::find($id);
         $job->errors()->create(['line' => 2, 'guid' => 'g-1', 'sku' => 'L4755-2', 'message' => 'Товар с таким GUID не найден']);

@@ -319,6 +319,9 @@
                     Статус: <strong class="text-green-700">Опубликован</strong>
                 @else
                     Статус: <strong class="text-amber-600">Скрыт</strong>
+                    @if($product->hidden_by_1c)
+                        <span class="text-amber-600" data-hidden-by-1c>· выведен в 1С (active = 0), покажется, когда 1С пришлёт active = 1</span>
+                    @endif
                 @endif
             </span>
 

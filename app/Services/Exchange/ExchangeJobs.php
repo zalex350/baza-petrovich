@@ -22,8 +22,9 @@ use Throwable;
  */
 class ExchangeJobs
 {
-    /** Обработчики по типу; нет в списке — StubHandler (этапы 4–5 заменят) */
+    /** Обработчики по типу; нет в списке — StubHandler (заказы, этап 5) */
     private const HANDLERS = [
+        'catalog' => CatalogHandler::class,
         'prices-stock' => PricesStockHandler::class,
     ];
 
@@ -64,6 +65,7 @@ class ExchangeJobs
         ?ExchangeToken $token,
         ?string $ip,
         ?User $user = null,
+        bool $dryRun = false,
     ): ExchangeJob {
         $manual = $user !== null;
 
@@ -73,6 +75,7 @@ class ExchangeJobs
             'source' => $manual ? ExchangeJob::SOURCE_MANUAL : ExchangeJob::SOURCE_API,
             'user_id' => $user?->id,
             'mode' => $mode,
+            'dry_run' => $dryRun,
             'status' => ExchangeJobStatus::Queued,
             'exchange_id' => $exchangeId,
             'token_id' => $token?->id,
@@ -145,6 +148,7 @@ class ExchangeJobs
                     'rows_skipped' => $result->skipped,
                     'rows_error' => count($result->errors),
                     'message' => $result->message,
+                    'report' => $result->report(),
                     'finished_at' => now(),
                 ]);
             });

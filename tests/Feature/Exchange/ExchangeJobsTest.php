@@ -47,8 +47,9 @@ class ExchangeJobsTest extends TestCase
 
     private function job(array $attributes = [], ?string $content = "guid;sku\n"): ExchangeJob
     {
+        // Тип без обработчика (StubHandler) — подменяется в тестах
         $job = new ExchangeJob($attributes + [
-            'type' => ExchangeJobType::Catalog, 'direction' => 'import', 'mode' => 'delta',
+            'type' => ExchangeJobType::OrderStatuses, 'direction' => 'import', 'mode' => 'delta',
             'status' => ExchangeJobStatus::Queued, 'received_at' => now(),
         ]);
         $job->id = $job->newUniqueId();

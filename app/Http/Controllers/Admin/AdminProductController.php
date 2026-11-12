@@ -80,7 +80,10 @@ class AdminProductController extends Controller
             'description' => $unapproved ? 'unapproved' : null,
         ]);
 
-        return view('admin.products', compact('products', 'uncategorized', 'uncategorizedCount', 'unnamed', 'unnamedCount', 'unapproved', 'unapprovedCount', 'search', 'filter'));
+        // Черновики, созданные обменом номенклатуры («Новые из 1С»)
+        $new1cCount = Product::whereNotNull('guid')->where('is_published', false)->count();
+
+        return view('admin.products', compact('products', 'uncategorized', 'uncategorizedCount', 'unnamed', 'unnamedCount', 'unapproved', 'unapprovedCount', 'search', 'filter', 'new1cCount'));
     }
 
     public function create()
@@ -124,6 +127,8 @@ class AdminProductController extends Controller
     {
         $product = Product::findOrFail($id);
 
+        // Решение администратора важнее отметки обмена: active = 1 из 1С скрытый вручную товар не покажет
+        $product->forceFill(['hidden_by_1c' => false]);
         $product->update(['is_active' => ! $product->is_active]);
 
         return back()->with(

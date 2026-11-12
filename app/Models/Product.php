@@ -83,6 +83,8 @@ class Product extends Model
         'synced_at' => 'datetime',
         'price_synced_at' => 'datetime',
         'stock_synced_at' => 'datetime',
+        // Скрыт потому, что 1С прислала active = 0 (CatalogHandler); active = 1 показывает только такие
+        'hidden_by_1c' => 'boolean',
     ];
 
     protected static function booted(): void

@@ -42,9 +42,9 @@ class ExchangeJob extends Model
     ];
 
     protected $fillable = [
-        'type', 'direction', 'source', 'mode', 'status', 'exchange_id', 'token_id', 'user_id', 'ip',
+        'type', 'direction', 'source', 'mode', 'dry_run', 'status', 'exchange_id', 'token_id', 'user_id', 'ip',
         'file_path', 'file_size', 'content_type', 'gzip',
-        'rows_total', 'rows_ok', 'rows_skipped', 'rows_error', 'message',
+        'rows_total', 'rows_ok', 'rows_skipped', 'rows_error', 'message', 'report',
         'received_at', 'started_at', 'finished_at', 'file_pruned_at',
     ];
 
@@ -52,6 +52,9 @@ class ExchangeJob extends Model
         'type' => ExchangeJobType::class,
         'status' => ExchangeJobStatus::class,
         'gzip' => 'boolean',
+        'dry_run' => 'boolean',
+        // Итог сверх счётчиков (ExchangeResult::report): summary, created, warnings, missing
+        'report' => 'array',
         'rows_total' => 'integer',
         'rows_ok' => 'integer',
         'rows_skipped' => 'integer',
@@ -144,6 +147,36 @@ class ExchangeJob extends Model
                 'line' => $e->line, 'guid' => $e->guid, 'sku' => $e->sku, 'message' => $e->message,
             ])->all(),
             'errors_truncated' => $this->rows_error > $errors->count() && $errors->count() === self::API_ERRORS_LIMIT,
-        ];
+        ] + $this->reportForApi();
+    }
+
+    /**
+     * Части report для API: dry_run и summary (номенклатура), warnings, missing и unmatched — до 1000
+     * с признаком *_truncated, created — целиком (раздел 4, правило 3).
+     *
+     * @return array<string, mixed>
+     */
+    private function reportForApi(): array
+    {
+        $report = (array) ($this->report ?? []);
+        $api = [];
+
+        if ($this->type === ExchangeJobType::Catalog) {
+            $api['dry_run'] = (bool) $this->dry_run;
+            $api['summary'] = $report['summary'] ?? (object) [];
+            $api['created'] = $report['created'] ?? [];
+        }
+
+        foreach (['warnings', 'missing', 'unmatched'] as $part) {
+            if ($part !== 'warnings' && $this->type !== ExchangeJobType::Catalog) {
+                continue;
+            }
+
+            $all = $report[$part] ?? [];
+            $api[$part] = array_slice($all, 0, self::API_ERRORS_LIMIT);
+            $api[$part.'_truncated'] = count($all) > self::API_ERRORS_LIMIT;
+        }
+
+        return $api;
     }
 }
