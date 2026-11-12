@@ -46,6 +46,8 @@
         $r = $plan->result;
         $binding = array_values(array_filter($plan->matches, fn ($m) => $m['how'] !== 'guid'));
         $changed = array_values(array_filter($plan->matches, fn ($m) => $m['how'] === 'guid'));
+        // Товары сайта без пары: список — только в full; в delta файл частичный, это нормально
+        $full = $draft['mode'] === 'full';
     @endphp
 
     @if($plan->guard)
@@ -70,6 +72,9 @@
             <div class="rounded-card border border-line bg-surface p-4">
                 <dt class="text-meta text-ink-muted">{{ $label }}</dt>
                 <dd class="text-2xl font-semibold" data-preview-count="{{ $label }}">{{ $value }}</dd>
+                @if($label === 'Товары сайта без пары' && ! $full)
+                    <dd class="text-meta text-ink-muted" data-preview-unmatched-note>нормально для частичного файла (delta); список — в режиме full</dd>
+                @endif
             </div>
         @endforeach
     </dl>
@@ -94,13 +99,16 @@
                     <x-table.td label="Товар сайта"><span class="font-medium">{{ $sku($match['id']) }}</span> — {{ $title($match['id']) }}</x-table.td>
                     <x-table.td label="Найден" nowrap>{{ $how[$match['how']] }}</x-table.td>
                     <x-table.td label="Изменится">
-                        @foreach($match['changes'] as $field => [$before, $after])
-                            @if($field === 'guid')
-                                <div>GUID: <code class="break-all">{{ $after }}</code></div>
-                            @else
-                                <div>{{ $fieldLabels[$field] ?? $field }}: {{ $show($before) }} → <strong>{{ $show($after) }}</strong></div>
-                            @endif
-                        @endforeach
+                        {{-- Один элемент-список: в карточке (stack) ячейка — flex-строка, отдельные блоки встали бы в ряд --}}
+                        <ul class="min-w-0 space-y-1 text-left" data-preview-changes>
+                            @foreach($match['changes'] as $field => [$before, $after])
+                                @if($field === 'guid')
+                                    <li data-preview-change="guid">GUID: <code class="break-all">{{ $after }}</code></li>
+                                @else
+                                    <li class="break-words" data-preview-change="{{ $field }}">{{ $fieldLabels[$field] ?? $field }}: {{ $show($before) }} → <strong>{{ $show($after) }}</strong></li>
+                                @endif
+                            @endforeach
+                        </ul>
                     </x-table.td>
                 </tr>
             @endforeach
@@ -112,7 +120,7 @@
 
     @php($report = $r->report())
     @if($report)
-        @include('admin.partials.exchange_report', ['report' => array_diff_key($report, ['summary' => true])])
+        @include('admin.partials.exchange_report', ['report' => array_diff_key($report, ['summary' => true] + ($full ? [] : ['unmatched' => true]))])
     @endif
 
     @if($r->errors)

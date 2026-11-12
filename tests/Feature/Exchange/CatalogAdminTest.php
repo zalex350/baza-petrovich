@@ -93,8 +93,8 @@ class CatalogAdminTest extends TestCase
             ->assertSee('Сифон старый')
             ->assertSee('Созданные товары (черновики) — 1')
             ->assertSee('SAVOL-NEW-1')
-            ->assertSee('Товары сайта без пары в файле — 1')
-            ->assertSee('ALONE-1')
+            ->assertSee('нормально для частичного файла')
+            ->assertDontSee('Товары сайта без пары в файле')
             ->assertSee('Нет бренда (brand)')
             ->assertSee('data-catalog-apply', false)
             ->getContent();
@@ -102,11 +102,43 @@ class CatalogAdminTest extends TestCase
         $this->assertStringContainsString("data-preview-binding=\"{$byKey->id}\"", $html);
         $this->assertStringContainsString("data-preview-changed=\"{$withGuid->id}\"", $html);
         $this->assertMatchesRegularExpression('#data-preview-count="Будет создано">1<#', $html);
+        $this->assertMatchesRegularExpression('#data-preview-count="Товары сайта без пары">1<#', $html);
+        // «Изменится» — один список, каждое поле отдельной строкой (в карточке ячейка — flex-строка)
+        $this->assertMatchesRegularExpression('#<ul[^>]*data-preview-changes>\s*<li[^>]*data-preview-change="name">.*?</li>\s*<li[^>]*data-preview-change="article">#us', $html);
+        $this->assertMatchesRegularExpression('#<li[^>]*data-preview-change="name">наименование: Сифон старый → <strong>Сифон новый</strong></li>#u', $html);
 
         // Предпросмотр — без записи и без задания
         $this->assertNull($bySku->fresh()->guid);
         $this->assertSame(0, ExchangeJob::count());
         $this->assertSame(4, Product::count());
+    }
+
+    public function test_unmatched_list_is_shown_in_full_mode(): void
+    {
+        $this->product('ALONE-1');
+        $this->product('P-1', null, ['brand' => 'X', 'article' => 'P-1']);
+
+        $this->upload(self::HEAD.'g-1;;P-1;X;P;шт;20;;;1
+', mode: 'full');
+
+        $this->actingAs($this->admin)->get('/admin/exchange/catalog/preview')->assertOk()
+            ->assertSee('Товары сайта без пары в файле — 1')
+            ->assertSee('ALONE-1')
+            ->assertDontSee('нормально для частичного файла');
+    }
+
+    public function test_preview_shows_vat_15_as_row_error(): void
+    {
+        $this->upload(self::HEAD.'g-1;;A-1;X;Товар;шт;15;;;1
+');
+
+        $this->actingAs($this->admin)->get('/admin/exchange/catalog/preview')->assertOk()
+            ->assertSee('Ставка НДС «15»: допустимо 20, 10, 0 или «без НДС»')
+            ->assertDontSee('Созданные товары (черновики)');
+
+        $this->actingAs($this->admin)->post('/admin/exchange/catalog/apply');
+        $this->assertNull(Product::where('guid', 'g-1')->first());
+        $this->assertSame(1, ExchangeJob::sole()->rows_error);
     }
 
     public function test_apply_equals_dry_run_and_lands_in_journal(): void

@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
  *
  * plan() — без записи (он же пробный прогон dry_run=1):
  *  1. разбор строк (ExchangeFile: колонки по заголовку) и проверка: guid, name, article,
- *     active (1/0), vat_rate (число 0–100 или «без НДС»), min_qty / qty_step (целые ≥ 1),
+ *     active (1/0), vat_rate (20, 10, 0 или «без НДС»; «20%» = 20), min_qty / qty_step (целые ≥ 1),
  *     длины колонок products (LENGTHS: длиннее — ошибка строки; name и group_1c — обрезка
  *     с предупреждением);
  *  2. товар: guid (без учёта регистра) → sku, если заполнен (точно, без учёта регистра и
@@ -56,6 +56,9 @@ class CatalogHandler implements ExchangeHandler
 
     /** Длиннее колонки — обрезка с предупреждением: справочные поля, не ключи */
     private const TRUNCATE = ['name', 'group_1c'];
+
+    /** Допустимые ставки НДС (спецификация, раздел 4); ещё — «без НДС» */
+    private const VAT_RATES = [20, 10, 0];
 
     /** @var array<int, array<string, mixed>> id => текущие значения товара */
     private array $products = [];
@@ -572,21 +575,21 @@ class CatalogHandler implements ExchangeHandler
      */
     private function vat(string $value, array &$errors): ?string
     {
-        $number = rtrim($value, '% ');
+        // Без учёта регистра и пробелов: «Без НДС», «без  ндс», «20 %»
+        $compact = mb_strtolower((string) preg_replace('/[\s\p{Z}]+/u', '', $value));
 
-        if (mb_strtolower(preg_replace('/\s+/u', ' ', $value)) === 'без ндс') {
+        if ($compact === 'безндс') {
             return null;
         }
 
-        if (preg_match('/^\d{1,3}(\.\d{1,2})?$/', $number) && (float) $number <= 100) {
-            return self::vatValue($number);
+        // Только ставки РБ: 20, 10, 0 (также «20%», «20.00»)
+        if (preg_match('/^(\d{1,3})(\.0{1,2})?%?$/', $compact, $m) && in_array((int) $m[1], self::VAT_RATES, true)) {
+            return self::vatValue($m[1]);
         }
 
-        $errors[] = match (true) {
-            $value === '' => 'Нет ставки НДС (vat_rate)',
-            str_contains($value, ',') => "Ставка НДС «{$value}»: ожидается точка",
-            default => "Ставка НДС «{$value}»: ожидается 20, 10, 0 или «без НДС»",
-        };
+        $errors[] = $value === ''
+            ? 'Нет ставки НДС (vat_rate)'
+            : "Ставка НДС «{$value}»: допустимо 20, 10, 0 или «без НДС»";
 
         return null;
     }
