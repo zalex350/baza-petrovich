@@ -10,6 +10,8 @@
         Админка — Товары
     </h1>
 
+    <div class="flex flex-wrap items-center gap-3">
+    <x-button variant="secondary" href="/admin/products/new-1c" data-new1c-link>Новые из 1С ({{ $new1cCount }})</x-button>
     @if(config('shop.catalog.manual_products'))
         <a
             href="/admin/product/create"
@@ -20,6 +22,7 @@
     @else
         <span class="text-sm text-slate-500">Товары приходят из 1С</span>
     @endif
+    </div>
 
 </div>
 

@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminProductDocumentController;
 use App\Http\Controllers\Admin\AdminProductImageController;
 use App\Http\Controllers\Admin\AdminExchangeController;
+use App\Http\Controllers\Admin\AdminNewFrom1cController;
 use App\Http\Controllers\Admin\AdminSettingsController;
 use App\Http\Controllers\Admin\AdminUserController;
 use Illuminate\Support\Facades\Route;
@@ -126,6 +127,10 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         '/admin/products',
         [AdminProductController::class, 'index']
     );
+
+    // Новые из 1С: черновики обмена номенклатуры — категория и публикация массово
+    Route::get('/admin/products/new-1c', [AdminNewFrom1cController::class, 'index']);
+    Route::post('/admin/products/new-1c', [AdminNewFrom1cController::class, 'update']);
 
     Route::get(
         '/admin/product/create',
@@ -362,4 +367,9 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post('/admin/exchange/prices/apply', [AdminExchangeController::class, 'applyPrices']);
     Route::post('/admin/exchange/prices/cancel', [AdminExchangeController::class, 'cancelPrices']);
     Route::get('/admin/exchange/prices/template', [AdminExchangeController::class, 'pricesTemplate']);
+    Route::post('/admin/exchange/catalog', [AdminExchangeController::class, 'uploadCatalog']);
+    Route::get('/admin/exchange/catalog/preview', [AdminExchangeController::class, 'previewCatalog']);
+    Route::post('/admin/exchange/catalog/apply', [AdminExchangeController::class, 'applyCatalog']);
+    Route::post('/admin/exchange/catalog/cancel', [AdminExchangeController::class, 'cancelCatalog']);
+    Route::get('/admin/exchange/catalog/template', [AdminExchangeController::class, 'catalogTemplate']);
 });

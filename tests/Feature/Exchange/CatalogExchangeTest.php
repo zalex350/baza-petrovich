@@ -352,6 +352,42 @@ class CatalogExchangeTest extends TestCase
         $this->assertSame(4, $job->report['summary']['unmatched']);
     }
 
+    public function test_dry_run_predicts_exactly_what_apply_does(): void
+    {
+        $this->product('A-1', 'g-1', ['name' => 'Старое', 'brand' => 'X', 'article' => 'A-1']);
+        $this->product('LEDEME-L4755-2');
+        $this->product('TIM-OLD', null, ['brand' => 'TIM', 'article' => 'BL5800']);
+        $this->product('SAVOL-NEW-1');
+        $csv = self::HEAD
+            ."g-1;;A-1;X;Новое;шт;10;;Группа;0\n"
+            ."g-2;LEDEME-L4755-2;L4755-2;LEDEME;Смеситель;компл;20;;;1\n"
+            ."g-3;;BL5800;TIM;Смеситель;шт;20;123;;1\n"
+            ."g-5;;NEW-1;SAVOL;Новинка;шт;20;;;1\n"
+            ."g-6;;A-1;;Без бренда;шт;20;;;1\n";
+
+        $dry = $this->import($csv, 'full', dryRun: true);
+        $real = $this->import($csv, 'full');
+
+        $summary = fn (ExchangeJob $job) => array_diff_key($job->report['summary'], ['unmatched' => 0]);
+        $this->assertSame($summary($dry), $summary($real));
+        foreach (['created', 'warnings'] as $part) {
+            $this->assertSame($dry->report[$part], $real->report[$part], $part);
+        }
+        $this->assertSame([$dry->rows_ok, $dry->rows_error], [$real->rows_ok, $real->rows_error]);
+        $this->assertSame(
+            ExchangeJobError::where('exchange_job_id', $dry->id)->orderBy('line')->pluck('message', 'line')->all(),
+            $this->errors($real),
+        );
+        // Без префикса пробного прогона сообщения совпадают
+        $this->assertSame(str_replace('Пробный прогон, данные сайта не изменены. ', '', $dry->message), $real->message);
+
+        // Предсказанное записано: GUID привязаны, поля изменены, создан товар с предсказанным кодом
+        $this->assertSame(['g-1', 'g-2', 'g-3'], Product::whereIn('sku', ['A-1', 'LEDEME-L4755-2', 'TIM-OLD'])->orderBy('guid')->pluck('guid')->all());
+        $this->assertSame(['Новое', false, 'Группа'], [Product::where('guid', 'g-1')->value('name'), (bool) Product::where('guid', 'g-1')->value('is_active'), Product::where('guid', 'g-1')->value('group_1c')]);
+        $this->assertSame($dry->report['created'][0]['sku'], Product::where('guid', 'g-5')->value('sku'));
+        $this->assertSame('SAVOL-NEW-1-2', Product::where('guid', 'g-5')->value('sku'));
+    }
+
     // --- mode=full ---
 
     public function test_full_lists_missing_without_hiding(): void

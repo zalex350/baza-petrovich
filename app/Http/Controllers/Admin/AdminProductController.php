@@ -80,7 +80,10 @@ class AdminProductController extends Controller
             'description' => $unapproved ? 'unapproved' : null,
         ]);
 
-        return view('admin.products', compact('products', 'uncategorized', 'uncategorizedCount', 'unnamed', 'unnamedCount', 'unapproved', 'unapprovedCount', 'search', 'filter'));
+        // Черновики, созданные обменом номенклатуры («Новые из 1С»)
+        $new1cCount = Product::whereNotNull('guid')->where('is_published', false)->count();
+
+        return view('admin.products', compact('products', 'uncategorized', 'uncategorizedCount', 'unnamed', 'unnamedCount', 'unapproved', 'unapprovedCount', 'search', 'filter', 'new1cCount'));
     }
 
     public function create()

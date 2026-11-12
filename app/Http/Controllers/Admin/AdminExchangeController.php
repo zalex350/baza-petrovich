@@ -9,7 +9,9 @@ use App\Models\ExchangeIp;
 use App\Models\ExchangeJob;
 use App\Models\ExchangeToken;
 use App\Models\Setting;
+use App\Services\Exchange\ManualCatalogUpload;
 use App\Services\Exchange\ManualPricesUpload;
+use App\Services\Exchange\ManualUpload;
 use App\Support\ExchangeSettings;
 use App\Support\LocalTime;
 use Illuminate\Support\Facades\Storage;
@@ -19,14 +21,21 @@ use Illuminate\Validation\Rule;
  * Админка «Обмен с 1С» (docs/1C_EXCHANGE_SPEC.md, разделы 2 и 8): журнал заданий
  * (фильтры, ошибки по строкам, исходный файл), токены API (создать, отозвать; токен
  * показывается один раз), белый список IP, настройки порогов и оповещений; ручная загрузка
- * цен и остатков (CSV / .xlsx → предпросмотр → «Применить», ManualPricesUpload).
+ * цен и остатков и номенклатуры (CSV / .xlsx → предпросмотр → «Применить», ManualPricesUpload,
+ * ManualCatalogUpload).
  */
 class AdminExchangeController extends Controller
 {
-    private const TABS = ['jobs', 'upload', 'tokens', 'ips', 'settings'];
+    private const TABS = ['jobs', 'upload', 'catalog', 'tokens', 'ips', 'settings'];
 
-    /** Черновик ручной загрузки цен: [token, mode, name] */
-    private const UPLOAD_SESSION = 'exchange_prices_upload';
+    /**
+     * Ручные загрузки: сервис, ключ сессии черновика ([token, mode, name]), вкладка формы,
+     * шаблон предпросмотра. Адреса — /admin/exchange/{prices|catalog}/…
+     */
+    private const UPLOADS = [
+        'prices' => ['service' => ManualPricesUpload::class, 'session' => 'exchange_prices_upload', 'tab' => 'upload', 'view' => 'admin.exchange_prices_preview'],
+        'catalog' => ['service' => ManualCatalogUpload::class, 'session' => 'exchange_catalog_upload', 'tab' => 'catalog', 'view' => 'admin.exchange_catalog_preview'],
+    ];
 
     public function index()
     {
@@ -57,7 +66,64 @@ class AdminExchangeController extends Controller
     }
 
     /** Ручная загрузка цен: файл → черновик → предпросмотр */
-    public function uploadPrices(ManualPricesUpload $upload)
+    public function uploadPrices()
+    {
+        return $this->upload('prices');
+    }
+
+    public function previewPrices()
+    {
+        return $this->preview('prices');
+    }
+
+    public function applyPrices()
+    {
+        return $this->applyUpload('prices');
+    }
+
+    public function cancelPrices()
+    {
+        return $this->cancel('prices');
+    }
+
+    public function pricesTemplate(ManualPricesUpload $upload)
+    {
+        return response()->download($upload->template(), 'prices-stock-template.xlsx')->deleteFileAfterSend();
+    }
+
+    /** Ручная загрузка номенклатуры (первичная привязка GUID): файл → черновик → предпросмотр */
+    public function uploadCatalog()
+    {
+        return $this->upload('catalog');
+    }
+
+    public function previewCatalog()
+    {
+        return $this->preview('catalog');
+    }
+
+    public function applyCatalog()
+    {
+        return $this->applyUpload('catalog');
+    }
+
+    public function cancelCatalog()
+    {
+        return $this->cancel('catalog');
+    }
+
+    public function catalogTemplate(ManualCatalogUpload $upload)
+    {
+        return response()->download($upload->template(), 'catalog-template.xlsx')->deleteFileAfterSend();
+    }
+
+    /** Загрузка $kind (prices | catalog): сервис, ключ сессии черновика, вкладка, шаблон предпросмотра */
+    private function uploader(string $kind): ManualUpload
+    {
+        return app(self::UPLOADS[$kind]['service']);
+    }
+
+    private function upload(string $kind)
     {
         $data = request()->validate([
             'file' => ['required', 'file', 'max:20480', function ($attribute, $value, $fail) {
@@ -72,38 +138,38 @@ class AdminExchangeController extends Controller
             'file.uploaded' => 'Файл не загрузился — проверьте размер (до 20 МБ)',
         ]);
 
-        $this->discardDraft($upload);
+        $this->discardDraft($kind);
 
-        session()->put(self::UPLOAD_SESSION, [
-            'token' => $upload->store($data['file']),
+        session()->put(self::UPLOADS[$kind]['session'], [
+            'token' => $this->uploader($kind)->store($data['file']),
             'mode' => $data['mode'],
             'name' => $data['file']->getClientOriginalName(),
         ]);
 
-        return redirect('/admin/exchange/prices/preview');
+        return redirect("/admin/exchange/{$kind}/preview");
     }
 
-    public function previewPrices(ManualPricesUpload $upload)
+    private function preview(string $kind)
     {
-        [$draft, $path] = $this->draft($upload);
+        [$draft, $path] = $this->draft($kind);
 
         if (! $path) {
-            return redirect('/admin/exchange?tab=upload')->with('error', 'Загрузите файл заново: черновик не найден или устарел');
+            return redirect('/admin/exchange?tab='.self::UPLOADS[$kind]['tab'])->with('error', 'Загрузите файл заново: черновик не найден или устарел');
         }
 
-        return view('admin.exchange_prices_preview', ['draft' => $draft] + $upload->preview($path, $draft['mode']));
+        return view(self::UPLOADS[$kind]['view'], ['draft' => $draft] + $this->uploader($kind)->preview($path, $draft['mode']));
     }
 
-    public function applyPrices(ManualPricesUpload $upload)
+    private function applyUpload(string $kind)
     {
-        [$draft, $path] = $this->draft($upload);
+        [$draft, $path] = $this->draft($kind);
 
         if (! $path) {
-            return redirect('/admin/exchange?tab=upload')->with('error', 'Загрузите файл заново: черновик не найден или уже применён');
+            return redirect('/admin/exchange?tab='.self::UPLOADS[$kind]['tab'])->with('error', 'Загрузите файл заново: черновик не найден или уже применён');
         }
 
-        session()->forget(self::UPLOAD_SESSION);
-        $job = $upload->apply($path, $draft['mode'], auth()->user(), request()->ip());
+        session()->forget(self::UPLOADS[$kind]['session']);
+        $job = $this->uploader($kind)->apply($path, $draft['mode'], auth()->user(), request()->ip());
 
         return redirect("/admin/exchange/job/{$job->id}")->with(
             $job->status === ExchangeJobStatus::Done ? 'success' : 'error',
@@ -113,35 +179,30 @@ class AdminExchangeController extends Controller
         );
     }
 
-    public function cancelPrices(ManualPricesUpload $upload)
+    private function cancel(string $kind)
     {
-        $this->discardDraft($upload);
+        $this->discardDraft($kind);
 
-        return redirect('/admin/exchange?tab=upload')->with('success', 'Загрузка отменена, данные не изменились');
-    }
-
-    public function pricesTemplate(ManualPricesUpload $upload)
-    {
-        return response()->download($upload->template(), 'prices-stock-template.xlsx')->deleteFileAfterSend();
+        return redirect('/admin/exchange?tab='.self::UPLOADS[$kind]['tab'])->with('success', 'Загрузка отменена, данные не изменились');
     }
 
     /** @return array{0: ?array{token: string, mode: string, name: string}, 1: ?string} */
-    private function draft(ManualPricesUpload $upload): array
+    private function draft(string $kind): array
     {
-        $draft = session(self::UPLOAD_SESSION);
+        $draft = session(self::UPLOADS[$kind]['session']);
 
-        return [$draft, is_array($draft) ? $upload->path((string) $draft['token']) : null];
+        return [$draft, is_array($draft) ? $this->uploader($kind)->path((string) $draft['token']) : null];
     }
 
-    private function discardDraft(ManualPricesUpload $upload): void
+    private function discardDraft(string $kind): void
     {
-        [, $path] = $this->draft($upload);
+        [, $path] = $this->draft($kind);
 
         if ($path) {
-            $upload->discard($path);
+            $this->uploader($kind)->discard($path);
         }
 
-        session()->forget(self::UPLOAD_SESSION);
+        session()->forget(self::UPLOADS[$kind]['session']);
     }
 
     public function storeToken()
@@ -220,7 +281,7 @@ class AdminExchangeController extends Controller
     {
         return match ($tab) {
             'jobs' => $this->jobsData(),
-            'upload' => [],
+            'upload', 'catalog' => [],
             'tokens' => ['tokens' => ExchangeToken::with('creator')->orderByRaw('revoked_at IS NULL DESC')->latest('id')->get()],
             'ips' => ['ips' => ExchangeIp::with('creator')->orderBy('ip')->get(), 'currentIp' => request()->ip()],
             'settings' => ['settings' => collect(ExchangeSettings::FIELDS)->map(fn ($f, $key) => ExchangeSettings::int($key))->all()],

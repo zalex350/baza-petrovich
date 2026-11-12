@@ -151,7 +151,7 @@ class CatalogHandler implements ExchangeHandler
             if ($how === 'new') {
                 $this->planCreate($plan, $line, $guid, $code, $values, $now);
             } else {
-                $this->planUpdate($plan, $id, $how, $guid, $values, $managed, $now);
+                $this->planUpdate($plan, $line, $id, $how, $guid, $values, $managed, $now);
             }
 
             $result->ok++;
@@ -444,7 +444,7 @@ class CatalogHandler implements ExchangeHandler
      * @param  array<string, mixed>  $values
      * @param  list<string>  $managed
      */
-    private function planUpdate(CatalogPlan $plan, int $id, string $how, string $guid, array $values, array $managed, string $now): void
+    private function planUpdate(CatalogPlan $plan, int $line, int $id, string $how, string $guid, array $values, array $managed, string $now): void
     {
         $product = &$this->products[$id];
         $changes = [];
@@ -480,12 +480,20 @@ class CatalogHandler implements ExchangeHandler
             }
         }
 
+        $shown = [];
+
         foreach ($changes as $field => $value) {
             if (! in_array($field, ['hidden_by_1c', 'match_key'], true)) {
                 $plan->countField($field);
+                $shown[$field] = [$product[$field], $value];
             }
 
             $product[$field] = $value;
+        }
+
+        // Для предпросмотра: привязка GUID и изменения полей (без строк «ничего не меняется»)
+        if ($shown !== []) {
+            $plan->matches[] = ['line' => $line, 'guid' => $guid, 'id' => $id, 'how' => $how, 'changes' => $shown];
         }
 
         match ($how) {

@@ -46,6 +46,7 @@
 | URL | Контроллер | Шаблон | Действия (POST) |
 |---|---|---|---|
 | `/admin/products` | `AdminProductController@index` | `admin/products` | `product/{id}/toggle-visibility`, `product/{id}/delete` |
+| `/admin/products/new-1c` (`?state=none\|ready\|all`, `q`, `group`) | `AdminNewFrom1cController@index` | `admin/products_new_1c` | `products/new-1c` (POST: `ids[]`, `action` = `category` \| `category_publish` \| `publish`, `category_id`) |
 | `/admin/product/create`, `/admin/product/{id}` | `…@create`, `…@show` | `admin/product_form` (+ `vat_rate_select`, `admin_product_attributes`, `admin_product_images`, `admin_product_documents`, `admin_product_client_codes`, `image_queue`) | `product`, `product/{id}`, `draft`, `draft/delete`, `publish`, `badge` (JSON), `images…` (store/reorder/main/move/replace/delete), `documents…` (store/reorder/update/delete), `client-codes…` (store/update/delete) |
 | `/admin/product/{id}/preview` | `…@preview` | `product` (витринный, `$preview`) | — |
 | `/admin/orders` | `AdminOrderController@index` | `admin/orders` | — |
@@ -69,9 +70,10 @@
 | `/admin/page/create`, `/admin/page/{id}` | `…@create`, `…@edit` | `admin/page_form` | `page`, `page/{id}`, `page/{id}/delete` |
 | `/admin/settings` | `AdminSettingsController@edit` | `admin/settings` | `settings` |
 | `/admin/partners` | `AdminPartnerRequestController@index` | `admin/partners` | `partner/{id}/status` |
-| `/admin/exchange` (`?tab=jobs\|tokens\|ips\|settings`) | `AdminExchangeController@index` | `admin/exchange` | `exchange/tokens`, `exchange/token/{id}/revoke`, `exchange/ips`, `exchange/ip/{id}/delete`, `exchange/settings` |
+| `/admin/exchange` (`?tab=jobs\|upload\|catalog\|tokens\|ips\|settings`) | `AdminExchangeController@index` | `admin/exchange` | `exchange/tokens`, `exchange/token/{id}/revoke`, `exchange/ips`, `exchange/ip/{id}/delete`, `exchange/settings` |
 | `/admin/exchange?tab=upload` → `/admin/exchange/prices/preview` | `AdminExchangeController@index`, `@previewPrices` | `admin/exchange`, `admin/exchange_prices_preview` | `exchange/prices` (файл), `exchange/prices/apply`, `exchange/prices/cancel`, `exchange/prices/template` (GET) |
-| `/admin/exchange/job/{id}` | `AdminExchangeController@job` | `admin/exchange_job` | `exchange/job/{id}/file` (GET, скачать) |
+| `/admin/exchange?tab=catalog` → `/admin/exchange/catalog/preview` | `AdminExchangeController@index`, `@previewCatalog` | `admin/exchange`, `admin/exchange_catalog_preview` (+ `admin/partials/exchange_report`) | `exchange/catalog` (файл), `exchange/catalog/apply`, `exchange/catalog/cancel`, `exchange/catalog/template` (GET) |
+| `/admin/exchange/job/{id}` | `AdminExchangeController@job` | `admin/exchange_job` (+ `admin/partials/exchange_report`) | `exchange/job/{id}/file` (GET, скачать) |
 
 ### Auth (Breeze)
 

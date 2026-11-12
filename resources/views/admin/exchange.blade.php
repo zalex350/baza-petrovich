@@ -1,5 +1,6 @@
 {{--
-    «Обмен с 1С» (docs/1C_EXCHANGE_SPEC.md, разделы 2 и 8): вкладки журнал, токены, IP, настройки.
+    «Обмен с 1С» (docs/1C_EXCHANGE_SPEC.md, разделы 2 и 8): вкладки журнал, загрузка цен и номенклатуры
+    вручную, токены, IP, настройки.
     Данные: $tab; jobs — $jobs, $filters; tokens — $tokens, $newToken (только сразу после создания);
     ips — $ips, $currentIp; settings — $settings.
 --}}
@@ -21,6 +22,7 @@
 <x-tabs label="Разделы обмена" :active="$tab" :tabs="[
     'jobs' => ['label' => 'Журнал', 'url' => '/admin/exchange'],
     'upload' => ['label' => 'Загрузить цены', 'url' => '/admin/exchange?tab=upload'],
+    'catalog' => ['label' => 'Загрузить номенклатуру', 'url' => '/admin/exchange?tab=catalog'],
     'tokens' => ['label' => 'Токены', 'url' => '/admin/exchange?tab=tokens'],
     'ips' => ['label' => 'IP-адреса', 'url' => '/admin/exchange?tab=ips'],
     'settings' => ['label' => 'Настройки', 'url' => '/admin/exchange?tab=settings'],
@@ -109,6 +111,39 @@
                 :options="[
                     'delta' => 'delta — только товары из файла',
                     'full' => 'full — полный файл: товарам с GUID, которых нет в файле, остаток 0',
+                ]"
+                value="delta"
+            />
+            <x-button>Предпросмотр</x-button>
+        </form>
+    </div>
+
+@elseif($tab === 'catalog')
+
+    <div class="max-w-3xl space-y-6">
+        <p class="text-sm text-ink-muted">
+            Выгрузка номенклатуры из 1С в формате потока 1 (раздел 4 спецификации): колонки <code>guid</code>, <code>sku</code>,
+            <code>article</code>, <code>brand</code>, <code>name</code>, <code>unit</code>, <code>vat_rate</code>, <code>active</code>
+            (и необязательные <code>min_qty</code>, <code>qty_step</code>, <code>barcode</code>, <code>group_1c</code>) в любом порядке.
+            CSV с разделителем «;» (UTF-8 или Windows-1251 из Excel) или .xlsx (первый лист).
+        </p>
+        <p class="text-sm text-ink-muted">
+            Главный сценарий — первичная привязка GUID: товар сайта находится по <code>sku</code> или по «бренд + артикул»
+            и получает GUID 1С; позиции без пары создаются черновиками в «Товары → Новые из 1С». Предпросмотр покажет,
+            что будет привязано, создано и изменено, и товары сайта без пары; база меняется только после «Применить».
+        </p>
+
+        <x-button variant="secondary" href="/admin/exchange/catalog/template">Скачать шаблон .xlsx</x-button>
+
+        <form method="POST" action="/admin/exchange/catalog" enctype="multipart/form-data" class="space-y-6 rounded-card border border-line bg-surface p-card" data-catalog-upload>
+            @csrf
+            <x-file name="file" label="Файл номенклатуры" accept=".csv,.xlsx,text/csv" hint="До 20 МБ." required />
+            <x-select
+                name="mode"
+                label="Режим"
+                :options="[
+                    'delta' => 'delta — только товары из файла',
+                    'full' => 'full — полный файл: товары с GUID, которых в нём нет, будут перечислены (не скрываются)',
                 ]"
                 value="delta"
             />

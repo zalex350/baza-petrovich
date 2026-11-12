@@ -27,6 +27,14 @@ class CatalogPlan
     /** Строк, применённых без изменения значений (обновится только synced_at) */
     public int $unchanged = 0;
 
+    /**
+     * Найденные товары, у которых что-то меняется (в том числе присваивается GUID), — для
+     * предпросмотра ручной загрузки: changes — поле => [было, стало].
+     *
+     * @var list<array{line: int, guid: string, id: int, how: string, changes: array<string, array{0: mixed, 1: mixed}>}>
+     */
+    public array $matches = [];
+
     /** @var array<string, int> поле => у скольких товаров изменится */
     public array $fields = [];
 
