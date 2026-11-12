@@ -201,14 +201,15 @@ class CartSelectionTest extends TestCase
     {
         $item = $this->inCart($this->product('STP', ['min_qty' => 2, 'qty_step' => 3, 'stock' => 6]), 2);
 
+        // min 2, шаг 3 → 3, 6; 4 → вверх до 6; 8 → 9 больше остатка 6 — не применяется
         $this->actingAs($this->client)->postJson("/order/update/{$item->id}", ['quantity' => 4])
-            ->assertStatus(422)->assertJson(['quantity' => 2]);
+            ->assertOk()->assertJson(['quantity' => 6, 'message' => 'Округлено до 6 — кратно 3']);
         $this->actingAs($this->client)->postJson("/order/update/{$item->id}", ['quantity' => 8])
-            ->assertStatus(422)->assertJson(['quantity' => 2]);
-        $this->actingAs($this->client)->postJson("/order/update/{$item->id}", ['quantity' => 5])
-            ->assertOk()->assertJson(['quantity' => 5]);
+            ->assertStatus(422)->assertJson(['quantity' => 6]);
+        $this->actingAs($this->client)->postJson("/order/update/{$item->id}", ['quantity' => 3])
+            ->assertOk()->assertJson(['quantity' => 3]);
 
-        $this->assertSame(5, $item->refresh()->quantity);
+        $this->assertSame(3, $item->refresh()->quantity);
     }
 
     public function test_delete_answers_json_and_clear_empties_cart(): void
@@ -252,8 +253,9 @@ class CartSelectionTest extends TestCase
         $this->actingAs($this->client)->from('/order')->post('/order/quick-add', ['sku' => 'NOPE'])
             ->assertSessionHasErrors(['sku' => 'Товар с артикулом «NOPE» не найден']);
 
-        $this->actingAs($this->client)->from('/order')->post('/order/quick-add', ['sku' => 'FLX-050', 'qty' => 5])
-            ->assertSessionHasErrors(['qty' => 'Количество должно быть не меньше 10 и кратно 10']);
+        // Остаток — у количества (5 → вверх до 10, 200 → больше остатка)
+        $this->actingAs($this->client)->from('/order')->post('/order/quick-add', ['sku' => 'FLX-050', 'qty' => 200])
+            ->assertSessionHasErrors(['qty']);
 
         $this->assertSame(0, CartItem::count());
 
@@ -289,8 +291,8 @@ class CartSelectionTest extends TestCase
         $this->actingAs($this->client)->postJson('/order/quick-add', ['sku' => 'NOPE'])
             ->assertStatus(422)->assertJsonPath('errors.sku', 'Товар с артикулом «NOPE» не найден');
 
-        $this->actingAs($this->client)->postJson('/order/quick-add', ['sku' => 'FLX-050', 'qty' => 5])
-            ->assertStatus(422)->assertJsonPath('errors.qty', 'Количество должно быть не меньше 10 и кратно 10');
+        $this->actingAs($this->client)->postJson('/order/quick-add', ['sku' => 'FLX-050', 'qty' => 200])
+            ->assertStatus(422)->assertJsonStructure(['errors' => ['qty']]);
 
         $this->assertSame(0, CartItem::count());
     }

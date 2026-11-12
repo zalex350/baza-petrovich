@@ -166,11 +166,24 @@ class ProductKitTest extends TestCase
         $this->assertSame(0, preg_match_all('/<button[^>]*\sdisabled[\s>=]/', $html));
     }
 
+    public function test_qty_first_allowed_is_min_rounded_up_to_step(): void
+    {
+        // min 2, шаг 3 → 3, 6, 9: начальное 2 → 3, «−» на 3 отключён; 4 → 6
+        $html = (string) $this->blade('<x-qty :value="2" :min="2" :step="3" />');
+        $this->assertStringContainsString('value="3"', $html);
+        $this->assertStringContainsString('min="3"', $html);
+        $this->assertSame(1, preg_match_all('/<button[^>]*\sdisabled[\s>=]/', $html));
+        $this->assertStringContainsString('value="6"', (string) $this->blade('<x-qty :value="4" :min="2" :step="3" />'));
+        // Формула в Alpine та же
+        $this->assertStringContainsString('Math.ceil(v / this.step) * this.step', $html);
+        $this->assertStringContainsString(':disabled="value - step < min"', $html);
+    }
+
     public function test_qty_keeps_value_above_max_and_has_hint(): void
     {
-        // Остаток уменьшился на сервере: в корзине 8 при остатке 5 — показывается 8, не урезается
-        $html = (string) $this->blade('<x-qty :value="8" :min="2" :step="3" :max="5" />');
-        $this->assertStringContainsString('value="8"', $html);
+        // Остаток уменьшился на сервере: в корзине 9 при остатке 5 — показывается 9, не урезается
+        $html = (string) $this->blade('<x-qty :value="9" :min="2" :step="3" :max="5" />');
+        $this->assertStringContainsString('value="9"', $html);
         $this->assertStringContainsString('max="5"', $html);
         // «+» отключён, «−» — нет
         $this->assertSame(1, preg_match_all('/<button[^>]*\sdisabled[\s>=]/', $html));

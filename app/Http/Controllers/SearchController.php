@@ -10,6 +10,7 @@ use App\Services\ArticleSearch;
 use App\Services\CartSummary;
 use App\Services\Catalog\KeyAttributes;
 use App\Services\ClientCodes;
+use App\Support\OrderQuantity;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
@@ -127,7 +128,7 @@ class SearchController extends Controller
             ->orderBy('name')
             ->orderBy('id')
             ->limit(5)
-            ->get(['id', 'name', 'display_name', 'sku', 'article', 'brand', 'price', 'default_qty']);
+            ->get(['id', 'name', 'display_name', 'sku', 'article', 'brand', 'price', 'min_qty', 'qty_step', 'default_qty']);
 
         $codes->load($products);
 
@@ -155,7 +156,8 @@ class SearchController extends Controller
                 // Код товара у организации пользователя (только своей) или null
                 'client_code' => $codes->codeFor($p),
                 // «Добавить по артикулу» в корзине подставляет количество товара по умолчанию
-                'default_qty' => (int) ($p->default_qty ?: 1),
+                // (допустимое: вверх до кратности, как в x-qty)
+                'default_qty' => OrderQuantity::for($p)->roundUp((int) ($p->default_qty ?: 1)),
                 // Цена — только после входа
                 'price' => $withPrices && $p->price ? number_format($p->price, 2) : null,
                 'image' => $p->mainImage?->url('thumb') ?? ProductImage::placeholderUrl(),

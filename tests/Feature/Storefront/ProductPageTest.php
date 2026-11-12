@@ -94,6 +94,18 @@ class ProductPageTest extends TestCase
         $this->assertStringContainsString('Мин. заказ 2 шт. · кратность 2 шт.', $card);
     }
 
+    public function test_qty_rules_show_effective_minimum(): void
+    {
+        // min 2, кратность 3 → первое допустимое 3: подпись и поле — с 3
+        $this->product->update(['min_qty' => 2, 'qty_step' => 3, 'default_qty' => 2]);
+
+        $html = $this->actingAs($this->client)->get("/product/{$this->product->id}")->assertOk()->getContent();
+        $card = substr($html, strpos($html, 'data-buy-card'));
+
+        $this->assertStringContainsString('Мин. заказ 3 шт. · кратность 3 шт.', $card);
+        $this->assertMatchesRegularExpression('#name="qty"[^>]*value="3"[^>]*min="3"[^>]*step="3"#s', $card);
+    }
+
     public function test_product_in_cart_shows_current_quantity_and_link(): void
     {
         $cart = Cart::create(['user_id' => $this->client->id]);

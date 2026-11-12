@@ -276,6 +276,38 @@ class AdminProductFormTest extends TestCase
         $this->assertSame(['new.jpg'], $this->product->images()->pluck('original_name')->all());
     }
 
+    public function test_min_not_multiple_of_step_saves_with_hint_default_must_be_allowed(): void
+    {
+        // min 2 не кратно 3 — сохраняется, в форме подсказка «будет округлено до 3»
+        $this->actingAs($this->admin)->post("/admin/product/{$this->product->id}", $this->edit([
+            'action' => 'draft', 'min_qty' => 2, 'qty_step' => 3, 'default_qty' => 3,
+        ]))->assertSessionHasNoErrors();
+        $this->assertSame([2, 3, 3], [$this->product->fresh()->min_qty, $this->product->fresh()->qty_step, $this->product->fresh()->default_qty]);
+
+        $this->actingAs($this->admin)->get("/admin/product/{$this->product->id}")->assertOk()
+            ->assertSee('Не кратно шагу 3 — будет округлено до 3')
+            ->assertSee('Допустимое: 3, 6, 9, …');
+
+        // default_qty 2 и 5 (прежние «мин., мин. + шаг») — уже не допустимые
+        foreach ([2, 5, 4] as $default) {
+            $this->actingAs($this->admin)->from("/admin/product/{$this->product->id}")
+                ->post("/admin/product/{$this->product->id}", $this->edit([
+                    'action' => 'draft', 'min_qty' => 2, 'qty_step' => 3, 'default_qty' => $default,
+                ]))->assertSessionHasErrors(['default_qty' => 'Количество по умолчанию — допустимое количество: 3, 6, 9, … (кратно 3, не меньше 3)']);
+        }
+
+        $this->actingAs($this->admin)->post("/admin/product/{$this->product->id}", $this->edit([
+            'action' => 'draft', 'min_qty' => 2, 'qty_step' => 3, 'default_qty' => 6,
+        ]))->assertSessionHasNoErrors();
+        $this->assertSame(6, $this->product->fresh()->default_qty);
+
+        // Кратный минимум — без подсказки
+        $this->actingAs($this->admin)->post("/admin/product/{$this->product->id}", $this->edit([
+            'action' => 'draft', 'min_qty' => 4, 'qty_step' => 2, 'default_qty' => 4,
+        ]))->assertSessionHasNoErrors();
+        $this->actingAs($this->admin)->get("/admin/product/{$this->product->id}")->assertDontSee('Не кратно шагу');
+    }
+
     public function test_slug_must_be_unique(): void
     {
         Product::create(['name' => 'Other', 'sku' => 'OT-1', 'slug' => 'taken', 'price' => 1, 'stock' => 1]);

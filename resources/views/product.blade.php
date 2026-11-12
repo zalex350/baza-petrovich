@@ -129,8 +129,10 @@
 
                 <x-product-row.buy :product="$product" :in-cart="$inCart" layout="card" />
 
+                {{-- Эффективный минимум: min_qty, округлённый вверх до кратности (OrderQuantity) --}}
+                @php($qtyRule = \App\Support\OrderQuantity::for($product))
                 <div class="text-meta text-ink-muted" data-qty-rules>
-                    Мин. заказ {{ $product->min_qty }} шт. · кратность {{ $product->qty_step }} шт.
+                    Мин. заказ {{ $qtyRule->first }} шт. · кратность {{ $qtyRule->step }} шт.
                 </div>
 
             </section>
