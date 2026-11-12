@@ -38,6 +38,11 @@ class AdminSettingsController extends Controller
     {
         $text = collect(Setting::FIELDS)->map(fn () => ['nullable', 'string', 'max:1000'])->all();
 
+        // УНП — без пробелов; проверка — только 9 цифр, контрольная цифра — подсказка в форме
+        if (filled(request('seller_unp'))) {
+            request()->merge(['seller_unp' => Unp::normalize(request('seller_unp'))]);
+        }
+
         $data = request()->validate([
             ...$text,
             'contact_email' => ['nullable', 'email', 'max:255'],

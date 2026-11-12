@@ -294,64 +294,74 @@ class AdminOrganizationTest extends TestCase
 
     public static function invalidUnpProvider(): array
     {
-        $format = 'УНП — ровно 9 цифр.';
-        $checksum = 'УНП с ошибкой: не сходится контрольная цифра.';
-
         return [
-            '8 цифр' => ['12345678', $format],
-            '10 цифр' => ['1234567890', $format],
-            'буквы' => ['12345678A', $format],
-            '8 цифр с пробелом' => ['123 45678', $format],
-            'с дефисом' => ['1234-5678', $format],
-            'контрольная цифра' => ['191234564', $checksum],
-            'прежний «любой» УНП' => ['190123456', $checksum],
-            // сумма с весами даёт остаток 10 — такого УНП не бывает
-            'остаток 10' => [self::remainderTen(), $checksum],
+            '8 цифр'            => ['12345678'],
+            '10 цифр'           => ['1234567890'],
+            'буквы'             => ['12345678A'],
+            '8 цифр с пробелом' => ['123 45678'],
+            'с дефисом'         => ['1234-5678'],
         ];
     }
 
-    /** Первые 8 цифр, у которых контрольная цифра не существует, + любая девятая */
-    private static function remainderTen(): string
-    {
-        for ($n = 10000000; Unp::checkDigit((string) $n) !== null; $n++);
-
-        return $n.'0';
-    }
-
     #[DataProvider('invalidUnpProvider')]
-    public function test_unp_format_is_validated(string $unp, string $message): void
+    public function test_unp_format_is_validated(string $unp): void
     {
         $this->actingAs($this->admin)
             ->post('/admin/organization', $this->validPayload(['unp' => $unp]))
-            ->assertSessionHasErrors(['unp' => $message]);
+            ->assertSessionHasErrors(['unp' => 'УНП должен состоять ровно из 9 цифр.']);
 
         $this->assertSame(0, Organization::count());
     }
 
-    public function test_unp_checksum_examples_and_spaces(): void
+    public function test_unp_spaces_are_removed(): void
     {
-        foreach (['100000007', '190000005', '191234563', '100582333'] as $valid) {
-            $this->assertTrue(Unp::valid($valid), $valid);
-        }
-
-        // Пробелы при вводе убираются
         $this->actingAs($this->admin)
             ->post('/admin/organization', $this->validPayload(['unp' => ' 191 234 563 ']))
             ->assertSessionHasNoErrors();
         $this->assertSame('191234563', Organization::sole()->unp);
     }
 
+    public function test_unp_check_digit_is_only_a_warning(): void
+    {
+        foreach (['100000007', '190000005', '191234563', '100582333'] as $valid) {
+            $this->assertTrue(Unp::valid($valid), $valid);
+            $this->assertNull(Unp::warning($valid));
+        }
+        // Остаток 10 (контрольной цифры не бывает) и несовпадение — подсказка; не 9 цифр — подсказки нет (это ошибка)
+        $this->assertSame(Unp::WARNING, Unp::warning('000000190'));
+        $this->assertSame(Unp::WARNING, Unp::warning('191 234 564'));
+        $this->assertNull(Unp::warning('12345'));
+        $this->assertNull(Unp::warning(null));
+
+        // Не сходится — сохраняется
+        $this->actingAs($this->admin)
+            ->post('/admin/organization', $this->validPayload(['unp' => '191234564']))
+            ->assertSessionHasNoErrors();
+        $organization = Organization::sole();
+        $this->assertSame('191234564', $organization->unp);
+
+        // Пометка в карточке и жёлтая подсказка под полем
+        $this->actingAs($this->admin)->get("/admin/organization/{$organization->id}")->assertOk()
+            ->assertSee('data-unp-warning', false)
+            ->assertSee('Контрольная цифра не сходится — проверьте УНП');
+        $this->actingAs($this->admin)->get("/admin/organization/{$organization->id}/edit")->assertOk()
+            ->assertSee('id="f-unp-warning"', false)
+            ->assertSee('Контрольная цифра не сходится — проверьте УНП')
+            ->assertDontSee('id="f-unp-error"', false);
+
+        // Сходится — пометки нет
+        $organization->update(['unp' => '191234563']);
+        $this->actingAs($this->admin)->get("/admin/organization/{$organization->id}")->assertDontSee('data-unp-warning', false);
+        $this->actingAs($this->admin)->get("/admin/organization/{$organization->id}/edit")->assertDontSee('id="f-unp-warning"', false);
+    }
+
     public function test_unp_error_is_under_field(): void
     {
-        $this->actingAs($this->admin)->from('/admin/organization/create')
-            ->post('/admin/organization', $this->validPayload(['unp' => '191234564']))
-            ->assertRedirect('/admin/organization/create');
-
         $this->actingAs($this->admin)
-            ->withSession(['errors' => (new ViewErrorBag)->put('default', new MessageBag(['unp' => 'УНП с ошибкой: не сходится контрольная цифра.']))])
+            ->withSession(['errors' => (new ViewErrorBag)->put('default', new MessageBag(['unp' => 'УНП должен состоять ровно из 9 цифр.']))])
             ->get('/admin/organization/create')
             ->assertSee('id="f-unp-error"', false)
-            ->assertSee('УНП с ошибкой: не сходится контрольная цифра.')
+            ->assertSee('УНП должен состоять ровно из 9 цифр.')
             ->assertSee('Проверьте выделенные поля');
     }
 

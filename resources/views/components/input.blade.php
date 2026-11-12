@@ -2,6 +2,7 @@
     Поле ввода с подписью и ошибкой валидации.
     <x-input name="q" label="Поиск" :value="$filters['q']" class="grow" />
     name — также ключ ошибки и old(): items[0][qty] → items.0.qty. Значение: old(name, value), у password — пустое.
+    warning — жёлтая справочная подсказка под полем (x-field), не ошибка.
     class — на обёртку; остальные атрибуты (placeholder, autocomplete, min…) — на <input>.
 --}}
 @props([
@@ -10,6 +11,7 @@
     'value' => null,
     'label' => null,
     'hint' => null,
+    'warning' => null,
     'required' => false,
     'id' => null,
 ])
@@ -19,10 +21,10 @@
     $id ??= 'f-'.str_replace('.', '-', $key);
     $invalid = isset($errors) && $errors->has($key);
     $value = $type === 'password' ? null : old($key, $value);
-    $describedBy = trim(($hint ? "$id-hint " : '').($invalid ? "$id-error" : ''));
+    $describedBy = trim(($hint ? "$id-hint " : '').($warning ? "$id-warning " : '').($invalid ? "$id-error" : ''));
 @endphp
 
-<x-field :id="$id" :label="$label" :hint="$hint" :error="$key" :required="$required" class="{{ $attributes->get('class') }}">
+<x-field :id="$id" :label="$label" :hint="$hint" :warning="$warning" :error="$key" :required="$required" class="{{ $attributes->get('class') }}">
     <input
         id="{{ $id }}"
         name="{{ $name }}"
