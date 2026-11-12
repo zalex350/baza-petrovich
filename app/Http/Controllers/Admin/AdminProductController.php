@@ -124,6 +124,8 @@ class AdminProductController extends Controller
     {
         $product = Product::findOrFail($id);
 
+        // Решение администратора важнее отметки обмена: active = 1 из 1С скрытый вручную товар не покажет
+        $product->forceFill(['hidden_by_1c' => false]);
         $product->update(['is_active' => ! $product->is_active]);
 
         return back()->with(

@@ -34,10 +34,10 @@ class ExchangeController extends Controller
         ], 200, [], JSON_UNESCAPED_UNICODE);
     }
 
-    /** Поток 1: номенклатура (CSV) */
+    /** Поток 1: номенклатура (CSV); dry_run=1 — пробный прогон без записи (раздел 4, правило 10) */
     public function catalog(Request $request): JsonResponse
     {
-        return $this->accept($request, ExchangeJobType::Catalog, ['text/csv']);
+        return $this->accept($request, ExchangeJobType::Catalog, ['text/csv'], $request->boolean('dry_run'));
     }
 
     /** Поток 2: цены и остатки (CSV) */
@@ -60,7 +60,7 @@ class ExchangeController extends Controller
     /**
      * @param  list<string>  $contentTypes
      */
-    private function accept(Request $request, ExchangeJobType $type, array $contentTypes): JsonResponse
+    private function accept(Request $request, ExchangeJobType $type, array $contentTypes, bool $dryRun = false): JsonResponse
     {
         $mode = $request->query('mode', 'delta');
 
@@ -83,6 +83,7 @@ class ExchangeController extends Controller
                 $exchangeId,
                 $request->attributes->get('exchange_token'),
                 $request->ip(),
+                dryRun: $dryRun,
             );
 
         return response()->json(['job_id' => $job->id, 'status' => $job->status->value], 202);

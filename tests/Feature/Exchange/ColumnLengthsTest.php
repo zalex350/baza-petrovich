@@ -7,6 +7,7 @@ use App\Models\ExchangeJob;
 use App\Models\ExchangeJobError;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\Exchange\CatalogHandler;
 use App\Services\Exchange\ExchangeJobs;
 use App\Services\Exchange\ExchangeResult;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -113,6 +114,17 @@ class ColumnLengthsTest extends TestCase
                     ? $this->assertSame($length, (int) $info->length, "{$table}.{$column}")
                     : $this->assertLessThanOrEqual((int) $info->length, $length * 4, "{$table}.{$column}");
             }
+        }
+
+        // Номенклатура: длиннее CatalogHandler::LENGTHS — ошибка строки или обрезка; не длиннее колонки
+        // (guid — строже колонки: 64, как в exchange_job_errors)
+        $products = collect(DB::select(
+            'SELECT COLUMN_NAME AS name, CHARACTER_MAXIMUM_LENGTH AS length FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?',
+            ['products'],
+        ))->keyBy('name');
+
+        foreach (CatalogHandler::LENGTHS as $column => $length) {
+            $this->assertLessThanOrEqual((int) $products->get($column)?->length, $length, "products.{$column}");
         }
     }
 }
