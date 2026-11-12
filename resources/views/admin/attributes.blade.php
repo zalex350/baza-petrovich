@@ -4,19 +4,9 @@
 
 @section('content')
 
-<div class="flex items-center justify-between mb-6">
-
-    <h1 class="text-3xl font-bold">
-        Характеристики
-    </h1>
-
-    <a
-        href="/admin/attribute/create"
-        class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded"
-    >
-        Добавить характеристику
-    </a>
-
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-3xl font-bold">Характеристики</h1>
+    <x-button href="/admin/attribute/create">Добавить характеристику</x-button>
 </div>
 
 <p class="text-sm text-slate-500 mb-4 max-w-3xl">
@@ -24,7 +14,7 @@
     «Цвет» и «цвет» — одна характеристика. Дубли с разным написанием («Цвет корпуса» и «Цвет») сводятся объединением.
 </p>
 
-<form method="GET" action="/admin/attributes" class="flex items-center gap-3 mb-6">
+<form method="GET" action="/admin/attributes" class="flex flex-wrap items-center gap-3 mb-6">
 
     <input type="text" name="q" value="{{ $search }}" placeholder="Название" class="w-full max-w-md border rounded px-3 py-2">
 
@@ -61,53 +51,48 @@
         @csrf
     </form>
 
-    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden mb-4">
+    {{-- На узком экране таблица прокручивается вбок; название и действия закреплены --}}
+    <x-table caption="Характеристики" class="mb-4">
+        <x-slot:head>
+            <x-table.th class="w-10"><span class="sr-only">Объединить</span></x-table.th>
+            <x-table.th sticky="start">Название</x-table.th>
+            <x-table.th>Единица</x-table.th>
+            <x-table.th>Тип</x-table.th>
+            <x-table.th>В фильтрах</x-table.th>
+            <x-table.th align="right">Товаров</x-table.th>
+            <x-table.th sticky="end"><span class="sr-only">Действия</span></x-table.th>
+        </x-slot:head>
 
-        <table class="w-full text-sm">
-
-            <thead class="bg-slate-50 text-left text-slate-600">
-                <tr>
-                    <th class="p-3 w-10" title="Отметить для объединения"><span class="sr-only">Объединить</span></th>
-                    <th class="p-3">Название</th>
-                    <th class="p-3">Единица</th>
-                    <th class="p-3">Тип</th>
-                    <th class="p-3">В фильтрах</th>
-                    <th class="p-3 text-right">Товаров</th>
-                    <th class="p-3"></th>
-                </tr>
-            </thead>
-
-            <tbody class="divide-y divide-slate-200">
-
-                @foreach($attributes as $attribute)
-
-                    <tr data-attribute-row="{{ $attribute->id }}">
-                        <td class="p-3">
-                            <input type="checkbox" name="source_ids[]" value="{{ $attribute->id }}" form="merge-form" aria-label="Объединить «{{ $attribute->name }}»">
-                        </td>
-                        <td class="p-3 font-medium">{{ $attribute->name }}</td>
-                        <td class="p-3 text-slate-500">{{ $attribute->unit ?? '—' }}</td>
-                        <td class="p-3">{{ \App\Models\ProductAttribute::TYPES[$attribute->type] ?? $attribute->type }}</td>
-                        <td class="p-3">{{ $attribute->is_filterable ? 'да' : '—' }}</td>
-                        <td class="p-3 text-right">{{ $attribute->values_count }}</td>
-                        <td class="p-3 text-right whitespace-nowrap">
-                            <a href="/admin/attribute/{{ $attribute->id }}/edit" class="text-blue-600 hover:underline">Изменить</a>
-                            @if($attribute->values_count === 0)
-                                <form method="POST" action="/admin/attribute/{{ $attribute->id }}/delete" class="inline ml-3" onsubmit="return confirm('Удалить характеристику «{{ addslashes($attribute->name) }}»?')">
-                                    @csrf
-                                    <button type="submit" class="text-red-600 hover:underline">Удалить</button>
-                                </form>
-                            @endif
-                        </td>
-                    </tr>
-
-                @endforeach
-
-            </tbody>
-
-        </table>
-
-    </div>
+        @foreach($attributes as $attribute)
+            <tr data-attribute-row="{{ $attribute->id }}">
+                <x-table.td>
+                    <input type="checkbox" name="source_ids[]" value="{{ $attribute->id }}" form="merge-form" aria-label="Объединить «{{ $attribute->name }}»">
+                </x-table.td>
+                <x-table.td sticky="start"><span class="block min-w-32 max-w-56 font-medium text-ink">{{ $attribute->name }}</span></x-table.td>
+                <x-table.td nowrap>{{ $attribute->unit ?? '—' }}</x-table.td>
+                <x-table.td nowrap>{{ \App\Models\ProductAttribute::TYPES[$attribute->type] ?? $attribute->type }}</x-table.td>
+                <x-table.td nowrap>{{ $attribute->is_filterable ? 'да' : '—' }}</x-table.td>
+                <x-table.td align="right" nowrap>{{ $attribute->values_count }}</x-table.td>
+                <x-table.td sticky="end" nowrap>
+                    <div class="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-3">
+                        <x-button variant="link" size="sm" href="/admin/attribute/{{ $attribute->id }}/edit">Изменить</x-button>
+                        @if($attribute->values_count === 0)
+                            <x-confirm
+                                action="/admin/attribute/{{ $attribute->id }}/delete"
+                                label="Удалить"
+                                title="Удалить характеристику?"
+                                confirm-label="Удалить"
+                                trigger-variant="link"
+                                trigger-size="sm"
+                            >
+                                Характеристика «{{ $attribute->name }}» будет удалена.
+                            </x-confirm>
+                        @endif
+                    </div>
+                </x-table.td>
+            </tr>
+        @endforeach
+    </x-table>
 
     <div class="bg-white rounded-2xl border border-slate-200 p-4 mb-6 flex flex-wrap items-center gap-3 text-sm">
         <span class="font-semibold">Объединить отмеченные в</span>

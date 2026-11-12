@@ -1,17 +1,26 @@
+{{--
+    Категории каталога (AdminCategoryController@index). Без поиска — дерево по порядку
+    (sort_order, при равном — название), подкатегории — с отступом; с поиском — найденные с путём.
+    Данные: $rows [category, depth], $search, $path(category) — «Родитель / …», $siblings — parent_id => [id…]
+    (для «вверх / вниз»: первая и последняя среди соседей).
+    В строке: «↑ ↓», «Изменить» (название, родитель, адрес, картинка), «Скрыть / Показать», «Удалить»
+    (только пустую — иначе ошибка со счётчиками).
+--}}
 @extends('layouts.admin')
 
 @section('title', 'Категории')
 
 @section('content')
 
-<h1 class="text-3xl font-bold mb-2">Категории</h1>
+<div class="mb-2 flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-3xl font-bold">Категории</h1>
+    <x-button href="/admin/category/create">Добавить категорию</x-button>
+</div>
 
 <p class="text-sm text-ink-muted mb-6 max-w-3xl">
-    Картинка категории показывается плиткой над списком товаров родительского раздела
-    (если картинка есть хотя бы у одной подкатегории; иначе — чипы с названиями).
-    JPG, PNG или WebP до {{ (int) round(config('shop.images.max_kb') / 1024) }} МБ, сохраняется в WebP
-    ({{ \App\Http\Controllers\Admin\AdminCategoryController::IMAGE_MAX }} px по длинной стороне).
-    Дерево и названия категорий приходят из импорта каталога.
+    Порядок здесь — порядок в меню и каталоге. Скрытая категория не показывается в меню и каталоге
+    вместе с подкатегориями, её товары остаются в поиске. Удалить можно только пустую категорию.
+    Картинка (плитка над списком товаров родительского раздела) — в «Изменить».
 </p>
 
 <form method="GET" action="/admin/categories" class="mb-4 flex flex-wrap items-end gap-2">
@@ -22,64 +31,82 @@
     @endif
 </form>
 
-@if($categories->isEmpty())
+@if($rows->isEmpty())
     <x-empty-state title="Категорий не найдено" icon="folder" />
 @else
-    <x-table stack="md" caption="Категории">
+    <x-table caption="Категории">
         <x-slot:head>
-            <x-table.th>Картинка</x-table.th>
-            <x-table.th>Категория</x-table.th>
+            <x-table.th sticky="start">Категория</x-table.th>
             <x-table.th align="right">Товаров</x-table.th>
-            <x-table.th>Загрузить</x-table.th>
+            <x-table.th align="right">Подкатегорий</x-table.th>
+            <x-table.th>Картинка</x-table.th>
+            @if($search === '')<x-table.th>Порядок</x-table.th>@endif
+            <x-table.th sticky="end">Действия</x-table.th>
         </x-slot:head>
 
-        @foreach($categories as $category)
-            <tr data-category-row="{{ $category->id }}">
-                <x-table.td label="Картинка">
+        @foreach($rows as ['category' => $category, 'depth' => $depth])
+            @php
+                $group = $siblings[(int) $category->parent_id] ?? [];
+                $parentPath = $search !== '' ? $path($category) : '';
+            @endphp
+            <tr data-category-row="{{ $category->id }}" data-depth="{{ $depth }}">
+                <x-table.td sticky="start">
+                    <div style="padding-left: {{ $depth * 1.25 }}rem" class="min-w-40 max-w-72">
+                        @if($parentPath !== '')
+                            <span class="block text-meta text-ink-muted">{{ $parentPath }}</span>
+                        @endif
+                        <a href="/admin/category/{{ $category->id }}/edit" class="font-medium text-ink hover:text-link">{{ $category->name }}</a>
+                        @if($category->is_hidden)
+                            <x-badge>скрыта</x-badge>
+                        @endif
+                    </div>
+                </x-table.td>
+                <x-table.td align="right" nowrap>{{ $category->products_count }}</x-table.td>
+                <x-table.td align="right" nowrap>{{ $category->children_count }}</x-table.td>
+                <x-table.td>
                     @if($category->imageUrl())
-                        <img src="{{ $category->imageUrl() }}" alt="" class="h-14 w-14 rounded-control border border-line bg-media object-contain" data-category-image>
+                        <img src="{{ $category->imageUrl() }}" alt="" class="h-10 w-10 rounded-control border border-line bg-media object-contain" data-category-image>
                     @else
                         <span class="text-ink-muted">—</span>
                     @endif
                 </x-table.td>
-                <x-table.td label="Категория">
-                    @if($category->parent)
-                        <span class="block text-meta text-ink-muted">{{ $category->parent->name }}</span>
-                    @endif
-                    <span class="font-medium text-ink">{{ $category->name }}</span>
-                    @if($category->is_hidden)
-                        <x-badge>служебная</x-badge>
-                    @endif
-                </x-table.td>
-                <x-table.td label="Товаров" align="right" nowrap>{{ $category->products_count }}</x-table.td>
-                <x-table.td label="Загрузить">
-                    <div class="flex flex-wrap items-center gap-2">
-                        <form method="POST" action="/admin/category/{{ $category->id }}/image" enctype="multipart/form-data" class="flex flex-wrap items-center gap-2">
+                @if($search === '')
+                    <x-table.td nowrap>
+                        <div class="flex gap-1">
+                            @foreach(['up' => ['↑', 'Выше'], 'down' => ['↓', 'Ниже']] as $direction => [$arrow, $title])
+                                @php($edge = $direction === 'up' ? reset($group) : end($group))
+                                <form method="POST" action="/admin/category/{{ $category->id }}/move">
+                                    @csrf
+                                    <input type="hidden" name="direction" value="{{ $direction }}">
+                                    <x-button size="sm" variant="secondary" :disabled="$edge === $category->id" aria-label="{{ $title }}: {{ $category->name }}" data-category-move="{{ $direction }}">{{ $arrow }}</x-button>
+                                </form>
+                            @endforeach
+                        </div>
+                    </x-table.td>
+                @endif
+                <x-table.td sticky="end" nowrap>
+                    {{-- На телефоне столбиком: закреплённая колонка действий — узкая --}}
+                    <div class="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-3">
+                        <x-button variant="link" size="sm" href="/admin/category/{{ $category->id }}/edit">Изменить</x-button>
+                        <form method="POST" action="/admin/category/{{ $category->id }}/toggle-visibility">
                             @csrf
-                            <x-file name="image" :id="'f-image-'.$category->id" accept="image/jpeg,image/png,image/webp" aria-label="Картинка категории {{ $category->name }}" class="max-w-64" />
-                            <x-button size="sm">{{ $category->image ? 'Заменить' : 'Загрузить' }}</x-button>
+                            <x-button variant="link" size="sm">{{ $category->is_hidden ? 'Показать' : 'Скрыть' }}</x-button>
                         </form>
-                        @if($category->image)
-                            <x-confirm
-                                action="/admin/category/{{ $category->id }}/image/delete"
-                                label="Удалить"
-                                title="Удалить картинку?"
-                                confirm-label="Удалить"
-                                trigger-variant="link"
-                                trigger-size="sm"
-                            >
-                                Картинка категории «{{ $category->name }}» будет удалена.
-                            </x-confirm>
-                        @endif
+                        <x-confirm
+                            action="/admin/category/{{ $category->id }}/delete"
+                            label="Удалить"
+                            title="Удалить категорию?"
+                            confirm-label="Удалить"
+                            trigger-variant="link"
+                            trigger-size="sm"
+                        >
+                            Категория «{{ $category->name }}» будет удалена. Удалить можно только пустую — без товаров и подкатегорий.
+                        </x-confirm>
                     </div>
                 </x-table.td>
             </tr>
         @endforeach
     </x-table>
-
-    <div class="mt-4">
-        <x-pagination :paginator="$categories" />
-    </div>
 @endif
 
 @endsection

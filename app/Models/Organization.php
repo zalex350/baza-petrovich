@@ -18,10 +18,20 @@ class Organization extends Model
         'legal_name',
         'unp',
         'address',
+        'bank_name',
+        'bic',
+        'iban',
+        'bank_address',
         'phone',
         'email',
         'comment',
     ];
+
+    /** IBAN группами по 4 для чтения: «BY13 NBRB 3600 …»; хранится без пробелов */
+    public function ibanFormatted(): ?string
+    {
+        return $this->iban ? trim(chunk_split($this->iban, 4, ' ')) : null;
+    }
 
     public function users()
     {

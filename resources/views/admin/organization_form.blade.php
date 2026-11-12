@@ -1,158 +1,55 @@
+{{--
+    Клиент (организация): создание и редактирование (AdminOrganizationController@create / @edit).
+    УНП — 9 цифр с контрольной цифрой (App\Rules\Unp); банковские реквизиты необязательные:
+    BIC — 8 или 11 символов, IBAN — BY + 26 символов с проверкой контрольных цифр (пробелы при
+    вводе допускаются, хранится без них). Ошибки — у полей. GUID 1С — только чтение.
+--}}
 @extends('layouts.admin')
 
 @section('title', $organization->exists ? 'Редактирование клиента' : 'Новый клиент')
 
+@section('flash-validation', 'summary')
+
 @section('content')
 
-<a
-    href="{{ $organization->exists ? '/admin/organization/'.$organization->id : '/admin/organizations' }}"
-    class="text-sm text-slate-500 hover:text-blue-600"
->
+<a href="{{ $organization->exists ? '/admin/organization/'.$organization->id : '/admin/organizations' }}" class="text-sm text-ink-muted hover:text-link">
     {{ $organization->exists ? '← Назад к карточке клиента' : '← Назад к списку клиентов' }}
 </a>
 
-<h1 class="text-3xl font-bold mt-4 mb-6">
-    {{ $organization->exists ? 'Редактирование клиента' : 'Новый клиент' }}
-</h1>
+<h1 class="text-3xl font-bold mt-4 mb-6">{{ $organization->exists ? 'Редактирование клиента' : 'Новый клиент' }}</h1>
 
-@if($errors->any())
+<form
+    method="POST"
+    action="{{ $organization->exists ? '/admin/organization/'.$organization->id : '/admin/organization' }}"
+    class="max-w-3xl space-y-5 rounded-card border border-line bg-surface p-card"
+    data-organization-form
+>
+    @csrf
 
-    <div class="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6">
-        <ul class="list-disc list-inside text-red-700 space-y-1">
-            @foreach($errors->all() as $error)
-                <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    </div>
+    <x-input name="name" label="Наименование" :value="$organization->name" maxlength="255" required />
+    <x-input name="legal_name" label="Полное юридическое наименование" :value="$organization->legal_name" maxlength="255" />
+    <x-input name="unp" label="УНП" :value="$organization->unp" hint="9 цифр, последняя — контрольная" inputmode="numeric" maxlength="11" autocomplete="off" />
+    <x-input name="address" label="Адрес" :value="$organization->address" maxlength="255" />
+    <x-input name="phone" label="Телефон" :value="$organization->phone" maxlength="50" />
+    <x-input name="email" type="email" label="Email" :value="$organization->email" maxlength="255" />
 
-@endif
-
-<div class="bg-white rounded-2xl border border-slate-200 p-6">
-
-    <form
-        method="POST"
-        action="{{ $organization->exists ? '/admin/organization/'.$organization->id : '/admin/organization' }}"
-        class="space-y-6"
-    >
-
-        @csrf
-
-        <!-- Name -->
-        <div>
-            <label class="block mb-2 font-semibold">
-                Наименование <span class="text-red-600">*</span>
-            </label>
-            <input
-                type="text"
-                name="name"
-                value="{{ old('name', $organization->name) }}"
-                class="w-full border rounded px-3 py-2"
-                required
-            >
+    <fieldset class="space-y-5 border-t border-line-soft pt-5" data-organization-bank>
+        <legend class="text-lg font-semibold">Банковские реквизиты <span class="text-sm font-normal text-ink-muted">(необязательно)</span></legend>
+        <x-input name="bank_name" label="Банк" :value="$organization->bank_name" maxlength="255" />
+        <div class="grid gap-5 sm:grid-cols-[minmax(0,12rem)_1fr]">
+            <x-input name="bic" label="BIC" :value="$organization->bic" hint="8 или 11 символов" maxlength="11" autocomplete="off" />
+            <x-input name="iban" label="IBAN" :value="$organization->ibanFormatted() ?? $organization->iban" hint="BY и 26 символов; пробелы можно" maxlength="40" autocomplete="off" />
         </div>
+        <x-input name="bank_address" label="Адрес банка" :value="$organization->bank_address" maxlength="255" />
+    </fieldset>
 
-        <!-- Legal name -->
-        <div>
-            <label class="block mb-2 font-semibold">Полное юридическое наименование</label>
-            <input
-                type="text"
-                name="legal_name"
-                value="{{ old('legal_name', $organization->legal_name) }}"
-                class="w-full border rounded px-3 py-2"
-            >
-        </div>
+    <x-textarea name="comment" label="Комментарий" :value="$organization->comment" rows="4" />
 
-        <!-- UNP -->
-        <div>
-            <label class="block mb-2 font-semibold">
-                УНП
-                <span class="text-slate-400 font-normal text-sm">(9 цифр)</span>
-            </label>
-            <input
-                type="text"
-                name="unp"
-                value="{{ old('unp', $organization->unp) }}"
-                inputmode="numeric"
-                pattern="[0-9]{9}"
-                maxlength="9"
-                class="w-full border rounded px-3 py-2"
-            >
-        </div>
+    @if($organization->exists)
+        <x-input name="guid_readonly" label="GUID 1С" :value="$organization->guid ?? '—'" hint="Заполняется только при обмене с 1С" disabled />
+    @endif
 
-        <!-- Address -->
-        <div>
-            <label class="block mb-2 font-semibold">Адрес</label>
-            <input
-                type="text"
-                name="address"
-                value="{{ old('address', $organization->address) }}"
-                class="w-full border rounded px-3 py-2"
-            >
-        </div>
-
-        <!-- Phone -->
-        <div>
-            <label class="block mb-2 font-semibold">Телефон</label>
-            <input
-                type="text"
-                name="phone"
-                value="{{ old('phone', $organization->phone) }}"
-                class="w-full border rounded px-3 py-2"
-            >
-        </div>
-
-        <!-- Email -->
-        <div>
-            <label class="block mb-2 font-semibold">Email</label>
-            <input
-                type="email"
-                name="email"
-                value="{{ old('email', $organization->email) }}"
-                class="w-full border rounded px-3 py-2"
-            >
-        </div>
-
-        <!-- Comment -->
-        <div>
-            <label class="block mb-2 font-semibold">Комментарий</label>
-            <textarea
-                name="comment"
-                rows="4"
-                class="w-full border rounded px-3 py-2"
-            >{{ old('comment', $organization->comment) }}</textarea>
-        </div>
-
-        @if($organization->exists)
-
-            <!-- GUID (read-only) -->
-            <div>
-                <label class="block mb-2 font-semibold">
-                    GUID 1С
-                    <span class="text-slate-400 font-normal text-sm">(заполняется только при обмене с 1С)</span>
-                </label>
-                <input
-                    type="text"
-                    value="{{ $organization->guid ?? '—' }}"
-                    class="w-full border rounded px-3 py-2 bg-slate-100 text-slate-500"
-                    readonly
-                    disabled
-                >
-            </div>
-
-        @endif
-
-        <!-- Submit -->
-        <div>
-            <button
-                type="submit"
-                class="bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded"
-            >
-                {{ $organization->exists ? 'Сохранить' : 'Создать клиента' }}
-            </button>
-        </div>
-
-    </form>
-
-</div>
+    <x-button>{{ $organization->exists ? 'Сохранить' : 'Создать клиента' }}</x-button>
+</form>
 
 @endsection

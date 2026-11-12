@@ -14,19 +14,9 @@
     ← Назад к списку клиентов
 </a>
 
-<div class="flex items-center justify-between mt-4 mb-6">
-
-    <h1 class="text-3xl font-bold">
-        {{ $organization->name }}
-    </h1>
-
-    <a
-        href="/admin/organization/{{ $organization->id }}/edit"
-        class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded"
-    >
-        Изменить
-    </a>
-
+<div class="mt-4 mb-6 flex flex-wrap items-center justify-between gap-3">
+    <h1 class="min-w-0 break-words text-3xl font-bold">{{ $organization->name }}</h1>
+    <x-button href="/admin/organization/{{ $organization->id }}/edit">Изменить</x-button>
 </div>
 
 <x-tabs label="Разделы клиента" :active="$tab" :tabs="[
@@ -60,6 +50,19 @@
 
         <dt class="text-slate-500">Адрес</dt>
         <dd>{{ $organization->address ?? '—' }}</dd>
+
+        {{-- Банковские реквизиты (необязательные) --}}
+        <dt class="text-slate-500">Банк</dt>
+        <dd data-org-bank>{{ $organization->bank_name ?? '—' }}</dd>
+
+        <dt class="text-slate-500">BIC</dt>
+        <dd class="font-mono text-sm">{{ $organization->bic ?? '—' }}</dd>
+
+        <dt class="text-slate-500">IBAN</dt>
+        <dd class="break-all font-mono text-sm" data-org-iban>{{ $organization->ibanFormatted() ?? '—' }}</dd>
+
+        <dt class="text-slate-500">Адрес банка</dt>
+        <dd>{{ $organization->bank_address ?? '—' }}</dd>
 
         <dt class="text-slate-500">Телефон</dt>
         <dd>{{ $organization->phone ?? '—' }}</dd>
@@ -96,35 +99,20 @@
 
     @else
 
-        <table class="w-full border-collapse">
-
-            <thead class="bg-gray-100">
-
+        <x-table caption="Пользователи клиента">
+            <x-slot:head>
+                <x-table.th sticky="start">Имя</x-table.th>
+                <x-table.th>Email</x-table.th>
+                <x-table.th>Роль</x-table.th>
+            </x-slot:head>
+            @foreach($organization->users as $user)
                 <tr>
-                    <th class="border p-3 text-left">Имя</th>
-                    <th class="border p-3 text-left">Email</th>
-                    <th class="border p-3 text-left">Роль</th>
+                    <x-table.td sticky="start"><a href="/admin/user/{{ $user->id }}" class="block min-w-28 font-medium text-ink hover:text-link">{{ $user->name }}</a></x-table.td>
+                    <x-table.td>{{ $user->email }}</x-table.td>
+                    <x-table.td nowrap>{{ $user->role?->label() }}</x-table.td>
                 </tr>
-
-            </thead>
-
-            <tbody>
-
-                @foreach($organization->users as $user)
-
-                    <tr class="hover:bg-gray-50">
-                        <td class="border p-3">
-                            <a href="/admin/user/{{ $user->id }}" class="underline">{{ $user->name }}</a>
-                        </td>
-                        <td class="border p-3">{{ $user->email }}</td>
-                        <td class="border p-3">{{ $user->role?->label() }}</td>
-                    </tr>
-
-                @endforeach
-
-            </tbody>
-
-        </table>
+            @endforeach
+        </x-table>
 
     @endif
 

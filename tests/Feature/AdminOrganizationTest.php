@@ -6,7 +6,10 @@ use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\Organization;
 use App\Models\User;
+use App\Rules\Unp;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\MessageBag;
+use Illuminate\Support\ViewErrorBag;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -26,13 +29,13 @@ class AdminOrganizationTest extends TestCase
     private function validPayload(array $overrides = []): array
     {
         return array_merge([
-            'name'       => 'ООО «Сантехторг»',
+            'name' => 'ООО «Сантехторг»',
             'legal_name' => 'Общество с ограниченной ответственностью «Сантехторг»',
-            'unp'        => '190123456',
-            'address'    => 'г. Минск, ул. Примерная, 1',
-            'phone'      => '+375 29 000-00-00',
-            'email'      => 'info@santeh.by',
-            'comment'    => 'Постоянный клиент',
+            'unp' => '191234563',
+            'address' => 'г. Минск, ул. Примерная, 1',
+            'phone' => '+375 29 000-00-00',
+            'email' => 'info@santeh.by',
+            'comment' => 'Постоянный клиент',
         ], $overrides);
     }
 
@@ -41,13 +44,13 @@ class AdminOrganizationTest extends TestCase
     public static function adminUrlsProvider(): array
     {
         return [
-            'список'       => ['get', '/admin/organizations'],
-            'форма'        => ['get', '/admin/organization/create'],
-            'создание'     => ['post', '/admin/organization'],
-            'карточка'     => ['get', '/admin/organization/{id}'],
+            'список' => ['get', '/admin/organizations'],
+            'форма' => ['get', '/admin/organization/create'],
+            'создание' => ['post', '/admin/organization'],
+            'карточка' => ['get', '/admin/organization/{id}'],
             'редактирование' => ['get', '/admin/organization/{id}/edit'],
-            'сохранение'   => ['post', '/admin/organization/{id}'],
-            'удаление'     => ['post', '/admin/organization/{id}/delete'],
+            'сохранение' => ['post', '/admin/organization/{id}'],
+            'удаление' => ['post', '/admin/organization/{id}/delete'],
         ];
     }
 
@@ -105,9 +108,9 @@ class AdminOrganizationTest extends TestCase
         $organization = Organization::factory()->create();
 
         $pages = [
-            '/admin/organizations'                          => ['Админка — Клиенты', 'Добавить клиента'],
-            '/admin/organization/create'                    => ['Новый клиент', 'Назад к списку клиентов', 'Создать клиента'],
-            "/admin/organization/{$organization->id}"      => ['Клиент — ', 'Назад к списку клиентов', 'Удалить клиента'],
+            '/admin/organizations' => ['Админка — Клиенты', 'Добавить клиента'],
+            '/admin/organization/create' => ['Новый клиент', 'Назад к списку клиентов', 'Создать клиента'],
+            "/admin/organization/{$organization->id}" => ['Клиент — ', 'Назад к списку клиентов', 'Удалить клиента'],
             "/admin/organization/{$organization->id}/edit" => ['Редактирование клиента', 'Назад к карточке клиента'],
         ];
 
@@ -174,8 +177,8 @@ class AdminOrganizationTest extends TestCase
     {
         return [
             'по наименованию' => ['Сантех'],
-            'по УНП'          => ['1901234'],
-            'по email'        => ['santeh.by'],
+            'по УНП' => ['1912345'],
+            'по email' => ['santeh.by'],
         ];
     }
 
@@ -184,8 +187,8 @@ class AdminOrganizationTest extends TestCase
     {
         Organization::factory()->create($this->validPayload());
         Organization::factory()->create([
-            'name'  => 'ИП Другой',
-            'unp'   => '290000000',
+            'name' => 'ИП Другой',
+            'unp' => '290000001',
             'email' => 'other@mail.by',
         ]);
 
@@ -220,7 +223,7 @@ class AdminOrganizationTest extends TestCase
     {
         $response = $this->actingAs($this->admin)->post('/admin/organization', $this->validPayload());
 
-        $organization = Organization::where('unp', '190123456')->first();
+        $organization = Organization::where('unp', '191234563')->first();
 
         $this->assertNotNull($organization);
         $response->assertRedirect("/admin/organization/{$organization->id}");
@@ -272,7 +275,7 @@ class AdminOrganizationTest extends TestCase
 
         $organization->refresh();
         $this->assertSame('Новое имя', $organization->name);
-        $this->assertSame('190123456', $organization->unp);
+        $this->assertSame('191234563', $organization->unp);
     }
 
     public function test_update_does_not_touch_guid(): void
@@ -291,31 +294,139 @@ class AdminOrganizationTest extends TestCase
 
     public static function invalidUnpProvider(): array
     {
+        $format = 'УНП — ровно 9 цифр.';
+        $checksum = 'УНП с ошибкой: не сходится контрольная цифра.';
+
         return [
-            '8 цифр'       => ['12345678'],
-            '10 цифр'      => ['1234567890'],
-            'буквы'        => ['12345678A'],
-            'с пробелом'   => ['123 45678'],
-            'с дефисом'    => ['1234-5678'],
+            '8 цифр' => ['12345678', $format],
+            '10 цифр' => ['1234567890', $format],
+            'буквы' => ['12345678A', $format],
+            '8 цифр с пробелом' => ['123 45678', $format],
+            'с дефисом' => ['1234-5678', $format],
+            'контрольная цифра' => ['191234564', $checksum],
+            'прежний «любой» УНП' => ['190123456', $checksum],
+            // сумма с весами даёт остаток 10 — такого УНП не бывает
+            'остаток 10' => [self::remainderTen(), $checksum],
         ];
     }
 
+    /** Первые 8 цифр, у которых контрольная цифра не существует, + любая девятая */
+    private static function remainderTen(): string
+    {
+        for ($n = 10000000; Unp::checkDigit((string) $n) !== null; $n++);
+
+        return $n.'0';
+    }
+
     #[DataProvider('invalidUnpProvider')]
-    public function test_unp_format_is_validated(string $unp): void
+    public function test_unp_format_is_validated(string $unp, string $message): void
     {
         $this->actingAs($this->admin)
             ->post('/admin/organization', $this->validPayload(['unp' => $unp]))
-            ->assertSessionHasErrors(['unp' => 'УНП должен состоять ровно из 9 цифр.']);
+            ->assertSessionHasErrors(['unp' => $message]);
 
         $this->assertSame(0, Organization::count());
     }
 
-    public function test_unp_must_be_unique_on_create(): void
+    public function test_unp_checksum_examples_and_spaces(): void
     {
-        Organization::factory()->create(['unp' => '190123456']);
+        foreach (['100000007', '190000005', '191234563', '100582333'] as $valid) {
+            $this->assertTrue(Unp::valid($valid), $valid);
+        }
+
+        // Пробелы при вводе убираются
+        $this->actingAs($this->admin)
+            ->post('/admin/organization', $this->validPayload(['unp' => ' 191 234 563 ']))
+            ->assertSessionHasNoErrors();
+        $this->assertSame('191234563', Organization::sole()->unp);
+    }
+
+    public function test_unp_error_is_under_field(): void
+    {
+        $this->actingAs($this->admin)->from('/admin/organization/create')
+            ->post('/admin/organization', $this->validPayload(['unp' => '191234564']))
+            ->assertRedirect('/admin/organization/create');
 
         $this->actingAs($this->admin)
-            ->post('/admin/organization', $this->validPayload(['unp' => '190123456']))
+            ->withSession(['errors' => (new ViewErrorBag)->put('default', new MessageBag(['unp' => 'УНП с ошибкой: не сходится контрольная цифра.']))])
+            ->get('/admin/organization/create')
+            ->assertSee('id="f-unp-error"', false)
+            ->assertSee('УНП с ошибкой: не сходится контрольная цифра.')
+            ->assertSee('Проверьте выделенные поля');
+    }
+
+    // --- Банковские реквизиты ---
+
+    public function test_bank_details_are_optional_normalized_and_shown(): void
+    {
+        $this->actingAs($this->admin)
+            ->post('/admin/organization', $this->validPayload([
+                'bank_name' => 'ЗАО «Альфа-Банк»', 'bic' => 'alfaby2x',
+                'iban' => 'by43 alfa 3012 2c7e 2a00 1027 0000', 'bank_address' => 'г. Минск, ул. Сурганова, 43-47',
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $organization = Organization::sole();
+        $this->assertSame(['ALFABY2X', 'BY43ALFA30122C7E2A0010270000'], [$organization->bic, $organization->iban]);
+
+        // Карточка клиента в админке — IBAN группами по 4
+        $this->actingAs($this->admin)->get("/admin/organization/{$organization->id}")->assertOk()
+            ->assertSee('ЗАО «Альфа-Банк»')
+            ->assertSee('ALFABY2X')
+            ->assertSee('BY43 ALFA 3012 2C7E 2A00 1027 0000')
+            ->assertSee('г. Минск, ул. Сурганова, 43-47');
+
+        // Без реквизитов — тоже можно
+        $this->actingAs($this->admin)
+            ->post("/admin/organization/{$organization->id}", $this->validPayload(['bank_name' => '', 'bic' => '', 'iban' => '', 'bank_address' => '']))
+            ->assertSessionHasNoErrors();
+        $this->assertNull($organization->fresh()->iban);
+    }
+
+    public static function invalidBankProvider(): array
+    {
+        return [
+            'BIC 9 символов' => ['bic', 'ALFABY2XA', 'BIC — 8 или 11 латинских букв и цифр, например ALFABY2X.'],
+            'BIC кириллица' => ['bic', 'АЛФАBY2X', 'BIC — 8 или 11 латинских букв и цифр, например ALFABY2X.'],
+            'IBAN короткий' => ['iban', 'BY43ALFA30122C7E2A001027000', 'IBAN — 28 символов: BY, 2 цифры, код банка (4 символа), 4 цифры, 16 символов счёта.'],
+            'IBAN не BY' => ['iban', 'DE43ALFA30122C7E2A0010270000', 'IBAN — 28 символов: BY, 2 цифры, код банка (4 символа), 4 цифры, 16 символов счёта.'],
+            'IBAN контрольная сумма' => ['iban', 'BY44ALFA30122C7E2A0010270000', 'IBAN с ошибкой: не сходятся контрольные цифры.'],
+        ];
+    }
+
+    #[DataProvider('invalidBankProvider')]
+    public function test_bank_details_are_validated(string $field, string $value, string $message): void
+    {
+        $this->actingAs($this->admin)
+            ->post('/admin/organization', $this->validPayload([$field => $value]))
+            ->assertSessionHasErrors([$field => $message]);
+
+        $this->assertSame(0, Organization::count());
+    }
+
+    public function test_client_sees_bank_details_read_only(): void
+    {
+        $organization = Organization::factory()->create([
+            'bank_name' => 'ОАО «Банк»', 'bic' => 'NBRBBY2X', 'iban' => 'BY58NBRB36000000000000000000', 'bank_address' => 'Минск',
+        ]);
+        $client = User::factory()->create(['organization_id' => $organization->id]);
+
+        $html = $this->actingAs($client)->get('/account/organization')->assertOk()
+            ->assertSee('Реквизиты')
+            ->assertSee('ОАО «Банк»')
+            ->assertSee('NBRBBY2X')
+            ->assertSee('BY58 NBRB 3600 0000 0000 0000 0000')
+            ->getContent();
+        // Только чтение: формы нет
+        $this->assertStringNotContainsString('name="iban"', $html);
+    }
+
+    public function test_unp_must_be_unique_on_create(): void
+    {
+        Organization::factory()->create(['unp' => '191234563']);
+
+        $this->actingAs($this->admin)
+            ->post('/admin/organization', $this->validPayload(['unp' => '191234563']))
             ->assertSessionHasErrors(['unp' => 'Клиент с таким УНП уже существует.']);
 
         $this->assertSame(1, Organization::count());
@@ -323,22 +434,22 @@ class AdminOrganizationTest extends TestCase
 
     public function test_unp_must_be_unique_on_update(): void
     {
-        Organization::factory()->create(['unp' => '190123456']);
-        $other = Organization::factory()->create(['unp' => '290000000']);
+        Organization::factory()->create(['unp' => '191234563']);
+        $other = Organization::factory()->create(['unp' => '290000001']);
 
         $this->actingAs($this->admin)
-            ->post("/admin/organization/{$other->id}", $this->validPayload(['unp' => '190123456']))
+            ->post("/admin/organization/{$other->id}", $this->validPayload(['unp' => '191234563']))
             ->assertSessionHasErrors('unp');
 
-        $this->assertSame('290000000', $other->fresh()->unp);
+        $this->assertSame('290000001', $other->fresh()->unp);
     }
 
     public function test_update_keeps_own_unp(): void
     {
-        $organization = Organization::factory()->create(['unp' => '190123456']);
+        $organization = Organization::factory()->create(['unp' => '191234563']);
 
         $this->actingAs($this->admin)
-            ->post("/admin/organization/{$organization->id}", $this->validPayload(['unp' => '190123456']))
+            ->post("/admin/organization/{$organization->id}", $this->validPayload(['unp' => '191234563']))
             ->assertSessionHasNoErrors();
     }
 
@@ -364,7 +475,7 @@ class AdminOrganizationTest extends TestCase
 
         $this->actingAs($this->admin)->get("/admin/organization/{$organization->id}")
             ->assertOk()
-            ->assertSee('190123456')
+            ->assertSee('191234563')
             ->assertSee('г. Минск, ул. Примерная, 1')
             ->assertSee('a1b2c3d4-guid')
             ->assertSee('только чтение')

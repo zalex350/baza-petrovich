@@ -63,7 +63,8 @@
 | `/admin/attribute/create`, `…/{id}/edit` | `…@create`, `…@edit` | `admin/attribute_form` | `attribute`, `attribute/{id}` |
 | `/admin/catalog-filters` | `AdminCatalogFilterController@index` | `admin/catalog_filters` | — |
 | `/admin/catalog-filters/{id}` | `…@edit` | `admin/catalog_filter_form` | `catalog-filters/{id}` |
-| `/admin/categories` | `AdminCategoryController@index` | `admin/categories` | `category/{id}/image`, `category/{id}/image/delete` |
+| `/admin/categories` (`?q`) | `AdminCategoryController@index` | `admin/categories` | `category/{id}/move` (`direction` = `up` \| `down`), `category/{id}/toggle-visibility`, `category/{id}/delete` |
+| `/admin/category/create` (`?parent`), `…/{id}/edit` | `…@create`, `…@edit` | `admin/category_form` | `category`, `category/{id}`, `category/{id}/image`, `category/{id}/image/delete`, `category/{id}/delete` |
 | `/admin/banners` | `AdminBannerController@index` | `admin/banners` | `banner/{id}/toggle`, `banner/{id}/delete` |
 | `/admin/banner/create`, `…/{id}/edit` | `…@create`, `…@edit` | `admin/banner_form` | `banner`, `banner/{id}` |
 | `/admin/pages` | `AdminPageController@index` | `admin/pages` | — |
@@ -153,7 +154,7 @@
 | Стиль | Шапка | Ячейки | Где |
 |---|---|---|---|
 | Новый | `thead bg-slate-50 border-b`, `th px-4 py-3 text-sm font-semibold text-slate-600` | `tbody divide-y divide-slate-200` | `orders_table`, `order`, `search`, `admin/orders`, `order_items` |
-| Старый (сетка) | `thead bg-gray-100`, `th border p-3` | `td border p-3` | `admin/products`, `admin/users`, `admin/organizations`, `admin/organization` |
+| Старый (сетка) | `thead bg-gray-100`, `th border p-3` | `td border p-3` | — (админка переведена на `x-table`; широкие списки — с закреплёнными колонками `sticky="start|end"`) |
 | Компактный | `th py-2 pr-4` / `th p-3` | `text-sm` | `admin/attributes`, `admin/catalog_filters`, `address_list`, `order_history`, `product` (характеристики) |
 
 ### Flash-сообщения — 4 механизма

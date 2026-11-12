@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Organization;
 use App\Models\ProductClientCode;
+use App\Rules\Bic;
+use App\Rules\Iban;
+use App\Rules\Unp;
 use Illuminate\Validation\Rule;
 
 /**
@@ -128,20 +131,32 @@ class AdminOrganizationController extends Controller
      */
     private function validated(?Organization $organization = null): array
     {
+        // Пробелы при вводе допускаются: УНП, BIC и IBAN хранятся без них, BIC и IBAN — заглавными
+        request()->merge(array_filter([
+            'unp' => filled(request('unp')) ? preg_replace('/\s+/u', '', (string) request('unp')) : null,
+            'bic' => filled(request('bic')) ? Bic::normalize(request('bic')) : null,
+            'iban' => filled(request('iban')) ? Iban::normalize(request('iban')) : null,
+        ], fn ($value) => $value !== null));
+
         return request()->validate([
             'name' => ['required', 'string', 'max:255'],
             'legal_name' => ['nullable', 'string', 'max:255'],
+            // 9 цифр и контрольная цифра (алгоритм МНС РБ — App\Rules\Unp)
             'unp' => [
                 'nullable',
-                'digits:9',
+                new Unp,
                 Rule::unique('organizations', 'unp')->ignore($organization?->id),
             ],
             'address' => ['nullable', 'string', 'max:255'],
+            // Банковские реквизиты — необязательные
+            'bank_name' => ['nullable', 'string', 'max:255'],
+            'bic' => ['nullable', new Bic],
+            'iban' => ['nullable', new Iban],
+            'bank_address' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
             'comment' => ['nullable', 'string'],
         ], [
-            'unp.digits' => 'УНП должен состоять ровно из 9 цифр.',
             'unp.unique' => 'Клиент с таким УНП уже существует.',
         ]);
     }

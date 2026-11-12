@@ -16,18 +16,20 @@ class Unp implements ValidationRule
 
     public static function valid(string $value): bool
     {
-        if (! preg_match('/^\d{9}$/', $value)) {
-            return false;
-        }
+        return preg_match('/^\d{9}$/', $value) && self::checkDigit(substr($value, 0, 8)) === (int) $value[8];
+    }
 
+    /** Контрольная цифра к первым восьми цифрам; null — у такого начала действительного УНП нет */
+    public static function checkDigit(string $first8): ?int
+    {
         $sum = 0;
         foreach (self::WEIGHTS as $i => $weight) {
-            $sum += (int) $value[$i] * $weight;
+            $sum += (int) $first8[$i] * $weight;
         }
 
         $check = $sum % 11;
 
-        return $check < 10 && $check === (int) $value[8];
+        return $check < 10 ? $check : null;
     }
 
     public function validate(string $attribute, mixed $value, Closure $fail): void

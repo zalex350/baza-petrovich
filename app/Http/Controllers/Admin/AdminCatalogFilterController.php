@@ -13,13 +13,11 @@ use App\Services\Catalog\CatalogFilters;
  */
 class AdminCatalogFilterController extends Controller
 {
-    public function __construct(private readonly CatalogFilters $filters)
-    {
-    }
+    public function __construct(private readonly CatalogFilters $filters) {}
 
     public function index()
     {
-        $categories = Category::orderBy('name')->get();
+        $categories = Category::query()->ordered()->get();
         $available = $this->filters->available();
 
         // Все настройки одним запросом; наследование — по дереву в памяти
@@ -67,12 +65,12 @@ class AdminCatalogFilterController extends Controller
             ->values();
 
         return view('admin.catalog_filter_form', [
-            'category'  => $category,
+            'category' => $category,
             'available' => $available,
-            'ordered'   => $ordered,
-            'enabled'   => array_flip($current),
-            'inherits'  => $own->isEmpty(),
-            'source'    => $resolved['source'],
+            'ordered' => $ordered,
+            'enabled' => array_flip($current),
+            'inherits' => $own->isEmpty(),
+            'source' => $resolved['source'],
         ]);
     }
 
@@ -81,11 +79,11 @@ class AdminCatalogFilterController extends Controller
         $category = Category::findOrFail($id);
 
         $data = request()->validate([
-            'mode'      => ['required', 'in:inherit,own'],
-            'filters'   => ['array'],
+            'mode' => ['required', 'in:inherit,own'],
+            'filters' => ['array'],
             'filters.*' => ['string'],
-            'order'     => ['array'],
-            'order.*'   => ['nullable', 'integer'],
+            'order' => ['array'],
+            'order.*' => ['nullable', 'integer'],
         ]);
 
         if ($data['mode'] === 'inherit') {

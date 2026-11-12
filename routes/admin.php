@@ -324,6 +324,13 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
     // Категории: картинка (плитки подкатегорий)
     Route::get('/admin/categories', [AdminCategoryController::class, 'index']);
+    Route::get('/admin/category/create', [AdminCategoryController::class, 'create']);
+    Route::post('/admin/category', [AdminCategoryController::class, 'store']);
+    Route::get('/admin/category/{id}/edit', [AdminCategoryController::class, 'edit']);
+    Route::post('/admin/category/{id}', [AdminCategoryController::class, 'update']);
+    Route::post('/admin/category/{id}/move', [AdminCategoryController::class, 'move']);
+    Route::post('/admin/category/{id}/toggle-visibility', [AdminCategoryController::class, 'toggleVisibility']);
+    Route::post('/admin/category/{id}/delete', [AdminCategoryController::class, 'destroy']);
     Route::post('/admin/category/{id}/image', [AdminCategoryController::class, 'updateImage']);
     Route::post('/admin/category/{id}/image/delete', [AdminCategoryController::class, 'deleteImage']);
 
