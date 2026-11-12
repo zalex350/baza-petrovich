@@ -4,26 +4,17 @@
 
 @section('content')
 
-<div class="flex items-center justify-between mb-6">
-
-    <h1 class="text-3xl font-bold">
-        Админка — Товары
-    </h1>
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-3xl font-bold">Админка — Товары</h1>
 
     <div class="flex flex-wrap items-center gap-3">
-    <x-button variant="secondary" href="/admin/products/new-1c" data-new1c-link>Новые из 1С ({{ $new1cCount }})</x-button>
-    @if(config('shop.catalog.manual_products'))
-        <a
-            href="/admin/product/create"
-            class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded"
-        >
-            Добавить товар
-        </a>
-    @else
-        <span class="text-sm text-slate-500">Товары приходят из 1С</span>
-    @endif
+        <x-button variant="secondary" href="/admin/products/new-1c" data-new1c-link>Новые из 1С ({{ $new1cCount }})</x-button>
+        @if(config('shop.catalog.manual_products'))
+            <x-button href="/admin/product/create">Добавить товар</x-button>
+        @else
+            <span class="text-sm text-ink-muted">Товары приходят из 1С</span>
+        @endif
     </div>
-
 </div>
 
 @php
@@ -73,174 +64,69 @@
     @endif
 </div>
 
-<div class="bg-white border rounded overflow-hidden">
+{{-- На узком экране таблица прокручивается вбок; название и «Действия» закреплены --}}
+<x-table caption="Товары">
+    <x-slot:head>
+        <x-table.th sticky="start">Название</x-table.th>
+        <x-table.th>Артикул</x-table.th>
+        <x-table.th>SKU</x-table.th>
+        <x-table.th align="right">Цена</x-table.th>
+        <x-table.th align="right">Остаток</x-table.th>
+        <x-table.th>Статус</x-table.th>
+        <x-table.th align="right">ID</x-table.th>
+        <x-table.th sticky="end">Действия</x-table.th>
+    </x-slot:head>
 
-    <table class="w-full border-collapse">
-
-        <thead class="bg-gray-100">
-
-            <tr>
-
-                <th class="border p-3 text-left">
-                    ID
-                </th>
-
-                <th class="border p-3 text-left">
-                    Название
-                </th>
-
-                <th class="border p-3 text-left">
-                    Артикул
-                </th>
-
-                <th class="border p-3 text-left">
-                    SKU
-                </th>
-
-                <th class="border p-3 text-left">
-                    Цена
-                </th>
-
-                <th class="border p-3 text-left">
-                    Остаток
-                </th>
-
-                <th class="border p-3 text-left">
-                    Статус
-                </th>
-
-                <th class="border p-3 text-left">
-                    Действия
-                </th>
-
-            </tr>
-
-        </thead>
-
-        <tbody>
-
-            @foreach($products as $product)
-
-                <tr class="hover:bg-gray-50">
-
-                    <td class="border p-3">
-                        {{ $product->id }}
-                    </td>
-
-                    <td class="border p-3">
-                        {{ $product->title() }}
-                        @unless($product->hasRealName())
-                            <x-badge tone="warning">без названия</x-badge>
-                        @endunless
-                    </td>
-
-                    <td class="border p-3">
-                        {{ $product->article ?: '—' }}
-                    </td>
-
-                    <td class="border p-3">
-                        {{ $product->sku }}
-                    </td>
-
-                    <td class="border p-3">
-                        <x-price :amount="$product->price" vat="net" placeholder="—" />
-                    </td>
-
-                    <td class="border p-3">
-                        {{ $product->stock }}
-                    </td>
-
-                    <td class="border p-3">
-
-                        @if(!$product->is_published)
-
-                            <span class="inline-flex rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-xs">
-                                Черновик
-                            </span>
-
-                        @elseif($product->is_active)
-
-                            <span class="inline-flex rounded-full bg-green-100 text-green-700 px-2 py-0.5 text-xs">
-                                Опубликован
-                            </span>
-
-                        @else
-
-                            <span class="inline-flex rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-xs">
-                                Скрыт
-                            </span>
-
-                        @endif
-
-                        @if($product->draft)
-
-                            <span class="inline-flex rounded-full bg-blue-100 text-blue-600 px-2 py-0.5 text-xs ml-1">
-                                есть черновик
-                            </span>
-
-                        @endif
-
-                    </td>
-
-                    <td class="border p-3">
-
-                        <div class="flex items-center gap-3">
-
-                            <a
-                                href="/admin/product/{{ $product->id }}"
-                                class="underline"
-                            >
-                                Edit
-                            </a>
-
-                            <form
-                                method="POST"
-                                action="/admin/product/{{ $product->id }}/toggle-visibility"
-                                class="inline"
-                            >
-
-                                @csrf
-
-                                <button
-                                    type="submit"
-                                    class="text-slate-700 hover:text-slate-900 text-sm underline"
-                                >
-                                    {{ $product->is_active ? 'Скрыть' : 'Показать' }}
-                                </button>
-
-                            </form>
-
-                            <form
-                                method="POST"
-                                action="/admin/product/{{ $product->id }}/delete"
-                                class="inline"
-                            >
-
-                                @csrf
-
-                                <button
-                                    type="submit"
-                                    class="text-red-600 hover:text-red-700 text-sm underline"
-                                    onclick="return confirm('Удалить товар «{{ addslashes($product->title()) }}»?')"
-                                >
-                                    Удалить
-                                </button>
-
-                            </form>
-
-                        </div>
-
-                    </td>
-
-                </tr>
-
-            @endforeach
-
-        </tbody>
-
-    </table>
-
-</div>
+    @foreach($products as $product)
+        <tr data-product-row="{{ $product->id }}">
+            <x-table.td sticky="start">
+                <div class="min-w-40 max-w-72">
+                    <a href="/admin/product/{{ $product->id }}" class="font-medium text-ink hover:text-link">{{ $product->title() }}</a>
+                    @unless($product->hasRealName())
+                        <x-badge tone="warning">без названия</x-badge>
+                    @endunless
+                </div>
+            </x-table.td>
+            <x-table.td nowrap>{{ $product->article ?: '—' }}</x-table.td>
+            <x-table.td nowrap>{{ $product->sku }}</x-table.td>
+            <x-table.td align="right" nowrap><x-price :amount="$product->price" vat="net" placeholder="—" /></x-table.td>
+            <x-table.td align="right" nowrap>{{ $product->stock }}</x-table.td>
+            <x-table.td nowrap>
+                @if(! $product->is_published)
+                    <x-badge>Черновик</x-badge>
+                @elseif($product->is_active)
+                    <x-badge tone="success">Опубликован</x-badge>
+                @else
+                    <x-badge tone="warning">Скрыт</x-badge>
+                @endif
+                @if($product->draft)
+                    <x-badge tone="info">есть черновик</x-badge>
+                @endif
+            </x-table.td>
+            <x-table.td align="right" nowrap>{{ $product->id }}</x-table.td>
+            <x-table.td sticky="end" nowrap>
+                {{-- На телефоне столбиком: закреплённая колонка — узкая --}}
+                <div class="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-3">
+                    <x-button variant="link" size="sm" href="/admin/product/{{ $product->id }}">Изменить</x-button>
+                    <form method="POST" action="/admin/product/{{ $product->id }}/toggle-visibility">
+                        @csrf
+                        <x-button variant="link" size="sm">{{ $product->is_active ? 'Скрыть' : 'Показать' }}</x-button>
+                    </form>
+                    <x-confirm
+                        action="/admin/product/{{ $product->id }}/delete"
+                        label="Удалить"
+                        title="Удалить товар?"
+                        confirm-label="Удалить"
+                        trigger-variant="link"
+                        trigger-size="sm"
+                    >
+                        Товар «{{ $product->title() }}» будет удалён.
+                    </x-confirm>
+                </div>
+            </x-table.td>
+        </tr>
+    @endforeach
+</x-table>
 
 <div class="mt-8">
     <x-pagination :paginator="$products" />

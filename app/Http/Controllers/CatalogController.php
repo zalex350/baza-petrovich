@@ -36,10 +36,9 @@ class CatalogController extends Controller
         $parents = Category::whereNull('parent_id')
             ->visible()
             ->with(['children' => function ($q) {
-                $q->withCount(['products' => fn ($q2) => $q2->where('is_active', 1)])
-                    ->orderBy('name');
+                $q->withCount(['products' => fn ($q2) => $q2->where('is_active', 1)]);
             }])
-            ->orderBy('name')
+            ->ordered()
             ->get();
 
         return view('catalog_index', compact('parents'));

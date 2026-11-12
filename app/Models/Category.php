@@ -17,13 +17,21 @@ class Category extends Model
         'name',
         'slug',
         'parent_id',
+        'sort_order',
         'is_hidden',
         'image',
     ];
 
     protected $casts = [
         'is_hidden' => 'boolean',
+        'sort_order' => 'integer',
     ];
+
+    /** Порядок среди соседей (админка «Категории»), при равном — по названию */
+    public function scopeOrdered($query)
+    {
+        return $query->orderBy('sort_order')->orderBy('name');
+    }
 
     public function scopeVisible($query)
     {
@@ -32,7 +40,7 @@ class Category extends Model
 
     public function children()
     {
-        return $this->hasMany(Category::class, 'parent_id');
+        return $this->hasMany(Category::class, 'parent_id')->ordered();
     }
 
     public function parent()

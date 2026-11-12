@@ -23,6 +23,7 @@ class HomeController extends Controller
         $categories = Category::whereNull('parent_id')
             ->visible()
             ->with('children')
+            ->ordered()
             ->get();
 
         $shown = fn () => Product::with(['mainImage', 'category'])
