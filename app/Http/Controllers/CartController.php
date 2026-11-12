@@ -12,6 +12,7 @@ use App\Services\CartSummary;
 use App\Services\CartValidator;
 use App\Services\CheckoutService;
 use App\Services\ClientCodes;
+use App\Support\OrderQuantity;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -95,20 +96,24 @@ class CartController extends Controller
             return $this->addResult(CartProblemType::Missing->title());
         }
 
-        return $this->addResult($this->addProduct($product, $qty), $product);
+        $hint = null;
+        $error = $this->addProduct($product, $qty, $hint);
+
+        return $this->addResult($error, $product, $hint);
     }
 
     /**
-     * Добавить товар в корзину клиента: проверяется итоговое количество (кратность, остаток,
+     * Добавить товар в корзину клиента: итоговое количество округляется вверх до допустимого
+     * (OrderQuantity; $hint — «Округлено до 6 — кратно 3»), затем проверяется (остаток,
      * доступность). Добавленная позиция отмечается «в заказ». null — успех, иначе текст ошибки.
      */
-    private function addProduct(Product $product, int $qty): ?string
+    private function addProduct(Product $product, int $qty, ?string &$hint = null): ?string
     {
         $cart = auth()->user()->cart()->firstOrCreate();
 
         // Блокировка строки корзины сериализует параллельные добавления одного товара:
         // вторая вставка не упирается в unique(cart_id, product_id), а увеличивает количество.
-        return DB::transaction(function () use ($cart, $product, $qty) {
+        return DB::transaction(function () use ($cart, $product, $qty, &$hint) {
             Cart::whereKey($cart->id)->lockForUpdate()->first();
 
             $item = CartItem::where('cart_id', $cart->id)
@@ -116,6 +121,14 @@ class CartController extends Controller
                 ->first();
 
             $inCart = $item?->quantity ?? 0;
+
+            // Итог — вверх до допустимого: добавляется недостающее до него
+            $rule = OrderQuantity::for($product);
+            $total = $rule->roundUp($inCart + $qty);
+            if ($total !== $inCart + $qty) {
+                $hint = $rule->roundedHint($total);
+                $qty = $total - $inCart;
+            }
 
             // Проверяется итоговое количество — и для новой позиции, и для существующей
             $problem = $this->validator->check($product, $inCart + $qty)[0] ?? null;
@@ -213,13 +226,14 @@ class CartController extends Controller
             return $this->quickAddResult(['sku' => $hints ? $message.'. Возможно, вы искали '.implode(', ', $hints) : $message]);
         }
 
-        $error = $this->addProduct($product, (int) ($data['qty'] ?? $product->default_qty ?? 1));
+        $hint = null;
+        $error = $this->addProduct($product, (int) ($data['qty'] ?? $product->default_qty ?? 1), $hint);
 
         if ($error) {
             return $this->quickAddResult([$product->price === null ? 'sku' : 'qty' => $error]);
         }
 
-        $message = 'Добавлено в корзину: '.($product->title());
+        $message = 'Добавлено в корзину: '.($product->title()).($hint ? ". {$hint}" : '');
         $item = $this->summary->items(auth()->user())->get($product->id);
 
         if (request()->expectsJson()) {
@@ -256,10 +270,12 @@ class CartController extends Controller
     /**
      * Ответ на добавление в корзину: $error = null — успех.
      */
-    private function addResult(?string $error, ?Product $product = null)
+    private function addResult(?string $error, ?Product $product = null, ?string $hint = null)
     {
+        $added = 'Товар добавлен в корзину'.($hint ? ". {$hint}" : '');
+
         if (request()->expectsJson()) {
-            $data = ['ok' => $error === null, 'message' => $error ?? 'Товар добавлен в корзину'];
+            $data = ['ok' => $error === null, 'message' => $error ?? $added];
 
             if ($error === null) {
                 $data['cart'] = $this->summary->forHeader(auth()->user());
@@ -278,14 +294,18 @@ class CartController extends Controller
 
         return $error
             ? back()->with('error', $error)
-            : back()->with('success', 'Товар добавлен в корзину');
+            : back()->with('success', $added);
     }
 
     public function update($id)
     {
         $item = $this->ownItem($id);
 
-        $quantity = max(1, (int) request('quantity'));
+        // Ручной ввод — вверх до допустимого (x-qty округляет так же до отправки)
+        $rule = OrderQuantity::for($item->product);
+        $typed = max(1, (int) request('quantity'));
+        $quantity = $item->product ? $rule->roundUp($typed) : $typed;
+        $hint = $quantity !== $typed ? $rule->roundedHint($quantity) : null;
 
         // Цена здесь не сравнивается: её изменение не мешает менять количество
         $problem = $this->validator->check($item->product, $quantity, null, $item->title())[0] ?? null;
@@ -305,19 +325,23 @@ class CartController extends Controller
         $item->quantity = $quantity;
         $item->save();
 
-        return $this->updateResult(null, $item);
+        return $this->updateResult(null, $item, $hint);
     }
 
     /**
      * Ответ на изменение количества: обычная форма — назад с сообщением; JSON (+/− в списках) —
      * сообщение, количество в корзине (после ошибки — прежнее) и сводка для шапки.
      */
-    private function updateResult(?string $error, CartItem $item)
+    private function updateResult(?string $error, CartItem $item, ?string $hint = null)
     {
+        $updated = $hint ?? 'Корзина обновлена';
+
         if (request()->expectsJson()) {
             return response()->json([
                 'ok' => $error === null,
-                'message' => $error ?? 'Корзина обновлена',
+                'message' => $error ?? $updated,
+                // Округление сервером (без x-qty или из поля без кратности) — подсказка у строки
+                'hint' => $error === null ? $hint : null,
                 'quantity' => $item->quantity,
                 'cart' => $this->summary->forHeader(auth()->user()),
             ], $error === null ? 200 : 422, [], JSON_UNESCAPED_UNICODE);
@@ -325,7 +349,7 @@ class CartController extends Controller
 
         return $error
             ? back()->with('error', $error)
-            : back()->with('success', 'Корзина обновлена');
+            : back()->with('success', $updated);
     }
 
     /**

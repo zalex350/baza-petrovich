@@ -8,6 +8,7 @@ use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use App\Support\OrderQuantity;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -116,24 +117,18 @@ class ReorderService
     }
 
     /**
-     * Ближайшее допустимое количество в корзине: вверх до кратности (min, min + step, …), если
-     * это не больше остатка, иначе вниз — до остатка. Нельзя ни одного — null.
+     * Ближайшее допустимое количество в корзине (OrderQuantity): вверх до кратности, если это не
+     * больше остатка, иначе вниз — до остатка. Нельзя ни одного — null.
      */
     private function allowedTotal(Product $product, int $target, int $stock): ?int
     {
-        $min = max(1, (int) $product->min_qty);
-        $step = max(1, (int) $product->qty_step);
-
-        $up = $target <= $min ? $min : $min + (int) ceil(($target - $min) / $step) * $step;
+        $rule = OrderQuantity::for($product);
+        $up = $rule->roundUp($target);
 
         if ($up <= $stock) {
             return $up;
         }
 
-        if ($stock < $min) {
-            return null;
-        }
-
-        return $min + intdiv($stock - $min, $step) * $step;
+        return $rule->roundDown($stock);
     }
 }

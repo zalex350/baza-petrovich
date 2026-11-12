@@ -120,11 +120,19 @@
             <x-checkbox name="on_order" :label="'Под заказ, когда остатка нет'.($from1c('on_order') ? ' (из 1С)' : '')" :checked="$product->on_order" :form="$form" :disabled="$lock('on_order')" />
         </div>
 
-        {{-- Кратность заказа: поле количества на витрине (x-qty) начинается с default_qty и шагает от min_qty на qty_step --}}
+        {{-- Кратность заказа (OrderQuantity): на витрине количество кратно шагу и не меньше минимума,
+             округлённого вверх до кратности; поле количества (x-qty) начинается с default_qty --}}
+        @php
+            $qtyRule = \App\Support\OrderQuantity::for($product);
+            $minHint = $qtyRule->minIsRounded()
+                ? "Не кратно шагу {$qtyRule->step} — будет округлено до {$qtyRule->first}"
+                : null;
+            $defaultHint = 'Допустимое: '.$qtyRule->first.', '.($qtyRule->first + $qtyRule->step).', '.($qtyRule->first + 2 * $qtyRule->step).', …';
+        @endphp
         <div class="md:col-span-2 grid gap-6 sm:grid-cols-3" data-qty-rules>
-            <x-input name="min_qty" type="number" min="1" step="1" label="Минимум в заказе, шт." :value="$product->min_qty" :hint="$hint1c('min_qty')" :form="$form" :disabled="$lock('min_qty')" :required="! $lock('min_qty')" />
+            <x-input name="min_qty" type="number" min="1" step="1" label="Минимум в заказе, шт." :value="$product->min_qty" :hint="implode('. ', array_filter([$from1c('min_qty') ? 'из 1С' : null, $minHint])) ?: null" :form="$form" :disabled="$lock('min_qty')" :required="! $lock('min_qty')" data-min-rounded="{{ $minHint ? $qtyRule->first : '' }}" />
             <x-input name="qty_step" type="number" min="1" step="1" label="Шаг (кратность), шт." :value="$product->qty_step" :hint="$hint1c('qty_step')" :form="$form" :disabled="$lock('qty_step')" :required="! $lock('qty_step')" />
-            <x-input name="default_qty" type="number" min="1" step="1" label="По умолчанию, шт." :hint="$hint1c('default_qty', 'Минимум, минимум + шаг, …')" :value="$product->default_qty" :form="$form" :disabled="$lock('default_qty')" :required="! $lock('default_qty')" />
+            <x-input name="default_qty" type="number" min="1" step="1" label="По умолчанию, шт." :hint="$hint1c('default_qty', $defaultHint)" :value="$product->default_qty" :form="$form" :disabled="$lock('default_qty')" :required="! $lock('default_qty')" />
         </div>
 
     </div>

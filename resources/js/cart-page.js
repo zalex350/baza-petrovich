@@ -2,7 +2,7 @@
 // «Выбрать все», удаление позиции (x-confirm), «Добавить по артикулу» (x-cart-quick-add).
 //
 // Действие — fetch с Accept: application/json на CartController (update / select / select-all /
-// delete); ответ {ok, message, cart, quantity?}. Затем страница корзины запрашивается заново
+// delete); ответ {ok, message, cart, quantity?, hint?} (hint — «Округлено до 6 — кратно 3», в строке). Затем страница корзины запрашивается заново
 // и заменяются её части [data-refresh="…"] (суммы строк, наличие, панель «Ваш заказ», баннер,
 // нижняя панель телефона); часть, где сейчас фокус (поле количества), не трогается.
 // Ошибка проверки (кратность, остаток) — значение не применяется, текст — в строке.
@@ -111,7 +111,7 @@ async function changeQuantity(form, quantity) {
         const data = await post(form.action, { quantity });
 
         updateHeader(data.cart);
-        message(form, data.ok ? '' : data.message);
+        message(form, data.ok ? (data.hint ?? '') : data.message);
         refresh();
 
         return data;

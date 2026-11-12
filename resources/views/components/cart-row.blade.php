@@ -21,14 +21,15 @@
     // «Ваш код» — код организации клиента (коды позиций загружает CartController::index)
     $clientCode = client_code($product);
 
-    $min = (int) ($product?->min_qty ?? 1);
-    $step = (int) ($product?->qty_step ?? 1);
-    $aligned = $item->quantity >= $min && ($item->quantity - $min) % max(1, $step) === 0;
+    // Правило количества (OrderQuantity); количество не по правилу (правило сменилось) — поле
+    // без кратности, чтобы клиент мог его исправить, ошибку показывает валидатор
+    $qtyRule = \App\Support\OrderQuantity::for($product);
+    $aligned = $qtyRule->allows($item->quantity);
+    $min = $qtyRule->min;
+    $step = $qtyRule->step;
 
     // Упаковка/кратность: только если отличается от «по одной»
-    $pack = $product && ($min > 1 || $step > 1)
-        ? 'Кратно '.$step.' шт. · мин. заказ '.$min.' шт.'
-        : null;
+    $pack = $product ? $qtyRule->label() : null;
 
     // Причины, кроме нехватки остатка (она — под количеством) и изменения цены (оно — у цены)
     $notes = collect($problems)->reject(fn ($p) => $p->type->isShortage() || $p->type === \App\Enums\CartProblemType::PriceChanged);

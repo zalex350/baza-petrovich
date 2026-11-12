@@ -6,6 +6,7 @@ use App\Enums\CartProblemType;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
+use App\Support\OrderQuantity;
 use Illuminate\Support\Collection;
 
 /**
@@ -101,30 +102,22 @@ class CartValidator
     }
 
     /**
-     * Кратность заказа: количество ≥ min_qty и (количество − min_qty) делится на qty_step.
+     * Кратность заказа (OrderQuantity): количество кратно qty_step и не меньше первого допустимого
+     * ceil(min_qty / qty_step) × qty_step.
      */
     public function quantityRule(Product $product, int $quantity, string $name): ?CartProblem
     {
-        $min = max(1, (int) $product->min_qty);
-        $step = max(1, (int) $product->qty_step);
+        $rule = OrderQuantity::for($product);
 
-        if ($quantity >= $min && ($quantity - $min) % $step === 0) {
+        if ($rule->allows($quantity)) {
             return null;
         }
 
         return new CartProblem(
-            $quantity < $min ? CartProblemType::BelowMinQuantity : CartProblemType::StepMismatch,
+            $quantity < $rule->first ? CartProblemType::BelowMinQuantity : CartProblemType::StepMismatch,
             $name,
-            self::quantityMessage($min, $step),
+            $rule->message(),
         );
-    }
-
-    /**
-     * «Количество должно быть не меньше N и кратно M»; при шаге 1 — без «кратно 1».
-     */
-    public static function quantityMessage(int $min, int $step): string
-    {
-        return "Количество должно быть не меньше {$min}".($step > 1 ? " и кратно {$step}" : '');
     }
 
     /**

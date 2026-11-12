@@ -13,6 +13,7 @@ use App\Models\ProductDraft;
 use App\Services\ProductAttributes;
 use App\Services\ProductDrafts;
 use App\Services\Vat\VatCalculator;
+use App\Support\OrderQuantity;
 use Illuminate\Validation\Rule;
 
 /**
@@ -361,18 +362,31 @@ class AdminProductController extends Controller
     }
 
     /**
-     * Количество по умолчанию — одно из допустимых: min_qty, min_qty + qty_step, …
+     * Количество по умолчанию — допустимое (OrderQuantity): кратно qty_step и не меньше
+     * ceil(min_qty / qty_step) × qty_step. min_qty не кратный шагу сохранять можно — на витрине
+     * минимум округляется вверх (подсказка в форме).
      */
     private function defaultQtyRule(?Product $product): \Closure
     {
         return function (string $attribute, mixed $value, \Closure $fail) use ($product) {
             $min = (int) request('min_qty', $product?->min_qty ?? 1);
-            $step = max(1, (int) request('qty_step', $product?->qty_step ?? 1));
+            $rule = new OrderQuantity($min, (int) request('qty_step', $product?->qty_step ?? 1));
 
-            if ($min >= 1 && ((int) $value < $min || ((int) $value - $min) % $step !== 0)) {
-                $fail("Количество по умолчанию — не меньше минимума ({$min}) и с шагом {$step}.");
+            if ($min >= 1 && ! $rule->allows((int) $value)) {
+                $fail(self::defaultQtyMessage($rule));
             }
         };
+    }
+
+    /** «Количество по умолчанию — допустимое количество: 3, 6, 9, … (кратно 3, не меньше 3)» */
+    public static function defaultQtyMessage(OrderQuantity $rule): string
+    {
+        $first = $rule->first;
+        $list = $rule->step === 1 && $first === 1
+            ? '1, 2, 3, …'
+            : $first.', '.($first + $rule->step).', '.($first + 2 * $rule->step).', …';
+
+        return "Количество по умолчанию — допустимое количество: {$list} (кратно {$rule->step}, не меньше {$first})";
     }
 
     private function siteRules(?Product $product = null): array

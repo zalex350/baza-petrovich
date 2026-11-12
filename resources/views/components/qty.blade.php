@@ -2,9 +2,10 @@
     Количество: «−» поле «+» с кратностью заказа (Alpine).
     <x-qty :product="$product" />                               — min_qty, qty_step, default_qty из товара
     <x-qty name="items[3][qty]" :value="$item->qty" :min="2" :step="2" :max="100" size="sm" />
-    Допустимые значения: min, min + step, …; кнопки на границе отключаются.
+    Допустимые значения (App\Support\OrderQuantity): кратные step, не меньше первого допустимого
+    first = ceil(min / step) × step (мин. 2, кратность 3 → 3, 6, 9); «−» не опускает ниже first.
     Ручной ввод применяется по Enter и уходу из поля: округляется вверх до допустимого с подсказкой
-    на 3 с («Округлено до 5 — мин. 2, кратно 3»); больше max (остаток) — не применяется, подсказка
+    на 3 с («Округлено до 6 — кратно 3»); больше max (остаток) — не применяется, подсказка
     «Доступно N шт.» до следующего изменения. Значение больше max с сервера (остаток уменьшился)
     показывается как есть — не урезается.
     События change на поле: ручной ввод — обычное; кнопки — detail.source = 'button' (формы
@@ -25,15 +26,16 @@
 ])
 
 @php
-    $min = max(1, (int) ($min ?? $product?->min_qty ?? 1));
-    $step = max(1, (int) ($step ?? $product?->qty_step ?? 1));
+    $rule = new \App\Support\OrderQuantity((int) ($min ?? $product?->min_qty ?? 1), (int) ($step ?? $product?->qty_step ?? 1));
+    $step = $rule->step;
+    $min = $rule->first;
     $max = $max !== null ? (int) $max : null;
     $key = trim(str_replace(['[', ']'], ['.', ''], $name), '.');
     $id ??= 'f-'.str_replace('.', '-', $key);
 
     // Начальное значение — тоже допустимое
     $value = (int) old($key, $value ?? $product?->default_qty ?? $min);
-    $value = $value <= $min ? $min : $min + (int) ceil(($value - $min) / $step) * $step;
+    $value = $rule->roundUp($value);
 
     $button = [
         'flex shrink-0 items-center justify-center bg-field text-primary transition hover:bg-canvas',
@@ -50,17 +52,18 @@
 <div
     x-data="{
         value: @js($value), min: @js($min), step: @js($step), max: @js($max), hint: '', timer: null,
-        // Вверх до допустимого (min, min + step, …); не число — null
+        // Вверх до допустимого (кратно step, не меньше min — первого допустимого); не число — null
         round(v) {
             v = parseInt(v, 10);
             if (isNaN(v)) return null;
-            return v <= this.min ? this.min : this.min + Math.ceil((v - this.min) / this.step) * this.step;
+            return v <= this.min ? this.min : Math.ceil(v / this.step) * this.step;
         },
+        // Как OrderQuantity::rule(): «мин. 6, кратно 3» / «кратно 3» / «мин. 2»
         rule() {
             const parts = [];
-            if (this.min > 1 || this.step === 1) parts.push('мин. ' + this.min);
+            if (this.min > this.step) parts.push('мин. ' + this.min);
             if (this.step > 1) parts.push('кратно ' + this.step);
-            return parts.join(', ');
+            return parts.length ? parts.join(', ') : 'мин. ' + this.min;
         },
         say(text, ms = 0) {
             clearTimeout(this.timer);
@@ -115,8 +118,8 @@
         type="button"
         @class($button)
         @click="set(value - step)"
-        :disabled="value <= min"
-        @disabled($value <= $min)
+        :disabled="value - step < min"
+        @disabled($value - $step < $min)
         aria-label="Уменьшить количество"
         aria-controls="{{ $id }}"
     >@svg('heroicon-o-minus', 'h-4 w-4')</button>
