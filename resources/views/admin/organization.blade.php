@@ -46,7 +46,13 @@
         <dd>{{ $organization->legal_name ?? '—' }}</dd>
 
         <dt class="text-slate-500">УНП</dt>
-        <dd>{{ $organization->unp ?? '—' }}</dd>
+        <dd>
+            {{ $organization->unp ?? '—' }}
+            {{-- Контрольная цифра — справочно --}}
+            @if($unpWarning = \App\Rules\Unp::warning($organization->unp))
+                <x-badge tone="warning" data-unp-warning>{{ $unpWarning }}</x-badge>
+            @endif
+        </dd>
 
         <dt class="text-slate-500">Адрес</dt>
         <dd>{{ $organization->address ?? '—' }}</dd>

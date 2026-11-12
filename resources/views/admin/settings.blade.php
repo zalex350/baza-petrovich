@@ -55,7 +55,7 @@
         <legend class="mb-1 text-lg font-semibold text-ink">Реквизиты продавца</legend>
         <x-input name="seller_name" :label="$f['seller_name']" :value="$v('seller_name')" placeholder="ООО «…»" hint="В подвале и шапке документов." />
         <x-input name="seller_full_name" :label="$f['seller_full_name']" :value="$v('seller_full_name')" placeholder="Общество с ограниченной ответственностью «…»" />
-        <x-input name="seller_unp" :label="$f['seller_unp']" :value="$v('seller_unp')" inputmode="numeric" maxlength="9" hint="9 цифр, проверяется контрольная цифра." class="max-w-xs" />
+        <x-input name="seller_unp" :label="$f['seller_unp']" :value="$v('seller_unp')" inputmode="numeric" maxlength="9" hint="9 цифр." :warning="\App\Rules\Unp::warning(old('seller_unp', $v('seller_unp')))" class="max-w-xs" />
         <x-input name="seller_address" :label="$f['seller_address']" :value="$v('seller_address')" />
         <x-input name="seller_postal_address" :label="$f['seller_postal_address']" :value="$v('seller_postal_address')" />
         <x-textarea name="seller_registration" :label="$f['seller_registration']" :value="$v('seller_registration')" rows="2" hint="Кем и когда зарегистрировано, например: Минский горисполком, 01.02.2020, № 193000000." />

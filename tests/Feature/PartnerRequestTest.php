@@ -84,6 +84,19 @@ class PartnerRequestTest extends TestCase
         $this->assertSame(0, PartnerRequest::count());
     }
 
+    public function test_unp_check_digit_does_not_block_request(): void
+    {
+        // Форма вернулась с ошибкой другого поля — у УНП жёлтая подсказка
+        $this->withSession(['_old_input' => ['unp' => '190123456']])->get('/partner')
+            ->assertSee('Контрольная цифра не сходится — проверьте УНП');
+        $this->withSession(['_old_input' => ['unp' => '191234563']])->get('/partner')
+            ->assertDontSee('Контрольная цифра не сходится');
+
+        // 190123456 — контрольная цифра не сходится, заявка всё равно принимается
+        $this->post('/partner', $this->payload(['unp' => '190 123 456']))->assertSessionHasNoErrors();
+        $this->assertSame('190123456', PartnerRequest::sole()->unp);
+    }
+
     public function test_honeypot_silently_drops_request(): void
     {
         User::factory()->admin()->create();

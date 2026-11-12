@@ -133,7 +133,7 @@ class AdminOrganizationController extends Controller
     {
         // Пробелы при вводе допускаются: УНП, BIC и IBAN хранятся без них, BIC и IBAN — заглавными
         request()->merge(array_filter([
-            'unp' => filled(request('unp')) ? preg_replace('/\s+/u', '', (string) request('unp')) : null,
+            'unp' => filled(request('unp')) ? Unp::normalize(request('unp')) : null,
             'bic' => filled(request('bic')) ? Bic::normalize(request('bic')) : null,
             'iban' => filled(request('iban')) ? Iban::normalize(request('iban')) : null,
         ], fn ($value) => $value !== null));
@@ -141,10 +141,10 @@ class AdminOrganizationController extends Controller
         return request()->validate([
             'name' => ['required', 'string', 'max:255'],
             'legal_name' => ['nullable', 'string', 'max:255'],
-            // 9 цифр и контрольная цифра (алгоритм МНС РБ — App\Rules\Unp)
+            // Ровно 9 цифр; контрольная цифра — только справочно (Unp::warning: подсказка в форме и карточке)
             'unp' => [
                 'nullable',
-                new Unp,
+                'digits:9',
                 Rule::unique('organizations', 'unp')->ignore($organization?->id),
             ],
             'address' => ['nullable', 'string', 'max:255'],
@@ -157,6 +157,7 @@ class AdminOrganizationController extends Controller
             'email' => ['nullable', 'email', 'max:255'],
             'comment' => ['nullable', 'string'],
         ], [
+            'unp.digits' => 'УНП должен состоять ровно из 9 цифр.',
             'unp.unique' => 'Клиент с таким УНП уже существует.',
         ]);
     }

@@ -6,7 +6,6 @@ use App\Models\Page;
 use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\UserInvitation;
-use App\Rules\Unp;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -41,32 +40,34 @@ class SettingsExtTest extends TestCase
 
     public static function unps(): array
     {
+        // [УНП, сохраняется, жёлтая подсказка о контрольной цифре]
         return [
-            'МТС' => ['800013732', true],
-            'контрольная 7' => ['100000007', true],
-            'не та контрольная' => ['800013733', false],
-            '8 цифр' => ['80001373', false],
-            '10 цифр' => ['8000137321', false],
-            'буквы' => ['AB0013732', false],
-            'остаток 10' => ['000000190', false],
+            'МТС' => ['800013732', true, false],
+            'контрольная 7' => ['100000007', true, false],
+            'не та контрольная' => ['800013733', true, true],
+            'остаток 10' => ['000000190', true, true],
+            '8 цифр' => ['80001373', false, false],
+            '10 цифр' => ['8000137321', false, false],
+            'буквы' => ['AB0013732', false, false],
         ];
     }
 
     #[DataProvider('unps')]
-    public function test_unp_check_digit(string $unp, bool $valid): void
+    public function test_unp_nine_digits_check_digit_is_warning(string $unp, bool $saved, bool $warning): void
     {
-        $this->assertSame($valid, Unp::valid($unp));
-
         $response = $this->save(['seller_unp' => $unp]);
 
-        $valid ? $response->assertSessionHasNoErrors() : $response->assertSessionHasErrors('seller_unp');
-        $this->assertSame($valid ? $unp : null, Setting::value('seller_unp'));
+        $saved ? $response->assertSessionHasNoErrors() : $response->assertSessionHasErrors(['seller_unp' => 'УНП — ровно 9 цифр.']);
+        $this->assertSame($saved ? $unp : null, Setting::value('seller_unp'));
+
+        $html = $this->actingAs($this->admin)->get('/admin/settings')->assertOk()->getContent();
+        $this->assertSame($warning, str_contains($html, 'Контрольная цифра не сходится — проверьте УНП'));
     }
 
-    public function test_unp_errors_explain_problem(): void
+    public function test_unp_spaces_are_removed(): void
     {
-        $this->save(['seller_unp' => '12345'])->assertSessionHasErrors(['seller_unp' => 'УНП — ровно 9 цифр.']);
-        $this->save(['seller_unp' => '800013733'])->assertSessionHasErrors(['seller_unp' => 'УНП с ошибкой: не сходится контрольная цифра.']);
+        $this->save(['seller_unp' => '800 013 732'])->assertSessionHasNoErrors();
+        $this->assertSame('800013732', Setting::value('seller_unp'));
     }
 
     // --- IBAN, BIC ---
@@ -151,7 +152,7 @@ class SettingsExtTest extends TestCase
 
     public function test_validation_errors_shown_under_fields(): void
     {
-        $this->save(['seller_unp' => '800013733', 'phones' => [['label' => 'Склад', 'number' => '']]]);
+        $this->save(['seller_unp' => '12345', 'phones' => [['label' => 'Склад', 'number' => '']]]);
 
         $html = $this->actingAs($this->admin)->get('/admin/settings')->getContent();
 

@@ -32,7 +32,7 @@
             @csrf
 
             <x-input name="organization" label="Организация" required maxlength="255" autocomplete="organization" />
-            <x-input name="unp" label="УНП" required inputmode="numeric" maxlength="9" placeholder="9 цифр" class="max-w-xs" />
+            <x-input name="unp" label="УНП" required inputmode="numeric" maxlength="9" placeholder="9 цифр" :warning="\App\Rules\Unp::warning(old('unp'))" class="max-w-xs" />
             <x-input name="contact_name" label="Контактное лицо" required maxlength="255" autocomplete="name" />
 
             <div class="grid gap-4 sm:grid-cols-2">

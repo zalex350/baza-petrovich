@@ -1,6 +1,7 @@
 {{--
     Клиент (организация): создание и редактирование (AdminOrganizationController@create / @edit).
-    УНП — 9 цифр с контрольной цифрой (App\Rules\Unp); банковские реквизиты необязательные:
+    УНП — ровно 9 цифр; контрольная цифра — справочно (App\Rules\Unp::warning, жёлтая подсказка,
+    сохранить можно). Банковские реквизиты необязательные:
     BIC — 8 или 11 символов, IBAN — BY + 26 символов с проверкой контрольных цифр (пробелы при
     вводе допускаются, хранится без них). Ошибки — у полей. GUID 1С — только чтение.
 --}}
@@ -28,7 +29,7 @@
 
     <x-input name="name" label="Наименование" :value="$organization->name" maxlength="255" required />
     <x-input name="legal_name" label="Полное юридическое наименование" :value="$organization->legal_name" maxlength="255" />
-    <x-input name="unp" label="УНП" :value="$organization->unp" hint="9 цифр, последняя — контрольная" inputmode="numeric" maxlength="11" autocomplete="off" />
+    <x-input name="unp" label="УНП" :value="$organization->unp" hint="9 цифр" :warning="\App\Rules\Unp::warning(old('unp', $organization->unp))" inputmode="numeric" maxlength="11" autocomplete="off" />
     <x-input name="address" label="Адрес" :value="$organization->address" maxlength="255" />
     <x-input name="phone" label="Телефон" :value="$organization->phone" maxlength="50" />
     <x-input name="email" type="email" label="Email" :value="$organization->email" maxlength="255" />
