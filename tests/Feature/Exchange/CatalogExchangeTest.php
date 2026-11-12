@@ -293,7 +293,7 @@ class CatalogExchangeTest extends TestCase
             ."g-1;;A-1;X;Товар;шт;20;;1\n");
 
         $this->assertSame([
-            2 => 'Ставка НДС «20,5»: ожидается точка; active «да»: ожидается 1 или 0; min_qty «0»: ожидается целое число ≥ 1',
+            2 => 'Ставка НДС «20,5»: допустимо 20, 10, 0 или «без НДС»; active «да»: ожидается 1 или 0; min_qty «0»: ожидается целое число ≥ 1',
             3 => 'Нет GUID',
             4 => 'Нет ставки НДС (vat_rate); Нет наименования (name); Нет артикула (article)',
             5 => 'Поле unit длиннее 20 символов',
@@ -305,6 +305,61 @@ class CatalogExchangeTest extends TestCase
         $created = Product::where('guid', 'g-5')->sole();
         $this->assertSame(255, mb_strlen($created->name));
         $this->assertSame('Поле name длиннее 255 символов — обрезано', $job->report['warnings'][0]['message']);
+    }
+
+    public function test_vat_rate_only_20_10_0_or_without_vat(): void
+    {
+        $job = $this->import(self::HEAD
+            .'g-1;;A-1;X;Товар;шт;20;;;1
+'
+            .'g-2;;A-2;X;Товар;шт;10;;;1
+'
+            .'g-3;;A-3;X;Товар;шт;0;;;1
+'
+            .'g-4;;A-4;X;Товар;шт;20%;;;1
+'
+            .'g-5;;A-5;X;Товар;шт;20 %;;;1
+'
+            .'g-6;;A-6;X;Товар;шт;20.00;;;1
+'
+            .'g-7;;A-7;X;Товар;шт;Без  НДС;;;1
+'
+            .'g-8;;A-8;X;Товар;шт;БЕЗНДС;;;1
+'
+            .'g-9;;A-9;X;Товар;шт;15;;;1
+'
+            .'g-10;;A-10;X;Товар;шт;18%;;;1
+'
+            .'g-11;;A-11;X;Товар;шт;20.5;;;1
+'
+            .'g-12;;A-12;X;Товар;шт;100;;;1
+'
+            .'g-13;;A-13;X;Товар;шт;НДС 20;;;1
+');
+
+        $this->assertSame([
+            10 => 'Ставка НДС «15»: допустимо 20, 10, 0 или «без НДС»',
+            11 => 'Ставка НДС «18%»: допустимо 20, 10, 0 или «без НДС»',
+            12 => 'Ставка НДС «20.5»: допустимо 20, 10, 0 или «без НДС»',
+            13 => 'Ставка НДС «100»: допустимо 20, 10, 0 или «без НДС»',
+            14 => 'Ставка НДС «НДС 20»: допустимо 20, 10, 0 или «без НДС»',
+        ], $this->errors($job));
+
+        // Строки с ошибкой не создают товар; остальные — со ставкой как в БД
+        $rates = Product::whereNotNull('guid')->pluck('vat_rate', 'guid')->map(fn ($r) => $r === null ? null : (float) $r)->all();
+        $this->assertEquals(['g-1' => 20, 'g-2' => 10, 'g-3' => 0, 'g-4' => 20, 'g-5' => 20, 'g-6' => 20, 'g-7' => null, 'g-8' => null], $rates);
+        $this->assertSame(5, $job->rows_error);
+    }
+
+    public function test_invalid_vat_rate_does_not_change_existing_product(): void
+    {
+        $product = $this->product('A-1', 'g-1', ['article' => 'A-1', 'brand' => 'X', 'name' => 'Товар', 'vat_rate' => 20]);
+
+        $job = $this->import(self::HEAD.'g-1;;A-1;X;Новое имя;шт;15;;;1
+');
+
+        $this->assertSame([2 => 'Ставка НДС «15»: допустимо 20, 10, 0 или «без НДС»'], $this->errors($job));
+        $this->assertEquals([20, 'Товар'], [$product->fresh()->vat_rate, $product->fresh()->name]);
     }
 
     // --- Пробный прогон ---

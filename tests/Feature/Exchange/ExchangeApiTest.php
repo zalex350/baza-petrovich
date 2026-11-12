@@ -281,6 +281,22 @@ class ExchangeApiTest extends TestCase
         }
     }
 
+    public function test_catalog_vat_rate_15_is_row_error_in_api(): void
+    {
+        $id = $this->postCsv('/catalog', 'guid;article;brand;name;unit;vat_rate;active
+g-1;A1;LEDEME;Товар;шт;15;1
+g-2;A2;LEDEME;Товар;шт;20%;1
+')
+            ->assertStatus(202)->json('job_id');
+
+        $this->api('GET', "/jobs/{$id}")->assertOk()
+            ->assertJsonPath('rows_error', 1)
+            ->assertJsonPath('errors.0.line', 2)
+            ->assertJsonPath('errors.0.message', 'Ставка НДС «15»: допустимо 20, 10, 0 или «без НДС»')
+            ->assertJsonPath('created.0.guid', 'g-2');
+        $this->assertNull(Product::where('guid', 'g-1')->first());
+    }
+
     public function test_job_errors_are_listed_in_api(): void
     {
         Product::create(['name' => 'Смеситель', 'sku' => 'LEDEME-L4755-2', 'price' => 1, 'stock' => 1]);
