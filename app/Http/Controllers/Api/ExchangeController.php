@@ -8,9 +8,11 @@ use App\Http\Controllers\Controller;
 use App\Models\ExchangeJob;
 use App\Services\Exchange\ExchangeJobs;
 use App\Services\Exchange\ExchangeUpload;
+use App\Services\Exchange\SkuMap;
 use App\Support\ExchangeTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 /**
  * API обмена с 1С v1 (docs/1C_EXCHANGE_SPEC.md, разделы 2–5, 8): приём файлов в очередь
@@ -44,6 +46,46 @@ class ExchangeController extends Controller
     public function pricesStock(Request $request): JsonResponse
     {
         return $this->accept($request, ExchangeJobType::PricesStock, ['text/csv']);
+    }
+
+    /**
+     * Карта «guid;sku» товаров с GUID (раздел 4, «Карта кодов»); Accept-Encoding: gzip — сжатый ответ.
+     */
+    public function skuMap(Request $request, SkuMap $map): Response
+    {
+        $body = $map->csv();
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="sku-map.csv"',
+            'Vary' => 'Accept-Encoding',
+        ];
+
+        if (self::acceptsGzip((string) $request->headers->get('Accept-Encoding'))) {
+            $body = gzencode($body, 6);
+            $headers['Content-Encoding'] = 'gzip';
+        }
+
+        return response($body, 200, $headers);
+    }
+
+    /** gzip есть в Accept-Encoding и не запрещён (q=0) */
+    private static function acceptsGzip(string $header): bool
+    {
+        foreach (explode(',', strtolower($header)) as $part) {
+            $params = array_map('trim', explode(';', $part));
+
+            if (in_array($params[0], ['gzip', 'x-gzip'], true)) {
+                foreach (array_slice($params, 1) as $param) {
+                    if (preg_match('/^q=0(\.0{0,3})?$/', $param)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function job(string $id): JsonResponse

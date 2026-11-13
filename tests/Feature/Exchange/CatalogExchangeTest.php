@@ -108,16 +108,43 @@ class CatalogExchangeTest extends TestCase
             $job->report['summary']['fields']);
     }
 
-    public function test_quantities_are_written_when_managed(): void
+    public function test_only_managed_fields_are_written(): void
     {
-        config(['shop.exchange_1c.managed_fields' => ['name', 'article', 'min_qty', 'qty_step']]);
+        config(['shop.exchange_1c.managed_fields' => ['name', 'article']]);
         $product = $this->product('A-1', 'g-1', ['brand' => 'OLD', 'unit' => 'шт']);
 
-        $this->import("guid;article;brand;name;unit;vat_rate;min_qty;qty_step;active\ng-1;A-1;NEW;Товар;м;20;10;;1\n");
+        $this->import("guid;article;brand;name;unit;vat_rate;active\ng-1;A-1;NEW;Новое имя;м;20;1\n");
 
         $product->refresh();
-        // brand и unit не в списке — не меняются; пустой qty_step — 1
-        $this->assertSame(['OLD', 'шт', 10, 1], [$product->brand, $product->unit, $product->min_qty, $product->qty_step]);
+        // brand и unit не в списке — не меняются
+        $this->assertSame(['OLD', 'шт', 'Новое имя'], [$product->brand, $product->unit, $product->name]);
+    }
+
+    public function test_quantity_columns_are_ignored(): void
+    {
+        // Даже если поля в списке 1С: минимальное количество и кратность — только админка сайта
+        config(['shop.exchange_1c.managed_fields' => ['name', 'article', 'brand', 'min_qty', 'qty_step']]);
+        $product = $this->product('A-1', 'g-1', ['brand' => 'X', 'min_qty' => 3, 'qty_step' => 3]);
+
+        // Любые значения, в том числе неверные, — без ошибок и проверок
+        $job = $this->import("guid;sku;article;brand;name;unit;vat_rate;min_qty;qty_step;active\n"
+            ."g-1;;A-1;X;Товар;шт;20;10;0,5;1\n"
+            ."g-2;;B-2;NEW;Новый товар;шт;20;abc;-7;1\n");
+
+        $this->assertSame([], $this->errors($job));
+        $this->assertSame(2, $job->rows_ok);
+        $this->assertArrayNotHasKey('min_qty', $job->report['summary']['fields']);
+
+        $product->refresh();
+        $this->assertSame([3, 3], [$product->min_qty, $product->qty_step]);
+
+        // Новый товар — значения по умолчанию сайта
+        $created = Product::where('guid', 'g-2')->sole();
+        $this->assertSame([1, 1, 1], [$created->min_qty, $created->qty_step, $created->default_qty]);
+
+        // И в админке поля не закрыты, хотя есть в SHOP_1C_MANAGED_FIELDS
+        $this->assertNotContains('min_qty', $product->lockedFields());
+        $this->assertNotContains('qty_step', $product->lockedFields());
     }
 
     public function test_unchanged_row_only_marks_sync_time(): void
@@ -293,7 +320,8 @@ class CatalogExchangeTest extends TestCase
             ."g-1;;A-1;X;Товар;шт;20;;1\n");
 
         $this->assertSame([
-            2 => 'Ставка НДС «20,5»: допустимо 20, 10, 0 или «без НДС»; active «да»: ожидается 1 или 0; min_qty «0»: ожидается целое число ≥ 1',
+            // min_qty «0» — не ошибка: колонка игнорируется
+            2 => 'Ставка НДС «20,5»: допустимо 20, 10, 0 или «без НДС»; active «да»: ожидается 1 или 0',
             3 => 'Нет GUID',
             4 => 'Нет ставки НДС (vat_rate); Нет наименования (name); Нет артикула (article)',
             5 => 'Поле unit длиннее 20 символов',

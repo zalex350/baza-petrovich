@@ -219,7 +219,7 @@ class CatalogAdminTest extends TestCase
         $reader->open($file);
         foreach ($reader->getSheetIterator() as $sheet) {
             foreach ($sheet->getRowIterator() as $row) {
-                $this->assertSame(['guid', 'sku', 'article', 'brand', 'name', 'unit', 'vat_rate', 'min_qty', 'qty_step', 'barcode', 'group_1c', 'active'], $row->toArray());
+                $this->assertSame(['guid', 'sku', 'article', 'brand', 'name', 'unit', 'vat_rate', 'barcode', 'group_1c', 'active'], $row->toArray());
                 break;
             }
             break;

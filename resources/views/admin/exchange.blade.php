@@ -124,7 +124,8 @@
         <p class="text-sm text-ink-muted">
             Выгрузка номенклатуры из 1С в формате потока 1 (раздел 4 спецификации): колонки <code>guid</code>, <code>sku</code>,
             <code>article</code>, <code>brand</code>, <code>name</code>, <code>unit</code>, <code>vat_rate</code>, <code>active</code>
-            (и необязательные <code>min_qty</code>, <code>qty_step</code>, <code>barcode</code>, <code>group_1c</code>) в любом порядке.
+            (и необязательные <code>barcode</code>, <code>group_1c</code>) в любом порядке. Минимальное количество и кратность
+            в обмен не входят — задаются в карточке товара; такие колонки в файле игнорируются.
             CSV с разделителем «;» (UTF-8 или Windows-1251 из Excel) или .xlsx (первый лист).
         </p>
         <p class="text-sm text-ink-muted">
