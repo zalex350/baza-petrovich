@@ -490,11 +490,13 @@ class AdminProductFormTest extends TestCase
     public function test_managed_fields_come_from_config(): void
     {
         $this->linkTo1c();
-        // 1С подтвердила кратность, цену не присылает
+        // 1С присылает название, цену не присылает; кратность в списке — всё равно не из 1С (ведёт сайт)
         config(['shop.exchange_1c.managed_fields' => ['name', 'min_qty', 'qty_step']]);
 
         $html = $this->actingAs($this->admin)->get("/admin/product/{$this->product->id}")->assertOk()->getContent();
-        $this->assertMatchesRegularExpression('/id="f-min_qty-hint"[^>]*>\s*из 1С/u', $html);
+        $this->assertMatchesRegularExpression('/id="f-name-hint"[^>]*>\s*из 1С/u', $html);
+        $this->assertDoesNotMatchRegularExpression('/id="f-min_qty-hint"[^>]*>\s*из 1С/u', $html);
+        $this->assertDoesNotMatchRegularExpression('/<input[^>]*id="f-min_qty"[^>]*\sdisabled(?=[\s=>\/])/s', $html);
         $this->assertDoesNotMatchRegularExpression('/<input[^>]*id="f-price"[^>]*\sdisabled(?=[\s=>\/])/s', $html);
         // Артикул не из списка 1С — редактируется
         $this->assertDoesNotMatchRegularExpression('/<input[^>]*id="f-article"[^>]*\sdisabled(?=[\s=>\/])/s', $html);
@@ -504,7 +506,7 @@ class AdminProductFormTest extends TestCase
         ]))->assertSessionHasNoErrors();
 
         $product = $this->product->fresh();
-        $this->assertSame(['Grohe Start', 120.0, 1, 1], [$product->name, (float) $product->price, $product->min_qty, $product->qty_step]);
+        $this->assertSame(['Grohe Start', 120.0, 3, 3], [$product->name, (float) $product->price, $product->min_qty, $product->qty_step]);
     }
 
     public function test_default_managed_fields(): void
