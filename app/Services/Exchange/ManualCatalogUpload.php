@@ -60,9 +60,9 @@ class ManualCatalogUpload extends ManualUpload
         $path = tempnam(sys_get_temp_dir(), 'tpl').'.xlsx';
         $writer = new Writer;
         $writer->openToFile($path);
-        $writer->addRow(Row::fromValues(['guid', 'sku', 'article', 'brand', 'name', 'unit', 'vat_rate', 'min_qty', 'qty_step', 'barcode', 'group_1c', 'active']));
-        $writer->addRow(Row::fromValues(['5f1c2b8a-3d4e-11ef-9a1b-0050569a1c01', 'LEDEME-L4755-2', 'L4755-2', 'LEDEME', 'Смеситель для кухни LEDEME L4755-2', 'шт', '20', '1', '1', '4810000000017', 'Смесители', '1']));
-        $writer->addRow(Row::fromValues(['8c4f5e1d-3d4e-11ef-9a1b-0050569a1c04', '', 'BL 5810', 'TIM', 'Смеситель для ванны TIM BL5810', 'шт', '20', '1', '1', '', 'Смесители', '1']));
+        $writer->addRow(Row::fromValues(['guid', 'sku', 'article', 'brand', 'name', 'unit', 'vat_rate', 'barcode', 'group_1c', 'active']));
+        $writer->addRow(Row::fromValues(['5f1c2b8a-3d4e-11ef-9a1b-0050569a1c01', 'LEDEME-L4755-2', 'L4755-2', 'LEDEME', 'Смеситель для кухни LEDEME L4755-2', 'шт', '20', '4810000000017', 'Смесители', '1']));
+        $writer->addRow(Row::fromValues(['8c4f5e1d-3d4e-11ef-9a1b-0050569a1c04', '', 'BL 5810', 'TIM', 'Смеситель для ванны TIM BL5810', 'шт', '20', '', 'Смесители', '1']));
         $writer->close();
 
         return $path;

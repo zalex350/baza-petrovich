@@ -17,8 +17,7 @@ use Illuminate\Support\Facades\DB;
  *
  * plan() — без записи (он же пробный прогон dry_run=1):
  *  1. разбор строк (ExchangeFile: колонки по заголовку) и проверка: guid, name, article,
- *     active (1/0), vat_rate (20, 10, 0 или «без НДС»; «20%» = 20), min_qty / qty_step (целые ≥ 1),
- *     длины колонок products (LENGTHS: длиннее — ошибка строки; name и group_1c — обрезка
+ *     active (1/0), vat_rate (20, 10, 0 или «без НДС»; «20%» = 20), длины колонок products (LENGTHS: длиннее — ошибка строки; name и group_1c — обрезка
  *     с предупреждением);
  *  2. товар: guid (без учёта регистра) → sku, если заполнен (точно, без учёта регистра и
  *     пробелов по краям; только товар без GUID; не найден — ошибка) → «бренд + артикул»
@@ -26,17 +25,20 @@ use Illuminate\Support\Facades\DB;
  *     «неоднозначное сопоставление»; без бренда — ошибка). Найден не по GUID — товару
  *     присваивается guid;
  *  3. найден — пишутся поля из SHOP_1C_MANAGED_FIELDS (из name, article, brand, unit,
- *     vat_rate, min_qty, qty_step; price и stock — поток 2) и всегда guid, barcode, group_1c;
+ *     vat_rate; price и stock — поток 2) и всегда guid, barcode, group_1c;
  *     код сайта (sku) и display_name не меняются. active = 0 — товар скрывается
  *     (is_active = 0, hidden_by_1c = 1); active = 1 показывает только скрытый так же,
  *     скрытый вручную в админке остаётся скрытым;
  *  4. не найден (sku пуст) — новый товар черновиком (is_published = 0) без категории,
+ *     минимальное количество и кратность — по умолчанию сайта (1 / 1),
  *     код сайта «БРЕНД-артикул», занят — суффикс -2, -3 … и предупреждение; коды — в created;
  *  5. mode=full: товары с GUID, которых нет в файле, не скрываются и не удаляются — только
  *     список (missing) в отчёте задания; предохранитель — нет больше доли из настроек (10 %)
  *     → ExchangeJobFailedException (в пробном прогоне — отметка в сообщении).
  * Пробный прогон (dry_run=1) — тот же план без записи, в отчёте ещё и все товары сайта без пары
  * в файле (unmatched).
+ * Минимальное количество и кратность (min_qty, qty_step) в обмен не входят: ведутся в админке
+ * сайта, колонки файла с ними игнорируются без проверки.
  * handle() — план и запись пачками по 500 в транзакции (BulkUpdate, создание через модель).
  */
 class CatalogHandler implements ExchangeHandler
@@ -44,7 +46,7 @@ class CatalogHandler implements ExchangeHandler
     private const BATCH = 500;
 
     /** Поля строки, которые обмен пишет в найденный товар, если они в SHOP_1C_MANAGED_FIELDS */
-    private const MANAGEABLE = ['name', 'article', 'brand', 'unit', 'vat_rate', 'min_qty', 'qty_step'];
+    private const MANAGEABLE = ['name', 'article', 'brand', 'unit', 'vat_rate'];
 
     /** Служебные поля 1С — пишутся всегда */
     private const ALWAYS = ['barcode', 'group_1c'];
@@ -217,7 +219,7 @@ class CatalogHandler implements ExchangeHandler
         $this->products = $this->byGuid = $this->bySku = $this->byKey = $this->takenSku = [];
 
         DB::table('products')
-            ->select(['id', 'guid', 'sku', 'article', 'brand', 'name', 'unit', 'vat_rate', 'min_qty', 'qty_step',
+            ->select(['id', 'guid', 'sku', 'article', 'brand', 'name', 'unit', 'vat_rate',
                 'barcode', 'group_1c', 'is_active', 'hidden_by_1c', 'match_key', 'deleted_at'])
             ->lazyById(2000)
             ->each(function ($p) {
@@ -232,8 +234,6 @@ class CatalogHandler implements ExchangeHandler
                     'brand' => $p->brand,
                     'unit' => $p->unit,
                     'vat_rate' => self::vatValue($p->vat_rate),
-                    'min_qty' => (int) $p->min_qty,
-                    'qty_step' => (int) $p->qty_step,
                     'barcode' => $p->barcode,
                     'group_1c' => $p->group_1c,
                     'is_active' => (bool) $p->is_active,
@@ -285,13 +285,6 @@ class CatalogHandler implements ExchangeHandler
 
         if ($values['article'] === '') {
             $errors[] = 'Нет артикула (article)';
-        }
-
-        // Колонки нет — поле не меняется; есть, но пусто — 1 (раздел 4)
-        foreach (['min_qty', 'qty_step'] as $column) {
-            if (array_key_exists($column, $row)) {
-                $values[$column] = $this->quantity($column, self::clean($row[$column]), $errors);
-            }
         }
 
         foreach (self::LENGTHS as $column => $length) {
@@ -433,8 +426,6 @@ class CatalogHandler implements ExchangeHandler
             'brand' => $values['brand'],
             'unit' => $values['unit'],
             'vat_rate' => $values['vat_rate'],
-            'min_qty' => $values['min_qty'] ?? 1,
-            'qty_step' => $values['qty_step'] ?? 1,
             'barcode' => $values['barcode'],
             'group_1c' => $values['group_1c'],
             // Черновик без категории: на витрину — после категории и публикации в админке
@@ -615,24 +606,6 @@ class CatalogHandler implements ExchangeHandler
                 return true;
             })(),
         };
-    }
-
-    /**
-     * @param  list<string>  $errors
-     */
-    private function quantity(string $column, string $value, array &$errors): int
-    {
-        if ($value === '') {
-            return 1;
-        }
-
-        if (preg_match('/^\d{1,9}$/', $value) && (int) $value >= 1) {
-            return (int) $value;
-        }
-
-        $errors[] = "{$column} «{$value}»: ожидается целое число ≥ 1";
-
-        return 1;
     }
 
     /** Ставка как в БД (decimal 5,2) или null — «Без НДС» */

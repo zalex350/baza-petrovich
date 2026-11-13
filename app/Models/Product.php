@@ -114,7 +114,10 @@ class Product extends Model
      */
     public function lockedFrom1c(): array
     {
-        return $this->guid !== null ? array_values((array) config('shop.exchange_1c.managed_fields', [])) : [];
+        // Минимальное количество и кратность в обмен не входят — правятся в админке всегда
+        return $this->guid !== null
+            ? array_values(array_diff((array) config('shop.exchange_1c.managed_fields', []), ['min_qty', 'qty_step']))
+            : [];
     }
 
     /**

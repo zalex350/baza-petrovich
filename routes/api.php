@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware([AuthenticateExchange::class, 'throttle:exchange-1c'])->group(function () {
     Route::get('/ping', [ExchangeController::class, 'ping']);
     Route::post('/catalog', [ExchangeController::class, 'catalog']);
+    Route::get('/catalog/sku-map', [ExchangeController::class, 'skuMap']);
     Route::post('/prices-stock', [ExchangeController::class, 'pricesStock']);
     Route::get('/jobs/{id}', [ExchangeController::class, 'job']);
 });
