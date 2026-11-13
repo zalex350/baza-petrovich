@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Search\SearchIndex;
 use App\Services\StockReserve;
 use App\Services\Vat\VatCalculator;
 use App\Services\Vat\VatLine;
@@ -17,6 +18,7 @@ use Illuminate\Support\Collection;
  * у товара без GUID правится в админке, с GUID — приходит из 1С. sku — внутренний код сайта
  * для обмена с 1С, клиентам не показывается.
  * match_key — ключ сопоставления «бренд + артикул» (matchKey()), пересчитывается при сохранении.
+ * search_text — слова и основы для поиска (App\Services\Search\SearchIndex), тоже при сохранении.
  */
 class Product extends Model
 {
@@ -95,6 +97,11 @@ class Product extends Model
 
             if (! $product->exists || $product->isDirty(['brand', 'article'])) {
                 $product->match_key = self::matchKey($product->brand, $product->article);
+            }
+
+            // Слова и основы для поиска (SearchIndex): названия, бренд, категория
+            if (! $product->exists || $product->search_text === null || $product->isDirty(SearchIndex::FIELDS)) {
+                $product->search_text = app(SearchIndex::class)->textFor($product);
             }
         });
     }

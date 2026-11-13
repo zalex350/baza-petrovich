@@ -9,6 +9,7 @@ use App\Models\ProductAttribute;
 use App\Models\ProductAttributeValue;
 use App\Services\Catalog\CatalogFilters;
 use App\Services\CatalogMenu;
+use App\Services\Search\SearchIndex;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -62,6 +63,10 @@ class CatalogImportApplier
             $this->deleteCategories($plan);
             $this->applyFilters($plan);
         });
+
+        // Названия, бренды и категории менялись мимо модели — поисковый индекс всех товаров заново
+        $say('Поисковый индекс');
+        app(SearchIndex::class)->reindex();
 
         CatalogMenu::flush();
     }

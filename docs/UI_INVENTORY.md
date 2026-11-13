@@ -21,7 +21,7 @@
 | `/catalog/menu.json` | `CatalogController@menu` | JSON (мега-меню) | — | — |
 | `/product/{id}` | `ProductController@show` | `product` | app | — |
 | `/search` | `SearchController@index` | `search` (ничего не найдено — «Возможно, вы искали …», `ArticleSearch::didYouMean`) | app | — |
-| `/search/suggest` | `SearchController@suggest` | JSON (подсказки: `article` — артикул для покупателя, `brand`, `client_code`; без `sku`; пусто — `did_you_mean`) | — | — |
+| `/search/suggest` | `SearchController@suggest` | JSON (подсказки; категории — `name` с путём «Родитель / Категория»; `article` — артикул для покупателя, `brand`, `client_code`; без `sku`; пусто — `did_you_mean`) | — | — |
 
 ### Кабинет клиента (auth)
 
@@ -60,6 +60,7 @@
 | `/admin/user/{id}` | `…@show` | `admin/user` | `block`, `unblock`, `reset-password` |
 | `/admin/user/create`, `…/{id}/edit` | `…@create`, `…@edit` | `admin/user_form` | `user`, `user/{id}` |
 | `/admin/attributes` | `AdminAttributeController@index` | `admin/attributes` | `attributes/merge`, `attribute/{id}/delete` |
+| `/admin/search-synonyms` | `AdminSearchSynonymController@index` (`?check=` — «Проверить запрос») | `admin/search_synonyms` | `search-synonyms` (добавить), `search-synonym/{id}`, `search-synonym/{id}/delete` |
 | `/admin/attribute/create`, `…/{id}/edit` | `…@create`, `…@edit` | `admin/attribute_form` | `attribute`, `attribute/{id}` |
 | `/admin/catalog-filters` | `AdminCatalogFilterController@index` | `admin/catalog_filters` | — |
 | `/admin/catalog-filters/{id}` | `…@edit` | `admin/catalog_filter_form` | `catalog-filters/{id}` |

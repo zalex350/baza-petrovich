@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Search\SearchIndex;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 
@@ -28,6 +29,16 @@ class Category extends Model
     ];
 
     /** Порядок среди соседей (админка «Категории»), при равном — по названию */
+    protected static function booted(): void
+    {
+        // Название категории и её родителей — в поисковом индексе товаров (SearchIndex)
+        static::updated(function (Category $category) {
+            if ($category->wasChanged(['name', 'parent_id'])) {
+                app(SearchIndex::class)->reindexCategory($category->id);
+            }
+        });
+    }
+
     public function scopeOrdered($query)
     {
         return $query->orderBy('sort_order')->orderBy('name');

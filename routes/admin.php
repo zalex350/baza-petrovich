@@ -6,6 +6,8 @@ use App\Http\Controllers\Admin\AdminCatalogFilterController;
 use App\Http\Controllers\Admin\AdminCategoryController;
 use App\Http\Controllers\Admin\AdminClientCodeController;
 use App\Http\Controllers\Admin\AdminDeliveryAddressController;
+use App\Http\Controllers\Admin\AdminExchangeController;
+use App\Http\Controllers\Admin\AdminNewFrom1cController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminOrganizationController;
 use App\Http\Controllers\Admin\AdminPageController;
@@ -13,8 +15,7 @@ use App\Http\Controllers\Admin\AdminPartnerRequestController;
 use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminProductDocumentController;
 use App\Http\Controllers\Admin\AdminProductImageController;
-use App\Http\Controllers\Admin\AdminExchangeController;
-use App\Http\Controllers\Admin\AdminNewFrom1cController;
+use App\Http\Controllers\Admin\AdminSearchSynonymController;
 use App\Http\Controllers\Admin\AdminSettingsController;
 use App\Http\Controllers\Admin\AdminUserController;
 use Illuminate\Support\Facades\Route;
@@ -26,6 +27,12 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
+
+    // Синонимы поиска: правила строкой, «Проверить запрос» (?check=)
+    Route::get('/admin/search-synonyms', [AdminSearchSynonymController::class, 'index']);
+    Route::post('/admin/search-synonyms', [AdminSearchSynonymController::class, 'store']);
+    Route::post('/admin/search-synonym/{id}', [AdminSearchSynonymController::class, 'update'])->whereNumber('id');
+    Route::post('/admin/search-synonym/{id}/delete', [AdminSearchSynonymController::class, 'destroy'])->whereNumber('id');
 
     // Фильтры каталога по категориям (SRS §3.9, BR-016)
     Route::get('/admin/catalog-filters', [AdminCatalogFilterController::class, 'index']);
