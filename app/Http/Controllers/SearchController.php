@@ -4,26 +4,26 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\ProductClientCode;
 use App\Models\ProductImage;
 use App\Services\ArticleSearch;
 use App\Services\CartSummary;
 use App\Services\Catalog\KeyAttributes;
 use App\Services\ClientCodes;
+use App\Services\Search\ProductSearch;
 use App\Support\OrderQuantity;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
- * Поиск и подсказки в шапке: по артикулу, названию, бренду (и описанию на странице
- * результатов), а у пользователя организации — и по кодам товаров этой организации
- * (ClientCodes; без учёта регистра — по code_key).
+ * Поиск и подсказки в шапке (ProductSearch): слова — по основам и синонимам в названиях, бренде,
+ * категории; подстрокой — артикул, sku (и описание на странице результатов), а у пользователя
+ * организации — и коды товаров этой организации (ClientCodes; без учёта регистра — по code_key).
  */
 class SearchController extends Controller
 {
     /** Товаров на странице результатов */
     public const PER_PAGE = 24;
 
-    public function index(KeyAttributes $keyAttributes, CartSummary $cart, ClientCodes $codes, ArticleSearch $articles)
+    public function index(KeyAttributes $keyAttributes, CartSummary $cart, ClientCodes $codes, ArticleSearch $articles, ProductSearch $search)
     {
         $query = trim((string) request('q', ''));
 
@@ -35,7 +35,6 @@ class SearchController extends Controller
             ]);
         }
 
-        $words = preg_split('/\s+/', $query, -1, PREG_SPLIT_NO_EMPTY);
         // Коды товаров — только своей организации; гость и пользователь без организации — без них
         $organizationId = $codes->organizationId();
 
@@ -43,28 +42,8 @@ class SearchController extends Controller
             ->with(['mainImage', 'category'])
             ->where('is_active', 1)
             ->where('is_published', true)
-            ->where(function ($outer) use ($words, $codes, $organizationId) {
-                foreach ($words as $word) {
-                    $outer->where(function ($inner) use ($word, $codes, $organizationId) {
-                        $like = '%'.mb_strtolower($word).'%';
-
-                        $inner->whereRaw('LOWER(sku) LIKE ?', [$like])
-                            ->orWhereRaw('LOWER(article) LIKE ?', [$like])
-                            ->orWhereRaw('LOWER(name) LIKE ?', [$like])
-                            ->orWhereRaw('LOWER(display_name) LIKE ?', [$like])
-                            ->orWhereRaw('LOWER(brand) LIKE ?', [$like])
-                            ->orWhereRaw('LOWER(description) LIKE ?', [$like]);
-
-                        if ($organizationId) {
-                            $inner->orWhere(fn ($code) => $codes->whereCodeContains($code, $word, $organizationId));
-                        }
-                    });
-                }
-            })
-            // Сначала точное совпадение с кодом клиента, затем с артикулом
-            ->tap(fn ($q) => $this->exactFirst($q, $query, $organizationId))
-            ->orderBy('name')
-            ->orderBy('id')
+            // Слова — по основам и синонимам, артикул / код — подстрокой; порядок — ProductSearch
+            ->tap(fn ($q) => $search->apply($q, $search->parse($query), $organizationId, withDescription: true))
             // Страницы по 24; q и прочие параметры — в ссылках пагинации
             ->paginate(self::PER_PAGE)
             ->withQueryString();
@@ -92,7 +71,7 @@ class SearchController extends Controller
         return Product::query()->where('is_active', 1)->where('is_published', true);
     }
 
-    public function suggest(ClientCodes $codes, ArticleSearch $articles)
+    public function suggest(ClientCodes $codes, ArticleSearch $articles, ProductSearch $search)
     {
         $query = trim((string) request('q', ''));
 
@@ -100,46 +79,24 @@ class SearchController extends Controller
             return response()->json(['products' => [], 'categories' => []]);
         }
 
-        $words = preg_split('/\s+/', $query, -1, PREG_SPLIT_NO_EMPTY);
         $organizationId = $codes->organizationId();
+        $parsed = $search->parse($query);
 
         $products = Product::query()
             ->where('is_active', 1)
             ->where('is_published', true)
-            ->where(function ($outer) use ($words, $codes, $organizationId) {
-                foreach ($words as $word) {
-                    $outer->where(function ($inner) use ($word, $codes, $organizationId) {
-                        $like = '%'.mb_strtolower($word).'%';
-
-                        $inner->whereRaw('LOWER(sku) LIKE ?', [$like])
-                            ->orWhereRaw('LOWER(article) LIKE ?', [$like])
-                            ->orWhereRaw('LOWER(name) LIKE ?', [$like])
-                            ->orWhereRaw('LOWER(display_name) LIKE ?', [$like])
-                            ->orWhereRaw('LOWER(brand) LIKE ?', [$like]);
-
-                        if ($organizationId) {
-                            $inner->orWhere(fn ($code) => $codes->whereCodeContains($code, $word, $organizationId));
-                        }
-                    });
-                }
-            })
             ->with('mainImage')
-            ->tap(fn ($q) => $this->exactFirst($q, $query, $organizationId))
-            ->orderBy('name')
-            ->orderBy('id')
+            ->tap(fn ($q) => $search->apply($q, $parsed, $organizationId))
             ->limit(5)
             ->get(['id', 'name', 'display_name', 'sku', 'article', 'brand', 'price', 'min_qty', 'qty_step', 'default_qty']);
 
         $codes->load($products);
 
-        $categories = Category::query()
-            ->where(function ($outer) use ($words) {
-                foreach ($words as $word) {
-                    $outer->whereRaw('LOWER(name) LIKE ?', ['%'.mb_strtolower($word).'%']);
-                }
-            })
-            ->limit(5)
-            ->get(['name', 'slug']);
+        // Категории — по тем же основам и синонимам, с родителями (их пара сотен — сравнение в PHP);
+        // сначала верхние уровни (короче путь)
+        $categories = $search->categories(Category::query()->orderBy('id')->get(['id', 'parent_id', 'name', 'slug']), $parsed)
+            ->sortBy(fn ($c) => substr_count($c->path, ' / '))
+            ->take(5);
 
         // Цена — только после входа, как в каталоге и карточке товара
         $withPrices = auth()->check();
@@ -164,28 +121,11 @@ class SearchController extends Controller
                 'placeholder' => ProductImage::placeholderUrl(),
                 'url' => route('product.show', $p->id),
             ]),
-            'categories' => $categories->map(fn ($c) => [
-                'name' => $c->name,
+            'categories' => $categories->values()->map(fn ($c) => [
+                // С родителями: «Смесители / Для кухни» — одно «Для кухни» неоднозначно
+                'name' => $c->path,
                 'url' => route('catalog.show', $c->slug),
             ]),
         ]);
-    }
-
-    /**
-     * Порядок: точное совпадение запроса с кодом организации (без учёта регистра — code_key),
-     * затем с артикулом, затем остальные.
-     */
-    private function exactFirst($query, string $text, ?int $organizationId): void
-    {
-        if ($organizationId) {
-            $query->orderByRaw(
-                'CASE WHEN EXISTS (SELECT 1 FROM product_client_codes WHERE product_client_codes.product_id = products.id'
-                .' AND product_client_codes.organization_id = ? AND product_client_codes.code_key = ?) THEN 0 ELSE 1 END',
-                [$organizationId, ProductClientCode::key($text)]
-            );
-        }
-
-        $text = mb_strtolower(trim($text));
-        $query->orderByRaw('CASE WHEN LOWER(TRIM(article)) = ? OR LOWER(TRIM(sku)) = ? THEN 0 ELSE 1 END', [$text, $text]);
     }
 }

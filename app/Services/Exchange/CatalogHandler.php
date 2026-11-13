@@ -7,6 +7,7 @@ use App\Exceptions\ExchangeJobFailedException;
 use App\Models\ExchangeJob;
 use App\Models\Product;
 use App\Services\CatalogMenu;
+use App\Services\Search\SearchIndex;
 use App\Support\BulkUpdate;
 use App\Support\ExchangeSettings;
 use Illuminate\Support\Facades\DB;
@@ -195,6 +196,12 @@ class CatalogHandler implements ExchangeHandler
                 }
             });
         }
+
+        // BulkUpdate идёт мимо модели — поисковый индекс изменённых названий и брендов пересчитывается вручную
+        app(SearchIndex::class)->reindex(array_keys(array_filter(
+            $plan->updates,
+            fn (array $changes) => array_intersect_key($changes, array_flip(SearchIndex::FIELDS)) !== []
+        )));
 
         // BulkUpdate идёт мимо модели — меню каталога (видимость товаров) сбрасывается вручную
         if ($plan->hidden !== [] || $plan->shown !== []) {
