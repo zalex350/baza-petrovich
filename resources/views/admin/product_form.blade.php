@@ -64,7 +64,7 @@
 
     <p class="text-sm text-slate-500 mb-4">
         @if($locked)
-            Приходят из 1С и здесь не редактируются.
+            Приходят из 1С и здесь не редактируются — кроме кратности заказа: её ведёт сайт, сохраняется сразу.
         @elseif($product->lockedFrom1c())
             Товар связан с 1С: поля с подписью «из 1С» приходят оттуда и здесь не редактируются. Остальные сохраняются любой кнопкой внизу сразу.
         @else
@@ -121,7 +121,8 @@
         </div>
 
         {{-- Кратность заказа (OrderQuantity): на витрине количество кратно шагу и не меньше минимума,
-             округлённого вверх до кратности; поле количества (x-qty) начинается с default_qty --}}
+             округлённого вверх до кратности; поле количества (x-qty) начинается с default_qty.
+             Данные сайта: из 1С не приходят, не блокируются ни ручным вводом, ни GUID --}}
         @php
             $qtyRule = \App\Support\OrderQuantity::for($product);
             $minHint = $qtyRule->minIsRounded()
@@ -130,9 +131,9 @@
             $defaultHint = 'Допустимое: '.$qtyRule->first.', '.($qtyRule->first + $qtyRule->step).', '.($qtyRule->first + 2 * $qtyRule->step).', …';
         @endphp
         <div class="md:col-span-2 grid gap-6 sm:grid-cols-3" data-qty-rules>
-            <x-input name="min_qty" type="number" min="1" step="1" label="Минимум в заказе, шт." :value="$product->min_qty" :hint="implode('. ', array_filter([$from1c('min_qty') ? 'из 1С' : null, $minHint])) ?: null" :form="$form" :disabled="$lock('min_qty')" :required="! $lock('min_qty')" data-min-rounded="{{ $minHint ? $qtyRule->first : '' }}" />
-            <x-input name="qty_step" type="number" min="1" step="1" label="Шаг (кратность), шт." :value="$product->qty_step" :hint="$hint1c('qty_step')" :form="$form" :disabled="$lock('qty_step')" :required="! $lock('qty_step')" />
-            <x-input name="default_qty" type="number" min="1" step="1" label="По умолчанию, шт." :hint="$hint1c('default_qty', $defaultHint)" :value="$product->default_qty" :form="$form" :disabled="$lock('default_qty')" :required="! $lock('default_qty')" />
+            <x-input name="min_qty" type="number" min="1" step="1" label="Минимум в заказе, шт." :value="$product->min_qty" :hint="$minHint" :form="$form" required data-min-rounded="{{ $minHint ? $qtyRule->first : '' }}" />
+            <x-input name="qty_step" type="number" min="1" step="1" label="Шаг (кратность), шт." :value="$product->qty_step" :form="$form" required />
+            <x-input name="default_qty" type="number" min="1" step="1" label="По умолчанию, шт." :hint="$defaultHint" :value="$product->default_qty" :form="$form" required />
         </div>
 
     </div>

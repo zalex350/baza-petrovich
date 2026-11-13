@@ -31,14 +31,17 @@ class AdminProductController extends Controller
         private readonly ProductDrafts $drafts,
     ) {}
 
-    /** Поля учётной системы: при shop.catalog.manual_products = false приходят только из 1С */
-    private const ERP_FIELDS = ['name', 'sku', 'article', 'brand', 'price', 'vat_rate', 'stock', 'on_order', 'min_qty', 'qty_step', 'default_qty'];
+    /**
+     * Поля учётной системы: при shop.catalog.manual_products = false приходят только из 1С.
+     * Кратность заказа (min_qty, qty_step, default_qty) ведёт только сайт — она в DIRECT_SITE_FIELDS.
+     */
+    private const ERP_FIELDS = ['name', 'sku', 'article', 'brand', 'price', 'vat_rate', 'stock', 'on_order'];
 
     /** Бейджи витрины: у существующего товара сохраняются сразу по галочке (badge) */
     private const BADGE_FIELDS = ['is_hit', 'is_new', 'is_promo'];
 
     /** Данные сайта, которые применяются сразу, без черновика (SRS §11.3: категория — сайта, не 1С) */
-    private const DIRECT_SITE_FIELDS = ['slug', 'category_id', 'is_hit', 'is_new', 'is_promo'];
+    private const DIRECT_SITE_FIELDS = ['slug', 'category_id', 'is_hit', 'is_new', 'is_promo', 'min_qty', 'qty_step', 'default_qty'];
 
     /** Тексты сайта: через черновик */
     private const DRAFT_FIELDS = ProductDrafts::FIELDS;
@@ -354,10 +357,6 @@ class AdminProductController extends Controller
             'vat_rate' => ['sometimes', 'required', VatCalculator::rateRule()],
             'stock' => 'required|integer|min:0',
             'on_order' => 'boolean',
-            // Кратность заказа: не отправлены — остаются прежние (по умолчанию 1)
-            'min_qty' => 'sometimes|required|integer|min:1',
-            'qty_step' => 'sometimes|required|integer|min:1',
-            'default_qty' => ['sometimes', 'required', 'integer', 'min:1', $this->defaultQtyRule($product)],
         ];
     }
 
@@ -401,6 +400,10 @@ class AdminProductController extends Controller
             'is_hit' => 'boolean',
             'is_new' => 'boolean',
             'is_promo' => 'boolean',
+            // Кратность заказа — данные сайта (из 1С не приходит): не отправлены — остаются прежние (по умолчанию 1)
+            'min_qty' => 'sometimes|required|integer|min:1',
+            'qty_step' => 'sometimes|required|integer|min:1',
+            'default_qty' => ['sometimes', 'required', 'integer', 'min:1', $this->defaultQtyRule($product)],
         ];
     }
 
