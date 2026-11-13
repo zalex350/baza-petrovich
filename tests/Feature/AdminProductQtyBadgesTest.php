@@ -118,22 +118,40 @@ class AdminProductQtyBadgesTest extends TestCase
         $this->assertTrue($product->is_new);
     }
 
-    public function test_without_manual_products_qty_rules_are_read_only_but_badges_save(): void
+    public function test_without_manual_products_qty_rules_stay_editable(): void
     {
+        // Ручной ввод выключен (товары из 1С), но кратность ведёт только сайт: из 1С она не приходит
         config(['shop.catalog.manual_products' => false]);
 
         $html = $this->actingAs($this->admin)->get("/admin/product/{$this->product->id}")->getContent();
 
-        $this->assertMatchesRegularExpression('#<input[^>]*name="min_qty"[^>]*\sdisabled[\s>=]#s', $html);
+        foreach (['min_qty', 'qty_step', 'default_qty'] as $field) {
+            $this->assertDoesNotMatchRegularExpression('#<input[^>]*name="'.$field.'"[^>]*\sdisabled[\s>=]#s', $html, $field);
+        }
+        // Поля 1С — по-прежнему только чтение
+        $this->assertMatchesRegularExpression('#<input[^>]*name="price"[^>]*\sdisabled[\s>=]#s', $html);
         $this->assertDoesNotMatchRegularExpression('#<input\s+type="checkbox"[^>]*name="is_hit"[^>]*\sdisabled[\s>=]#s', $html);
 
         $this->actingAs($this->admin)->post("/admin/product/{$this->product->id}", [
-            'action' => 'draft', 'min_qty' => 10, 'qty_step' => 10, 'default_qty' => 10, 'is_hit' => 1,
+            'action' => 'draft', 'min_qty' => 10, 'qty_step' => 5, 'default_qty' => 10, 'is_hit' => 1, 'price' => 1,
         ])->assertSessionHasNoErrors();
 
         $this->product->refresh();
 
-        $this->assertSame(1, $this->product->min_qty);
+        // Кратность сохранена сразу (без черновика), цена 1С — нет
+        $this->assertSame([10, 5, 10], [$this->product->min_qty, $this->product->qty_step, $this->product->default_qty]);
+        $this->assertNotEquals(1.0, (float) $this->product->price);
         $this->assertTrue($this->product->is_hit);
+    }
+
+    public function test_default_qty_is_still_checked_without_manual_products(): void
+    {
+        config(['shop.catalog.manual_products' => false]);
+
+        $this->actingAs($this->admin)->from("/admin/product/{$this->product->id}")
+            ->post("/admin/product/{$this->product->id}", ['action' => 'draft', 'min_qty' => 2, 'qty_step' => 3, 'default_qty' => 4])
+            ->assertSessionHasErrors('default_qty');
+
+        $this->assertSame(1, $this->product->fresh()->min_qty);
     }
 }
