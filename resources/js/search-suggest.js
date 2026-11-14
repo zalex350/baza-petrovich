@@ -48,7 +48,7 @@ function render(data, query) {
             if (prod.price) {
                 html += `<div class="text-xs text-slate-500">${escapeHtml(prod.price)} BYN</div>`;
             } else {
-                html += `<div class="text-xs text-slate-400">${data.guest ? 'Цена доступна после входа' : 'Цена уточняется'}</div>`;
+                html += `<div class="text-xs text-slate-400">${data.guest ? 'Цена и наличие — после входа' : 'Цена уточняется'}</div>`;
             }
             html += '</div></a>';
         });

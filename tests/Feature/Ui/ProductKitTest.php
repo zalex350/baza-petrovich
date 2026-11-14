@@ -4,6 +4,7 @@ namespace Tests\Feature\Ui;
 
 use App\Models\Product;
 use App\Support\Plural;
+use Illuminate\Auth\GenericUser;
 use Tests\TestCase;
 
 /**
@@ -86,8 +87,22 @@ class ProductKitTest extends TestCase
 
     // --- x-stock ---
 
+    /** x-stock выводится только вошедшему — пользователь без базы данных */
+    private function signedIn(): void
+    {
+        $this->actingAs(new GenericUser(['id' => 1]));
+    }
+
+    public function test_stock_is_empty_for_guest(): void
+    {
+        $this->assertSame('', trim((string) $this->blade('<x-stock :stock="500" />')));
+        $this->assertSame('', trim((string) $this->blade('<x-stock :stock="0" :on-order="true" />')));
+    }
+
     public function test_stock_levels_follow_config_thresholds(): void
     {
+        $this->signedIn();
+
         config(['shop.stock_many' => 50, 'shop.stock_few' => 5]);
 
         $cases = [
@@ -117,6 +132,8 @@ class ProductKitTest extends TestCase
 
     public function test_stock_thresholds_default_to_10_and_3(): void
     {
+        $this->signedIn();
+
         // config/shop.php: SHOP_STOCK_MANY / SHOP_STOCK_FEW, по умолчанию 10 и 3
         $this->assertSame(10, config('shop.stock_many'));
         $this->assertSame(3, config('shop.stock_few'));
@@ -128,6 +145,8 @@ class ProductKitTest extends TestCase
 
     public function test_stock_from_product(): void
     {
+        $this->signedIn();
+
         config(['shop.stock_many' => 50, 'shop.stock_few' => 5]);
 
         $product = new Product(['stock' => 0, 'on_order' => true]);

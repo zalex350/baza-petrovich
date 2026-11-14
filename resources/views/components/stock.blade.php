@@ -5,9 +5,12 @@
     Остаток ≥ stock_many — «Много» (3 зелёные); больше stock_few — «Мало» (2 жёлтые);
     1…stock_few — точное «N шт.» (1 жёлтая); 0 — «Под заказ» (on_order) или «Нет в наличии» (пустые).
     data-stock: many | few | count | on_order | out_of_stock.
+    Гостю (не вошёл) — ничего: наличие, как и цена, только после входа; вместо них
+    списки и карточка пишут «Цена и наличие — после входа».
 --}}
 @props(['product' => null, 'stock' => 0, 'onOrder' => false])
 
+@auth
 @php
     $stock = (int) ($product ? $product->stock : $stock);
     $onOrder = (bool) ($product ? $product->on_order : $onOrder);
@@ -40,3 +43,4 @@
     </span>
     <span>@if($stock > 0)<span class="sr-only">В наличии: </span>@endif{{ $label }}</span>
 </span>
+@endauth

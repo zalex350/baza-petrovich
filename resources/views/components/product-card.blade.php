@@ -2,7 +2,8 @@
     Плитка товара: вид «плитка» в каталоге и подборках, карусели на главной.
     <x-product-card :product="$product" :in-cart="$cartItems[$product->id] ?? null" />
     Фото, бейджи (%, НОВИНКА, ХИТ), «Арт.» (Product::displayArticle — артикул, без него sku) и «Ваш код:» (client_code(), коды страницы
-    загружает контроллер — ClientCodes::load), название, наличие, цена (без НДС и с НДС),
+    загружает контроллер — ClientCodes::load), название, наличие, цена (без НДС и с НДС; гостю вместо
+    наличия и цены — одна строка «Цена и наличие — после входа»),
     покупка — x-product-row.buy layout="tile" (количество + «В корзину», «В корзине: N шт.»).
     product — с mainImage. Плитка тянется на высоту ряда: покупка прижата к низу.
 --}}
@@ -37,7 +38,9 @@
 
     <a href="{{ $url }}" class="line-clamp-2 min-h-10 text-sm font-semibold text-ink hover:text-link" data-product-link title="{{ $name }}">{{ $name }}</a>
 
-    <x-stock :product="$product" class="text-sm" />
+    @auth
+        <x-stock :product="$product" class="text-sm" />
+    @endauth
 
     <div class="tabular-nums" data-card-price>
         @auth
@@ -50,7 +53,7 @@
                 </div>
             @endif
         @else
-            <span class="text-sm text-ink-muted">Цена доступна после входа</span>
+            <span class="text-sm text-ink-muted" data-guest-price>Цена и наличие — после входа</span>
         @endauth
     </div>
 

@@ -137,7 +137,7 @@ class ProductPageTest extends TestCase
     {
         $this->get("/product/{$this->product->id}")
             ->assertOk()
-            ->assertSee('Цена доступна после входа')
+            ->assertSee('Цена и наличие — после входа')
             ->assertSee('Войдите, чтобы заказать')
             ->assertSee(e(route('login', ['return' => "/product/{$this->product->id}"])), false)
             ->assertDontSee('data-cart-add', false);

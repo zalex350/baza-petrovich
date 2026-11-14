@@ -30,17 +30,17 @@ class CatalogListing
     public const PER_PAGE = 24;
 
     public const SORTS = [
-        'default'    => 'По умолчанию',
-        'name_asc'   => 'Название: А–Я',
-        'name_desc'  => 'Название: Я–А',
-        'price_asc'  => 'Сначала дешевле',
+        'default' => 'По умолчанию',
+        'name_asc' => 'Название: А–Я',
+        'name_desc' => 'Название: Я–А',
+        'price_asc' => 'Сначала дешевле',
         'price_desc' => 'Сначала дороже',
-        'popular'    => 'Популярные',
+        'popular' => 'Популярные',
     ];
 
     public const STOCK = [
-        'in_stock'     => 'В наличии',
-        'on_order'     => 'Под заказ',
+        'in_stock' => 'В наличии',
+        'on_order' => 'Под заказ',
         'out_of_stock' => 'Нет в наличии',
     ];
 
@@ -72,8 +72,11 @@ class CatalogListing
 
         ['source' => $this->filtersSource, 'filters' => $filters] = $config->forCategory($category);
 
-        // Цены видны только после входа — фильтр по цене гостю не показывается
-        $this->filters = $filters->reject(fn ($f) => $f->type === CategoryFilter::PRICE && ! $withPrices)->values();
+        // Цены и наличие видны только после входа — фильтры по цене и наличию гостю не показываются,
+        // их параметры в URL (price[…], stock[]) игнорируются: по фильтру гость узнал бы наличие
+        $this->filters = $filters->reject(
+            fn ($f) => ! $withPrices && in_array($f->type, [CategoryFilter::PRICE, CategoryFilter::STOCK], true)
+        )->values();
 
         $this->parse();
     }
@@ -225,8 +228,8 @@ class CatalogListing
     private function whereStock(Builder $q, string $status): void
     {
         match ($status) {
-            'in_stock'     => $q->where('products.stock', '>', 0),
-            'on_order'     => $q->where('products.stock', '<=', 0)->where('products.on_order', true),
+            'in_stock' => $q->where('products.stock', '>', 0),
+            'on_order' => $q->where('products.stock', '<=', 0)->where('products.on_order', true),
             'out_of_stock' => $q->where('products.stock', '<=', 0)->where('products.on_order', false),
         };
     }
@@ -239,14 +242,14 @@ class CatalogListing
         $query = $this->filtered()->select('products.*')->with(['category', 'mainImage']);
 
         match ($this->sort) {
-            'name_asc'   => $query->orderByRaw("COALESCE(NULLIF(products.display_name, ''), products.name) asc"),
-            'name_desc'  => $query->orderByRaw("COALESCE(NULLIF(products.display_name, ''), products.name) desc"),
+            'name_asc' => $query->orderByRaw("COALESCE(NULLIF(products.display_name, ''), products.name) asc"),
+            'name_desc' => $query->orderByRaw("COALESCE(NULLIF(products.display_name, ''), products.name) desc"),
             // Товары без цены — в конце при любом направлении
-            'price_asc'  => $query->orderByRaw('products.price IS NULL')->orderBy('products.price'),
+            'price_asc' => $query->orderByRaw('products.price IS NULL')->orderBy('products.price'),
             'price_desc' => $query->orderByRaw('products.price IS NULL')->orderByDesc('products.price'),
-            'popular'    => $query->leftJoinSub($this->popularity(), 'pop', 'pop.product_id', '=', 'products.id')
+            'popular' => $query->leftJoinSub($this->popularity(), 'pop', 'pop.product_id', '=', 'products.id')
                 ->orderByRaw('COALESCE(pop.units, 0) desc'),
-            default      => $query->latest('products.created_at'),
+            default => $query->latest('products.created_at'),
         };
 
         // Стабильный порядок между страницами
@@ -306,9 +309,9 @@ class CatalogListing
         foreach ($this->filters as $filter) {
             $facet = match ($filter->type) {
                 CategoryFilter::BRAND => [
-                    'kind'    => 'list',
-                    'title'   => 'Производитель',
-                    'name'    => 'brand[]',
+                    'kind' => 'list',
+                    'title' => 'Производитель',
+                    'name' => 'brand[]',
                     'options' => $this->base()->whereNotNull('brand')->where('brand', '<>', '')
                         ->groupBy('brand')->selectRaw('brand as value, COUNT(*) as c')->orderBy('brand')->toBase()->get()
                         ->map(fn ($r) => ['value' => $r->value, 'label' => $r->value, 'count' => (int) $r->c,
@@ -318,23 +321,23 @@ class CatalogListing
                     $this->base()->whereNotNull('price')->toBase()->selectRaw('MIN(price) as min, MAX(price) as max')->first(),
                     $this->selected['price']),
                 CategoryFilter::STOCK => [
-                    'kind'    => 'list',
-                    'title'   => 'Наличие',
-                    'name'    => 'stock[]',
+                    'kind' => 'list',
+                    'title' => 'Наличие',
+                    'name' => 'stock[]',
                     'options' => $this->stockOptions(),
                 ],
                 CategoryFilter::ATTRIBUTE => $filter->attribute->isNumber()
                     ? $this->rangeFacet(
-                        $filter->attribute->name . ($filter->attribute->unit ? ", {$filter->attribute->unit}" : ''),
+                        $filter->attribute->name.($filter->attribute->unit ? ", {$filter->attribute->unit}" : ''),
                         "a[{$filter->attribute_id}]",
                         $numberRanges[$filter->attribute_id] ?? null,
                         $this->selected['number'][$filter->attribute_id] ?? [null, null])
                     : [
-                        'kind'    => 'list',
-                        'title'   => $filter->attribute->name,
-                        'name'    => "a[{$filter->attribute_id}][]",
+                        'kind' => 'list',
+                        'title' => $filter->attribute->name,
+                        'name' => "a[{$filter->attribute_id}][]",
                         'options' => collect($textValues[$filter->attribute_id] ?? [])
-                            ->map(fn ($r) => ['value' => $r->value, 'label' => $r->value . ($filter->attribute->unit ? " {$filter->attribute->unit}" : ''),
+                            ->map(fn ($r) => ['value' => $r->value, 'label' => $r->value.($filter->attribute->unit ? " {$filter->attribute->unit}" : ''),
                                 'count' => (int) $r->c,
                                 'checked' => in_array($r->value, $this->selected['text'][$filter->attribute_id] ?? [], true)])
                             ->values()->all(),
@@ -353,13 +356,13 @@ class CatalogListing
     private function rangeFacet(string $title, string $name, $row, array $selected): array
     {
         return [
-            'kind'  => 'range',
+            'kind' => 'range',
             'title' => $title,
-            'name'  => $name,
-            'min'   => $row?->min !== null ? (float) $row->min : null,
-            'max'   => $row?->max !== null ? (float) $row->max : null,
-            'from'  => $selected[0],
-            'to'    => $selected[1],
+            'name' => $name,
+            'min' => $row?->min !== null ? (float) $row->min : null,
+            'max' => $row?->max !== null ? (float) $row->max : null,
+            'from' => $selected[0],
+            'to' => $selected[1],
         ];
     }
 
@@ -390,14 +393,14 @@ class CatalogListing
     {
         $chips = [];
         $names = $this->filters->where('type', CategoryFilter::ATTRIBUTE)->mapWithKeys(fn ($f) => [$f->attribute_id => $f->attribute]);
-        $range = fn ($from, $to, $unit = '') => trim(($from !== null ? 'от ' . $this->num($from) . ' ' : '') . ($to !== null ? 'до ' . $this->num($to) : '')) . $unit;
+        $range = fn ($from, $to, $unit = '') => trim(($from !== null ? 'от '.$this->num($from).' ' : '').($to !== null ? 'до '.$this->num($to) : '')).$unit;
 
         foreach ($this->selected['brand'] as $brand) {
             $chips[] = ['label' => "Производитель: {$brand}", 'url' => $this->urlWithout($baseUrl, ['brand', $brand])];
         }
 
         if ($this->selected['price'] !== [null, null]) {
-            $chips[] = ['label' => 'Цена: ' . $range(...$this->selected['price']) . ' BYN', 'url' => $this->urlWithout($baseUrl, ['price'])];
+            $chips[] = ['label' => 'Цена: '.$range(...$this->selected['price']).' BYN', 'url' => $this->urlWithout($baseUrl, ['price'])];
         }
 
         foreach ($this->selected['stock'] as $status) {
@@ -412,7 +415,7 @@ class CatalogListing
 
         foreach ($this->selected['number'] as $id => [$from, $to]) {
             $unit = $names[$id]->unit ? " {$names[$id]->unit}" : '';
-            $chips[] = ['label' => "{$names[$id]->name}: " . $range($from, $to, $unit), 'url' => $this->urlWithout($baseUrl, ['a', $id])];
+            $chips[] = ['label' => "{$names[$id]->name}: ".$range($from, $to, $unit), 'url' => $this->urlWithout($baseUrl, ['a', $id])];
         }
 
         return $chips;

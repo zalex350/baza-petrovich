@@ -120,11 +120,13 @@
                                 </div>
                             @endif
                         @else
-                            <div class="text-ink-muted">Цена доступна после входа</div>
+                            <div class="text-ink-muted" data-guest-price>Цена и наличие — после входа</div>
                         @endauth
                     </div>
 
-                    <x-stock :product="$product" />
+                    @auth
+                        <x-stock :product="$product" />
+                    @endauth
                 </div>
 
                 <x-product-row.buy :product="$product" :in-cart="$inCart" layout="card" />
