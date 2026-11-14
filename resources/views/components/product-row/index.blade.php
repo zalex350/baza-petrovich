@@ -54,10 +54,10 @@
          с md — колонки фиксированной ширины (grid-cols-product-row), одна под другой во всех строках;
          с xl — справа от названия, до xl — под фото и названием --}}
     <div class="col-span-2 grid grid-cols-2 items-start gap-x-3 gap-y-3 md:grid-cols-product-row xl:col-span-1" data-row-columns>
-        <x-stock :product="$product" class="text-sm md:pt-2.5" />
+        @auth
+            <x-stock :product="$product" class="text-sm md:pt-2.5" />
 
-        <div class="whitespace-nowrap text-right" data-row-price>
-            @auth
+            <div class="whitespace-nowrap text-right" data-row-price>
                 @if($product->price === null)
                     <span class="text-ink-muted" data-price-tbd>Цена уточняется</span>
                 @else
@@ -67,10 +67,11 @@
                         {{ $product->vat_rate === null ? 'НДС не облагается' : 'с НДС '.money($product->price_with_vat, false) }}
                     </div>
                 @endif
-            @else
-                <span class="block whitespace-normal text-sm text-ink-muted">Цена доступна после входа</span>
-            @endauth
-        </div>
+            </div>
+        @else
+            {{-- Гость: вместо наличия и цены — одна строка на месте обеих колонок --}}
+            <div class="col-span-2 text-sm text-ink-muted md:pt-2.5" data-row-price data-guest-price>Цена и наличие — после входа</div>
+        @endauth
 
         <x-product-row.buy :product="$product" :in-cart="$inCart" class="col-span-2 md:col-span-1" />
     </div>
