@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Storage;
 
 /**
  * is_hidden — служебная категория («Без категории»): нет в меню и каталоге, товары находятся поиском.
+ * icon — иконка (App\Services\CategoryIcons: material:имя | custom:имя | upload), icon_svg — загруженная SVG.
  */
 class Category extends Model
 {
@@ -21,6 +22,8 @@ class Category extends Model
         'sort_order',
         'is_hidden',
         'image',
+        'icon',
+        'icon_svg',
     ];
 
     protected $casts = [

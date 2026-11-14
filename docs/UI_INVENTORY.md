@@ -65,6 +65,7 @@
 | `/admin/catalog-filters` | `AdminCatalogFilterController@index` | `admin/catalog_filters` | — |
 | `/admin/catalog-filters/{id}` | `…@edit` | `admin/catalog_filter_form` | `catalog-filters/{id}` |
 | `/admin/categories` (`?q`) | `AdminCategoryController@index` | `admin/categories` | `category/{id}/move` (`direction` = `up` \| `down`), `category/{id}/toggle-visibility`, `category/{id}/delete` |
+| `/admin/category-icons` | `AdminCategoryController@icons` | `admin/category_icons` (превью иконок категорий и набора) | — |
 | `/admin/category/create` (`?parent`), `…/{id}/edit` | `…@create`, `…@edit` | `admin/category_form` | `category`, `category/{id}`, `category/{id}/image`, `category/{id}/image/delete`, `category/{id}/delete` |
 | `/admin/banners` | `AdminBannerController@index` | `admin/banners` | `banner/{id}/toggle`, `banner/{id}/delete` |
 | `/admin/banner/create`, `…/{id}/edit` | `…@create`, `…@edit` | `admin/banner_form` | `banner`, `banner/{id}` |

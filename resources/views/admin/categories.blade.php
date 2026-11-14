@@ -14,7 +14,10 @@
 
 <div class="mb-2 flex flex-wrap items-center justify-between gap-3">
     <h1 class="text-3xl font-bold">Категории</h1>
-    <x-button href="/admin/category/create">Добавить категорию</x-button>
+    <div class="flex flex-wrap gap-2">
+        <x-button variant="secondary" href="/admin/category-icons">Иконки категорий</x-button>
+        <x-button href="/admin/category/create">Добавить категорию</x-button>
+    </div>
 </div>
 
 <p class="text-sm text-ink-muted mb-6 max-w-3xl">

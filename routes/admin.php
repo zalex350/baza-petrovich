@@ -331,6 +331,8 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
     // Категории: картинка (плитки подкатегорий)
     Route::get('/admin/categories', [AdminCategoryController::class, 'index']);
+    // Превью иконок категорий (проверка набора и соответствий)
+    Route::get('/admin/category-icons', [AdminCategoryController::class, 'icons']);
     Route::get('/admin/category/create', [AdminCategoryController::class, 'create']);
     Route::post('/admin/category', [AdminCategoryController::class, 'store']);
     Route::get('/admin/category/{id}/edit', [AdminCategoryController::class, 'edit']);

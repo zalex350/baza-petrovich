@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\Concerns\UploadsProductImages;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Services\CatalogMenu;
+use App\Services\CategoryIcons;
 use App\Services\Images\WebpImage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Категории каталога: дерево (порядок — sort_order среди соседей, при равном — по названию),
@@ -55,6 +57,31 @@ class AdminCategoryController extends Controller
             'search' => $search,
             'path' => fn (Category $c) => $this->path($c, $byId),
             'siblings' => $siblings,
+        ]);
+    }
+
+    /**
+     * Превью иконок: категории 1-го и 2-го уровня с иконками (в трёх размерах, на светлом и на цветном фоне)
+     * и вся библиотека иконок с числом категорий, где иконка выбрана.
+     */
+    public function icons(CategoryIcons $icons)
+    {
+        $all = Category::query()->ordered()->get(['id', 'name', 'parent_id', 'is_hidden', 'icon', 'icon_svg']);
+        $byParent = $all->groupBy(fn ($c) => (int) $c->parent_id);
+
+        $rows = collect();
+        foreach ($byParent->get(0, collect()) as $root) {
+            $rows->push(['category' => $root, 'depth' => 0]);
+            foreach ($byParent->get($root->id, collect()) as $child) {
+                $rows->push(['category' => $child, 'depth' => 1]);
+            }
+        }
+
+        return view('admin.category_icons', [
+            'rows' => $rows,
+            'library' => $icons->library(),
+            'used' => $all->whereNotNull('icon')->countBy('icon')->all(),
+            'missing' => $rows->filter(fn ($r) => ! $r['category']->is_hidden && ! $icons->render($r['category']->icon, $r['category']->icon_svg))->count(),
         ]);
     }
 
@@ -212,18 +239,62 @@ class AdminCategoryController extends Controller
             'parent_id' => ['nullable', 'integer', Rule::exists('categories', 'id'), Rule::notIn($forbidden)],
             'slug' => ['nullable', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/'],
             'is_hidden' => ['boolean'],
+            'icon' => ['nullable', 'string', 'max:100'],
+            'icon_file' => ['nullable', 'file', 'max:'.intdiv(CategoryIcons::MAX_UPLOAD, 1024)],
         ], [
             'name.required' => 'Укажите название',
             'parent_id.not_in' => 'Нельзя перенести категорию в саму себя или в её подкатегорию',
             'parent_id.exists' => 'Родительская категория не найдена',
             'slug.regex' => 'Адрес — латиница в нижнем регистре, цифры и дефисы',
+            'icon_file.max' => 'SVG больше '.intdiv(CategoryIcons::MAX_UPLOAD, 1024).' КБ',
         ]);
 
         $data['name'] = trim($data['name']);
         $data['parent_id'] = $data['parent_id'] ?? null;
         $data['is_hidden'] = request()->boolean('is_hidden');
 
-        return $data;
+        // Иконку определяет iconData(): загруженный файл важнее выбранной в сетке
+        unset($data['icon'], $data['icon_file']);
+
+        return array_merge($data, $this->iconData($category));
+    }
+
+    /**
+     * Иконка: загруженная SVG (очищенная, CategoryIcons::sanitize) → icon = upload; иначе выбранная
+     * из библиотеки; «upload» без нового файла — прежняя загруженная; пусто — без иконки.
+     *
+     * @return array{icon: ?string, icon_svg: ?string}
+     */
+    private function iconData(?Category $category): array
+    {
+        $icons = app(CategoryIcons::class);
+        $file = request()->file('icon_file');
+
+        if ($file) {
+            $svg = $icons->sanitize((string) file_get_contents($file->getRealPath()));
+
+            if ($svg === null) {
+                throw ValidationException::withMessages(['icon_file' => 'Не удалось прочитать SVG: нужен файл SVG с фигурами (path, circle, rect…) и viewBox или размерами']);
+            }
+
+            return ['icon' => CategoryIcons::UPLOAD, 'icon_svg' => $svg];
+        }
+
+        $icon = trim((string) request('icon'));
+
+        if ($icon === '') {
+            return ['icon' => null, 'icon_svg' => null];
+        }
+
+        if ($icon === CategoryIcons::UPLOAD && $category?->icon === CategoryIcons::UPLOAD && $category->icon_svg) {
+            return ['icon' => CategoryIcons::UPLOAD, 'icon_svg' => $category->icon_svg];
+        }
+
+        if (! $icons->exists($icon)) {
+            throw ValidationException::withMessages(['icon' => "Нет такой иконки: {$icon}"]);
+        }
+
+        return ['icon' => $icon, 'icon_svg' => null];
     }
 
     /**

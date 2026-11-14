@@ -23,7 +23,12 @@
                 <li @if($more && $loop->index >= $brief) x-show="all" x-cloak @endif>
                     <a href="{{ $sub['url'] }}" class="flex h-full flex-col items-center gap-2 rounded-card border border-line bg-surface p-3 text-center text-sm text-ink hover:border-primary hover:text-primary" data-subcategory>
                         <span class="flex aspect-square w-full items-center justify-center overflow-hidden rounded-control bg-media">
-                            <img src="{{ $sub['image'] ?? \App\Models\ProductImage::placeholderUrl() }}" alt="" loading="lazy" class="h-full w-full object-contain p-2">
+                            {{-- Картинка; без неё — иконка категории; без обеих — заглушка --}}
+                            @if(empty($sub['image']) && ! empty($sub['icon']))
+                                <x-category-icon :icon="$sub['icon']" :svg="$sub['icon_svg'] ?? null" class="h-1/2 w-1/2 text-ink-muted" />
+                            @else
+                                <img src="{{ $sub['image'] ?? \App\Models\ProductImage::placeholderUrl() }}" alt="" loading="lazy" class="h-full w-full object-contain p-2">
+                            @endif
                         </span>
                         <span class="font-medium leading-tight">{{ $sub['name'] }}</span>
                         <span class="text-meta text-ink-muted tabular-nums">{{ $sub['count'] }}</span>
@@ -47,6 +52,7 @@
             @foreach($subcategories as $sub)
                 <li @if($more && $loop->index >= $brief) x-show="all" x-cloak @endif>
                     <a href="{{ $sub['url'] }}" class="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-sm text-ink hover:border-primary hover:text-primary" data-subcategory>
+                        <x-category-icon :icon="$sub['icon'] ?? null" :svg="$sub['icon_svg'] ?? null" class="h-4 w-4" />
                         {{ $sub['name'] }}
                         <span class="text-meta text-ink-muted tabular-nums">{{ $sub['count'] }}</span>
                     </a>

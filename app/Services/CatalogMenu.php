@@ -165,6 +165,9 @@ class CatalogMenu
                 'url' => route('catalog.show', $category->slug, false),
                 // Картинка категории (админка «Категории») — плитки подкатегорий
                 'image' => $category->imageUrl(),
+                // Иконка (App\Services\CategoryIcons): мегаменю, плитки
+                'icon' => $category->icon,
+                'icon_svg' => $category->icon === CategoryIcons::UPLOAD ? $category->icon_svg : null,
                 'count' => $count,
                 'children' => $children,
             ];

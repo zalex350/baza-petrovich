@@ -1,7 +1,8 @@
 {{--
     Категория: создание и редактирование (AdminCategoryController@create / @edit).
     Название, родитель (дерево; при редактировании — без самой категории и её подкатегорий),
-    адрес (slug; пусто при создании — из названия; при переименовании сохраняется), скрыть.
+    адрес (slug; пусто при создании — из названия; при переименовании сохраняется), скрыть,
+    иконка (x-category-icon-picker: Material Symbols / свои / загрузка SVG — поэтому форма multipart).
     При редактировании — картинка (отдельные формы: загрузка и удаление) и удаление пустой категории.
     Данные: $category, $parents (id => «— — название»).
 --}}
@@ -20,6 +21,7 @@
 <form
     method="POST"
     action="{{ $category->exists ? '/admin/category/'.$category->id : '/admin/category' }}"
+    enctype="multipart/form-data"
     class="max-w-3xl space-y-5 rounded-card border border-line bg-surface p-card"
     data-category-form
 >
@@ -45,6 +47,8 @@
     />
 
     <x-checkbox name="is_hidden" label="Скрыть" hint="Нет в меню и каталоге вместе с подкатегориями; товары — в поиске" :checked="$category->is_hidden" />
+
+    <x-category-icon-picker :category="$category" />
 
     <div class="flex flex-wrap gap-3">
         <x-button>{{ $category->exists ? 'Сохранить' : 'Создать' }}</x-button>
