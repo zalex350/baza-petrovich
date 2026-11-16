@@ -22,6 +22,9 @@ use Throwable;
  * берётся из EXIF (фото с телефона не повёрнуты), сами EXIF-данные в webp не попадают.
  * Оригинал не хранится.
  *
+ * Заглушки («нет фото» по имени файла или такой же файл, как у помеченной заглушки) помечаются
+ * is_placeholder — на сайте не показываются (PlaceholderImages).
+ *
  * Инвариант: если у товара есть фото, ровно одно из них основное. Все изменения —
  * в транзакции с блокировкой строки товара.
  */
@@ -44,6 +47,8 @@ class ProductImageService
                     'product_id'    => $product->id,
                     'path'          => $stored['path'],
                     'original_name' => $this->originalName($file),
+                    'content_hash'  => $stored['hash'],
+                    'is_placeholder' => PlaceholderImages::isKnown($this->originalName($file), $stored['hash']),
                     // Первое фото товара становится основным само (BR-051)
                     'is_main'       => ! $hasImages,
                     'sort_order'    => (int) ProductImage::where('product_id', $product->id)->max('sort_order') + 1,
@@ -73,6 +78,8 @@ class ProductImageService
                 $image->update([
                     'path'          => $stored['path'],
                     'original_name' => $this->originalName($file),
+                    'content_hash'  => $stored['hash'],
+                    'is_placeholder' => PlaceholderImages::isKnown($this->originalName($file), $stored['hash']),
                     'width'         => $stored['width'],
                     'height'        => $stored['height'],
                 ]);
@@ -194,7 +201,7 @@ class ProductImageService
     /**
      * Декодирует файл, пишет на диск три webp-версии.
      *
-     * @return array{path: string, paths: list<string>, width: int, height: int}
+     * @return array{path: string, paths: list<string>, width: int, height: int, hash: string}
      *
      * @throws ImageUploadException
      */
@@ -233,11 +240,13 @@ class ProductImageService
                 $image->scaleDown(width: $max, height: $max);
 
                 $path = "{$base}-{$size}.webp";
-                $disk->put($path, (string) $image->toWebp(quality: $quality));
+                $content = (string) $image->toWebp(quality: $quality);
+                $disk->put($path, $content);
                 $written[] = $path;
 
                 if ($size === 'large') {
-                    $large = ['width' => $image->width(), 'height' => $image->height()];
+                    // hash — sha1 большой версии: одинаковые файлы (заглушки) у разных товаров
+                    $large = ['width' => $image->width(), 'height' => $image->height(), 'hash' => sha1($content)];
                 }
             }
         } catch (Throwable $e) {

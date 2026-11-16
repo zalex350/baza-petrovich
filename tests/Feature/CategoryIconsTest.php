@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\CatalogMenu;
 use App\Services\CategoryIcons;
@@ -21,7 +22,8 @@ use Tests\TestCase;
  * Иконки категорий (CategoryIcons, x-category-icon, x-category-icon-picker) — набор сантехники plumb
  * (двухцветный, CSS-переменные), очистка загруженной SVG, админка (выбор, загрузка, превью только админу),
  * витрина (мегаменю, чипы), стартовые соответствия и их замена; плитки разделов (CategoryTiles,
- * x-category-tile, x-tile-product-picker): своя картинка → выбранный товар → популярный с фото и в наличии → иконка.
+ * x-category-tile, x-tile-product-picker): своя картинка → выбранный товар → (режим «автоматически») популярный с фото и в наличии → иконка;
+ * режим «вручную» и заглушки — TilePhotosTest.
  */
 class CategoryIconsTest extends TestCase
 {
@@ -66,6 +68,12 @@ class CategoryIconsTest extends TestCase
         $this->product($category);
 
         return $category;
+    }
+
+    /** Фото на плитках — автоматически (по умолчанию только выбранные вручную) */
+    private function autoTiles(): void
+    {
+        Setting::put([CategoryTiles::SETTING => CategoryTiles::AUTO]);
     }
 
     private function sold(Product $product, int $quantity, OrderStatus $status = OrderStatus::Completed): void
@@ -256,6 +264,7 @@ SVG;
 
     public function test_preview_page_only_for_admin_with_sizes_set_and_tiles(): void
     {
+        $this->autoTiles();
         $root = $this->category('Смесители', ['icon' => 'plumb:faucet']);
         $this->category('Для кухни', ['parent_id' => $root->id, 'icon' => 'plumb:kitchen_faucet']);
         $this->category('Без иконки', ['parent_id' => $root->id]);
@@ -304,6 +313,7 @@ SVG;
 
     public function test_tile_photo_priority_image_then_chosen_then_popular_then_icon(): void
     {
+        $this->autoTiles();
         $root = $this->category('Смесители', ['icon' => 'plumb:faucet']);
         $child = $this->category('Для кухни', ['parent_id' => $root->id]);
         $tiles = app(CategoryTiles::class);
@@ -338,6 +348,7 @@ SVG;
 
     public function test_tiles_for_tree_match_single_and_use_few_queries(): void
     {
+        $this->autoTiles();
         $tiles = app(CategoryTiles::class);
         $roots = [];
 
@@ -374,6 +385,7 @@ SVG;
 
     public function test_tiles_on_home_and_catalog_show_photo_or_icon(): void
     {
+        $this->autoTiles();
         $withPhoto = $this->category('Смесители', ['icon' => 'plumb:faucet']);
         $this->product($withPhoto, [], 'mixer.jpg');
         $iconOnly = $this->category('Сифоны', ['icon' => 'plumb:siphon']);
