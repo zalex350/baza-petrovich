@@ -47,6 +47,7 @@
 |---|---|---|---|
 | `/admin/products` | `AdminProductController@index` | `admin/products` | `product/{id}/toggle-visibility`, `product/{id}/delete` |
 | `/admin/products/new-1c` (`?state=none\|ready\|all`, `q`, `group`) | `AdminNewFrom1cController@index` | `admin/products_new_1c` | `products/new-1c` (POST: `ids[]`, `action` = `category` \| `category_publish` \| `publish`, `category_id`) |
+| `/admin/products/images-import`, `/admin/products/images-import/{id}` | `AdminImageImportController@index`, `@show` | `admin/image_import`, `admin/image_import_show` | `products/images-import` (POST: `source` = `zip` \| `csv`, `file`), `{id}/apply` (`mode` = `append` \| `replace`), `{id}/discard`, `{id}/status` (JSON), `{id}/not-found.csv` |
 | `/admin/product/create`, `/admin/product/{id}` | `…@create`, `…@show` | `admin/product_form` (+ `vat_rate_select`, `admin_product_attributes`, `admin_product_images`, `admin_product_documents`, `admin_product_client_codes`, `image_queue`) | `product`, `product/{id}`, `draft`, `draft/delete`, `publish`, `badge` (JSON), `images…` (store/reorder/main/move/replace/delete), `documents…` (store/reorder/update/delete), `client-codes…` (store/update/delete) |
 | `/admin/product/{id}/preview` | `…@preview` | `product` (витринный, `$preview`) | — |
 | `/admin/orders` | `AdminOrderController@index` | `admin/orders` | — |

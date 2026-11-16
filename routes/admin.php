@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\AdminPageController;
 use App\Http\Controllers\Admin\AdminPartnerRequestController;
 use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminProductDocumentController;
+use App\Http\Controllers\Admin\AdminImageImportController;
 use App\Http\Controllers\Admin\AdminProductImageController;
 use App\Http\Controllers\Admin\AdminSearchSynonymController;
 use App\Http\Controllers\Admin\AdminSettingsController;
@@ -134,6 +135,15 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         '/admin/products',
         [AdminProductController::class, 'index']
     );
+
+    // Массовая загрузка фото: ZIP или CSV «код;ссылка» → предпросмотр → очередь; журнал (BulkImages)
+    Route::get('/admin/products/images-import', [AdminImageImportController::class, 'index']);
+    Route::post('/admin/products/images-import', [AdminImageImportController::class, 'upload']);
+    Route::get('/admin/products/images-import/{id}', [AdminImageImportController::class, 'show'])->whereNumber('id');
+    Route::post('/admin/products/images-import/{id}/apply', [AdminImageImportController::class, 'apply'])->whereNumber('id');
+    Route::post('/admin/products/images-import/{id}/discard', [AdminImageImportController::class, 'discard'])->whereNumber('id');
+    Route::get('/admin/products/images-import/{id}/status', [AdminImageImportController::class, 'status'])->whereNumber('id');
+    Route::get('/admin/products/images-import/{id}/not-found.csv', [AdminImageImportController::class, 'notFound'])->whereNumber('id');
 
     // Новые из 1С: черновики обмена номенклатуры — категория и публикация массово
     Route::get('/admin/products/new-1c', [AdminNewFrom1cController::class, 'index']);
