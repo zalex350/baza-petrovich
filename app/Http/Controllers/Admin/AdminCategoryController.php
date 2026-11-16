@@ -70,7 +70,21 @@ class AdminCategoryController extends Controller
             'siblings' => $siblings,
             'counts' => $counts,
             'mode' => $mode,
+            'tileMode' => CategoryTiles::mode(),
         ]);
+    }
+
+    /**
+     * Фото на плитках разделов (CategoryTiles): только выбранные вручную / автоматически — самый продаваемый товар.
+     */
+    public function tilePhotos(): RedirectResponse
+    {
+        $data = request()->validate(['tile_mode' => ['required', Rule::in(array_keys(CategoryTiles::MODES))]]);
+
+        Setting::put([CategoryTiles::SETTING => $data['tile_mode']]);
+        CatalogMenu::flush();
+
+        return back()->with('success', 'Фото на плитках разделов: '.mb_strtolower(CategoryTiles::MODES[$data['tile_mode']]));
     }
 
     /**

@@ -264,15 +264,21 @@ class Product extends Model
      */
     public function gallery()
     {
-        return $this->images->sortByDesc('is_main')->values();
+        return $this->images->reject->is_placeholder->sortByDesc('is_main')->values();
     }
 
     /**
-     * Основное фото (BR-051) — для списков товаров, корзины, заказов.
+     * Основное фото (BR-051) — для списков товаров, корзины, заказов, плиток разделов.
+     * Заглушки (is_placeholder) не в счёт: если основное — заглушка, берётся первое настоящее по порядку,
+     * настоящих нет — null (товар без фото).
      */
     public function mainImage()
     {
-        return $this->hasOne(ProductImage::class)->where('is_main', true);
+        return $this->hasOne(ProductImage::class)
+            ->where('is_placeholder', false)
+            ->orderByDesc('is_main')
+            ->orderBy('sort_order')
+            ->orderBy('id');
     }
 
     public function draft()

@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\Setting;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -14,15 +15,35 @@ use Illuminate\Support\Facades\DB;
  * Фото на плитке раздела (главная, /catalog): по порядку —
  *  1. своя картинка категории (админка, «Картинка»; та же — у плиток подкатегорий);
  *  2. товар, выбранный в админке (categories.tile_product_id) — если он на витрине и с фото;
- *  3. самый популярный товар раздела (с подкатегориями) с фото и в наличии: больше всего штук
+ *  3. только в режиме «автоматически» (настройка «Фото на плитках разделов», Setting SETTING) —
+ *     самый продаваемый товар раздела (с подкатегориями) с фото и в наличии: больше всего штук
  *     в заказах (кроме отменённых), при равенстве — больше остаток, затем новее;
- *  4. нет — null: плитка с иконкой категории.
+ *  4. нет — null: плитка с иконкой категории. По умолчанию режим «только выбранные вручную».
+ * Фото-заглушки (product_images.is_placeholder) не в счёт — Product::mainImage их пропускает.
  * forTree() — для всех разделов меню сразу (несколько запросов, кэш CACHE_KEY на catalog_menu_ttl;
  * сбрасывается вместе с меню — CatalogMenu::flush). url() — для одной категории (админка).
  */
 class CategoryTiles
 {
     public const CACHE_KEY = 'catalog_menu.tiles';
+
+    public const SETTING = 'catalog_tile_photos';
+
+    public const MANUAL = 'manual';
+
+    public const AUTO = 'auto';
+
+    public const MODES = [
+        self::MANUAL => 'Только выбранные вручную',
+        self::AUTO => 'Автоматически — самый продаваемый товар',
+    ];
+
+    public static function mode(): string
+    {
+        $mode = Setting::value(self::SETTING);
+
+        return isset(self::MODES[$mode]) ? $mode : self::MANUAL;
+    }
 
     /** Товаров на выбор в админке */
     public const CANDIDATES = 12;
@@ -70,7 +91,7 @@ class CategoryTiles
             }
         }
 
-        if ($rootOf === []) {
+        if ($rootOf === [] || self::mode() !== self::AUTO) {
             return $urls;
         }
 
@@ -80,7 +101,10 @@ class CategoryTiles
             $best[$rootOf[$row->category_id]] ??= $row->id;
         }
 
-        $images = ProductImage::query()->whereIn('product_id', $best)->where('is_main', true)->get()->keyBy('product_id');
+        // Фото — как Product::mainImage: основное настоящее первым, заглушки пропускаются
+        $images = ProductImage::query()->whereIn('product_id', $best)->where('is_placeholder', false)
+            ->orderByDesc('is_main')->orderBy('sort_order')->orderBy('id')
+            ->get()->unique('product_id')->keyBy('product_id');
 
         foreach ($best as $rootId => $productId) {
             $urls[$rootId] = $images->get($productId)?->url(self::SIZE);
@@ -100,7 +124,8 @@ class CategoryTiles
             return $image;
         }
 
-        $product = $this->chosen($category) ?? $this->candidates($categoryIds, 1)->first();
+        $product = $this->chosen($category)
+            ?? (self::mode() === self::AUTO ? $this->candidates($categoryIds, 1)->first() : null);
 
         return $product?->mainImage?->url(self::SIZE);
     }

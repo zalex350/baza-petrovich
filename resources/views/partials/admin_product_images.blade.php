@@ -114,6 +114,11 @@
                             <span class="inline-flex mt-1 rounded-full bg-green-100 text-green-700 px-2 py-0.5 text-xs" data-main-badge>Основное</span>
                         @endif
 
+                        {{-- Заглушка «нет фото» (PlaceholderImages): на сайте не показывается; снять — удалить или заменить файл --}}
+                        @if($image->is_placeholder)
+                            <x-badge tone="warning" class="mt-1" data-placeholder-badge title="Фото-заглушка: на сайте не показывается, товар считается без фото">Заглушка — не показывается</x-badge>
+                        @endif
+
                     </div>
 
                     <div class="flex flex-wrap items-center gap-2 text-sm">

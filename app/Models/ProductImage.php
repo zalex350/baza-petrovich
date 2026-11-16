@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Storage;
  * размеры лежат рядом с суффиксами -thumb / -medium. Фото, перенесённое из прежнего
  * products.image, хранится как есть (без суффикса) и отдаётся для всех размеров.
  * width / height — размеры большой версии.
+ * is_placeholder — заглушка («нет фото» поставщика): на сайте не показывается (App\Services\Images\PlaceholderImages),
+ * content_hash — sha1 файла.
  */
 class ProductImage extends Model
 {
@@ -22,13 +24,16 @@ class ProductImage extends Model
         'path',
         'original_name',
         'is_main',
+        'is_placeholder',
         'sort_order',
         'width',
         'height',
+        'content_hash',
     ];
 
     protected $casts = [
         'is_main'    => 'boolean',
+        'is_placeholder' => 'boolean',
         'sort_order' => 'integer',
         'width'      => 'integer',
         'height'     => 'integer',

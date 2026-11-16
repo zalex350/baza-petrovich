@@ -1,13 +1,15 @@
 {{--
     Фото на плитке раздела (админка, форма категории верхнего уровня; CategoryTiles):
-    «Автоматически» (самый популярный товар раздела с фото и в наличии), выбор из популярных товаров
-    раздела (карточки с фото) или артикул / SKU любого товара с фото. Своя картинка категории важнее.
+    «Не выбран» (по режиму «Фото на плитках разделов»: иконка или самый продаваемый товар раздела с фото
+    и в наличии), выбор из популярных товаров раздела (карточки с фото) или артикул / SKU любого товара
+    с фото. Своя картинка категории важнее.
     <x-tile-product-picker :category="$category" :candidates="$tile['candidates']" :chosen="$tile['chosen']" :url="$tile['url']" />
     Поля формы: tile_sent=1, tile_product (id или пусто), tile_sku.
 --}}
 @props(['category', 'candidates', 'chosen' => null, 'url' => null])
 
 @php
+    $auto = \App\Services\CategoryTiles::mode() === \App\Services\CategoryTiles::AUTO;
     $value = (string) old('tile_product', $category->tile_product_id);
     $options = collect($candidates);
     if ($chosen && ! $options->contains('id', $chosen->id)) {
@@ -19,7 +21,8 @@
     <legend class="mb-1 font-medium text-ink">Фото на плитке раздела</legend>
     <p class="text-sm text-ink-muted">
         Главная и «Каталог». Своя картинка категории (блок «Картинка» ниже) важнее; без неё — выбранный товар;
-        «Автоматически» — самый популярный товар раздела с фото и в наличии. Нет подходящего — иконка.
+        не выбран — {{ $auto ? 'самый продаваемый товар раздела с фото и в наличии, нет такого — иконка' : 'иконка' }}
+        (настройка «Фото на плитках разделов» в списке категорий).
     </p>
 
     <input type="hidden" name="tile_sent" value="1">
@@ -34,15 +37,15 @@
         </span>
         <span class="text-sm text-ink-muted">
             Сейчас на плитке:
-            {{ $category->image ? 'своя картинка' : ($chosen ? 'выбранный товар' : ($url ? 'популярный товар' : 'иконка')) }}
+            {{ $category->image ? 'своя картинка' : ($chosen ? 'выбранный товар' : ($url ? 'самый продаваемый товар' : 'иконка')) }}
         </span>
     </div>
 
     <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4" role="radiogroup" aria-label="Товар для плитки">
         <label class="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-control border border-line p-2 text-center text-sm has-[:checked]:border-primary has-[:checked]:bg-tone-info-bg">
             <input type="radio" name="tile_product" value="" class="sr-only" @checked($value === '')>
-            <span class="font-medium text-ink">Автоматически</span>
-            <span class="text-meta text-ink-muted">популярный, с фото и в наличии</span>
+            <span class="font-medium text-ink">{{ $auto ? 'Автоматически' : 'Не выбран' }}</span>
+            <span class="text-meta text-ink-muted">{{ $auto ? 'самый продаваемый, с фото и в наличии' : 'иконка раздела' }}</span>
         </label>
         @foreach($options as $product)
             <label class="flex cursor-pointer flex-col gap-1 rounded-control border border-line p-2 text-sm has-[:checked]:border-primary has-[:checked]:bg-tone-info-bg" data-tile-option="{{ $product->id }}">

@@ -1,6 +1,7 @@
 {{--
     Плитка раздела каталога (главная, /catalog): фото типичного товара (CategoryTiles — своя картинка,
-    выбранный товар или самый популярный с фото и в наличии), без фото — иконка категории, без неё —
+    выбранный товар или, в режиме «автоматически», самый продаваемый с фото и в наличии; заглушки не в счёт),
+    без фото или если файл не загрузился — иконка категории, без неё —
     пустое поле той же высоты. Название, число товаров; слот — список подразделов (/catalog).
     <x-category-tile :node="$node" :tile="$tiles[$node['id']] ?? null" />   — узел CatalogMenu::tree() (icon, icon_svg, name, url, count),
                                                                            tile — URL фото (CategoryTiles::forTree) или null
@@ -17,7 +18,10 @@
             'bg-ic-tile' => ! $tile,
         ])>
             @if($tile)
-                <img src="{{ $tile }}" alt="" loading="lazy" class="h-full w-full object-contain p-3 transition group-hover:scale-105" data-tile-photo>
+                {{-- Файл не загрузился — вместо «битой» картинки иконка раздела --}}
+                <img src="{{ $tile }}" alt="" loading="lazy" class="h-full w-full object-contain p-3 transition group-hover:scale-105" data-tile-photo
+                     onerror="this.hidden=true;this.nextElementSibling.hidden=false">
+                <span hidden><x-category-icon :icon="$node['icon'] ?? null" :svg="$node['icon_svg'] ?? null" class="h-[120px] w-[120px] max-h-[75%] max-w-[75%]" /></span>
             @else
                 <x-category-icon :icon="$node['icon'] ?? null" :svg="$node['icon_svg'] ?? null" class="h-[120px] w-[120px] max-h-[75%] max-w-[75%]" />
             @endif

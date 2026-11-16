@@ -4,8 +4,8 @@
     с отступом; с поиском — найденные с путём.
     Данные: $rows [category, depth], $search, $path(category) — «Родитель / …», $siblings — parent_id => [id…]
     в порядке витрины (для «вверх / вниз»: первая и последняя среди соседей), $counts — id => опубликованных
-    товаров с подкатегориями, $mode — режим порядка.
-    Сверху — «Порядок категорий» (режим). В строке: «Товаров», пометка «закреплена» и «Вернуть автопорядок»,
+    товаров с подкатегориями, $mode — режим порядка, $tileMode — режим фото на плитках (CategoryTiles).
+    Сверху — «Порядок категорий» (режим) и «Фото на плитках разделов». В строке: «Товаров», пометка «закреплена» и «Вернуть автопорядок»,
     «↑ ↓» (в режиме «по количеству» закрепляют), «Изменить», «Скрыть / Показать», «Удалить» (только пустую).
 --}}
 @extends('layouts.admin')
@@ -45,6 +45,21 @@
         @else
             По алфавиту, ↑ / ↓ не действуют.
         @endif
+    </p>
+</form>
+
+<form method="POST" action="/admin/categories/tile-photos" class="mb-6 flex flex-wrap items-end gap-2 rounded-card border border-line bg-surface p-card" data-tile-mode>
+    @csrf
+    <x-select name="tile_mode" label="Фото на плитках разделов" :options="\App\Services\CategoryTiles::MODES" :value="$tileMode" class="min-w-72" />
+    <x-button variant="secondary">Применить</x-button>
+    <p class="basis-full text-meta text-ink-muted">
+        Главная и «Каталог». Своя картинка раздела или товар, выбранный в его карточке, — всегда.
+        @if($tileMode === \App\Services\CategoryTiles::AUTO)
+            Без них — самый продаваемый товар раздела с фото и в наличии, нет такого — иконка.
+        @else
+            Без них — иконка раздела.
+        @endif
+        Фото-заглушки «нет фото» не показываются нигде.
     </p>
 </form>
 
