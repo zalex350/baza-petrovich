@@ -20,19 +20,23 @@
 
             <div>
 
-                <h2 class="text-lg font-bold text-slate-800 mb-3">
-                    {{ $parent->name }}
+                <h2 class="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <x-category-icon :category="$parent" class="h-6 w-6 text-link" />
+                    <span>{{ $parent->name }}</span>
                 </h2>
 
                 @foreach($parent->children as $child)
 
                     <a
                         href="{{ route('catalog.show', $child->slug) }}"
-                        class="block text-sm text-slate-600 hover:text-blue-600 py-1"
+                        class="group flex items-start gap-2 text-sm text-slate-600 hover:text-blue-600 py-1"
                     >
-                        {{ $child->name }}
-                        <span class="text-slate-400">
-                            ({{ $child->products_count }})
+                        <x-category-icon :category="$child" class="mt-px h-4 w-4 text-slate-400 group-hover:text-blue-600" />
+                        <span>
+                            {{ $child->name }}
+                            <span class="text-slate-400">
+                                ({{ $child->products_count }})
+                            </span>
                         </span>
                     </a>
 

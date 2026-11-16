@@ -131,9 +131,8 @@
                 <a href="/catalog/{{ $category->slug }}"
                    class="bg-white rounded-xl shadow hover:shadow-lg transition p-8 border">
 
-                    <div class="text-5xl mb-5">
-                        🚿
-                    </div>
+                    {{-- Иконка категории (нет — плитка без неё) --}}
+                    <x-category-icon :category="$category" class="mb-5 block h-10 w-10 text-link" />
 
                     <h3 class="text-xl font-semibold">
                         {{ $category->name }}
