@@ -306,4 +306,29 @@ SVG;
         $this->assertSame('custom:siphon', $empty->fresh()->icon);
         $this->assertNull($unknown->fresh()->icon);
     }
+
+    public function test_room_thermostat_start_icon_is_replaced_but_manual_choice_kept(): void
+    {
+        $start = $this->category('Термостаты комнатные', ['icon' => 'material:nest_thermostat']);
+        $migration = require database_path('migrations/2026_11_19_120000_room_thermostat_icon.php');
+
+        $migration->up();
+        $this->assertSame('material:thermostat', $start->fresh()->icon);
+
+        // Выбрано вручную — не трогается
+        $start->update(['icon' => 'custom:radiator']);
+        $migration->up();
+        $this->assertSame('custom:radiator', $start->fresh()->icon);
+
+        // Стартовый список — уже с новой иконкой
+        $this->assertSame('material:thermostat', (require database_path('data/category_icons.php'))['Термостаты комнатные']);
+    }
+
+    public function test_picker_hides_empty_groups_while_searching(): void
+    {
+        $html = (string) $this->blade('<x-category-icon-picker :category="$c" />', ['c' => new Category(['name' => 'Тест'])]);
+
+        $this->assertSame(2, substr_count($html, 'x-show="any($el)" data-icon-group'));
+        $this->assertStringContainsString('data-icon-nothing', $html);
+    }
 }

@@ -1,6 +1,7 @@
 {{--
     Выбор иконки категории (админка, форма категории): поиск по имени и словам, сетка иконок
-    (Material Symbols и свои — CategoryIcons::library()), предпросмотр выбранной, «Без иконки»
+    (Material Symbols и свои — CategoryIcons::library(); при поиске группы без подходящих иконок
+    скрываются, ничего не нашлось — подсказка), предпросмотр выбранной, «Без иконки»
     и загрузка своей SVG (поле icon_file; форма — multipart). Значение — скрытое поле icon.
     <x-category-icon-picker :category="$category" />
     Загруженная SVG у категории — вариант «upload» (своя, предпросмотр — очищенная разметка).
@@ -21,6 +22,8 @@
         value: @js((string) $value),
         q: '',
         matches(words) { const q = this.q.trim().toLowerCase(); return q === '' || words.includes(q); },
+        // Группа видна, если в ней есть подходящие иконки (зависит от q — пересчитывается при вводе)
+        any(group) { return [...group.querySelectorAll('[data-icon-option]')].some((el) => this.matches(el.dataset.words)); },
         preview() {
             const el = this.value ? this.$root.querySelector('[data-icon-option=&quot;' + this.value + '&quot;] svg') : null;
             return el ? el.outerHTML : '';
@@ -51,7 +54,7 @@
 
     <div class="max-h-80 space-y-4 overflow-y-auto rounded-control border border-line p-3" data-icon-grid>
         @if($uploaded)
-            <div>
+            <div x-show="any($el)" data-icon-group>
                 <div class="mb-2 text-meta font-semibold uppercase text-ink-muted">Загруженная</div>
                 <button type="button" data-icon-option="upload" data-words="upload своя загруженная" title="Загруженная SVG"
                         x-show="matches($el.dataset.words)" @click="value = 'upload'"
@@ -64,7 +67,7 @@
         @endif
 
         @foreach($groups as $set => $items)
-            <div>
+            <div x-show="any($el)" data-icon-group="{{ $set }}">
                 <div class="mb-2 text-meta font-semibold uppercase text-ink-muted">{{ $titles[$set] ?? $set }}</div>
                 <div class="flex flex-wrap gap-1.5">
                     @foreach($items as $icon)
@@ -84,6 +87,8 @@
                 </div>
             </div>
         @endforeach
+
+        <p class="text-sm text-ink-muted" x-show="! any($el.closest('[data-icon-grid]'))" x-cloak data-icon-nothing>Ничего не найдено — попробуйте другое слово или имя на английском.</p>
     </div>
 
     <x-file name="icon_file" label="Своя SVG" accept=".svg,image/svg+xml"

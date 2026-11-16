@@ -148,7 +148,7 @@ return [
     'Текеры для теплого пола' => 'material:heat',
     'Термоголовки' => 'material:device_thermostat',
     'Термостаты и регулировочные короба' => 'material:thermostat',
-    'Термостаты комнатные' => 'material:nest_thermostat',
+    'Термостаты комнатные' => 'material:thermostat',
 
     // --- Разное ---
     'Разное' => 'material:category',
