@@ -25,6 +25,11 @@
     display: none !important;
 }
 
+/* Плитка раздела без фото (x-category-tile): фон поля — --ic-fill с прозрачностью 40 % */
+.bg-ic-tile {
+    background-color: color-mix(in srgb, var(--ic-fill) 40%, transparent);
+}
+
 /*
  * x-alert.flash поверх страницы (cart-add.js ставит data-floating после «В корзину» из списка):
  * по центру сверху, на телефоне — по ширине экрана с отступами 16px.

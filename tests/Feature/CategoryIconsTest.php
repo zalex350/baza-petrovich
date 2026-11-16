@@ -14,6 +14,7 @@ use App\Services\CategoryIcons;
 use App\Services\CategoryTiles;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 /**
@@ -275,7 +276,7 @@ SVG;
 
         $this->assertStringContainsString('data-icon-library="plumb"', $html);
         // 72 px: весь набор + две категории с иконкой из набора (Смесители, Для кухни)
-        $this->assertSame(count($this->icons->library()) + 2, substr_count($html, 'class="shrink-0 h-[72px] w-[72px]"'));
+        $this->assertSame(count($this->icons->library()) + 2, substr_count($html, 'class="shrink-0 min-h-6 min-w-6 h-[72px] w-[72px]"'));
         $this->assertStringContainsString('data-tile-preview', $html);
         $this->assertStringContainsString('tile.jpg', $html);
     }
@@ -479,6 +480,30 @@ SVG;
         $this->assertSame('plumb:pipe', $chosen->fresh()->icon);
         $this->assertSame('plumb:siphon', $empty->fresh()->icon);
         $this->assertNull($unknown->fresh()->icon);
+    }
+
+    public function test_icons_are_never_smaller_than_24px(): void
+    {
+        // Компонент не даёт уменьшить иконку меньше 24 px
+        $html = (string) $this->blade('<x-category-icon icon="plumb:siphon" class="h-4 w-4" />');
+        $this->assertStringContainsString('min-h-6 min-w-6', $html);
+
+        // В шаблонах — нет размеров меньше 24 px (h-1…h-5, h-[≤23px])
+        $checked = 0;
+        foreach (File::allFiles(resource_path('views')) as $file) {
+            preg_match_all('/<x-category-icon\b[^>]*class="([^"]*)"/', $file->getContents(), $m);
+            foreach ($m[1] as $class) {
+                $checked++;
+                $this->assertDoesNotMatchRegularExpression('/\b[hw]-([1-5]|\[(1?\d|2[0-3])px\])(\s|$)/', $class, $file->getRelativePathname().": {$class}");
+            }
+        }
+        $this->assertGreaterThan(10, $checked, 'проверены шаблоны с иконками, в том числе partials/header');
+
+        // Плитка без фото: иконка ~120 px на фоне --ic-fill 40 %
+        $tile = (string) $this->blade('<x-category-tile :node="$n" />', ['n' => ['id' => 1, 'name' => 'Сифоны', 'url' => '/catalog/x', 'count' => 3, 'icon' => 'plumb:siphon', 'icon_svg' => null]]);
+        $this->assertStringContainsString('bg-ic-tile', $tile);
+        $this->assertStringContainsString('h-[120px] w-[120px]', $tile);
+        $this->assertStringContainsString('color-mix(in srgb, var(--ic-fill) 40%, transparent)', file_get_contents(resource_path('css/app.css')));
     }
 
     public function test_picker_hides_empty_groups_while_searching(): void

@@ -10,11 +10,16 @@
 
 <article {{ $attributes->class('flex h-full min-w-0 flex-col overflow-hidden rounded-card border border-line bg-surface') }} data-category-tile="{{ $node['id'] }}">
     <a href="{{ $node['url'] }}" class="group flex flex-col gap-3 p-4 hover:text-link">
-        <span class="flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-control bg-media">
+        {{-- Фото — на фоне медиа; без фото — иконка ~120 px на фоне --ic-fill с прозрачностью 40 % (.bg-ic-tile, app.css) --}}
+        <span @class([
+            'flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-control',
+            'bg-media' => $tile,
+            'bg-ic-tile' => ! $tile,
+        ])>
             @if($tile)
                 <img src="{{ $tile }}" alt="" loading="lazy" class="h-full w-full object-contain p-3 transition group-hover:scale-105" data-tile-photo>
             @else
-                <x-category-icon :icon="$node['icon'] ?? null" :svg="$node['icon_svg'] ?? null" class="h-24 w-24" />
+                <x-category-icon :icon="$node['icon'] ?? null" :svg="$node['icon_svg'] ?? null" class="h-[120px] w-[120px] max-h-[75%] max-w-[75%]" />
             @endif
         </span>
         <span class="flex items-baseline justify-between gap-2">
