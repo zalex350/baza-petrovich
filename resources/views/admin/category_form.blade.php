@@ -19,6 +19,18 @@
 
 <h1 class="text-3xl font-bold mt-4 mb-6">{{ $category->exists ? $category->name : 'Новая категория' }}</h1>
 
+{{-- Закреплена кнопками ↑ / ↓ (порядок «по количеству товаров», CategoryOrder) --}}
+@if($category->exists && $category->is_pinned && \App\Services\Catalog\CategoryOrder::mode() === \App\Services\Catalog\CategoryOrder::COUNT)
+    <div class="mb-6 flex max-w-3xl flex-wrap items-center gap-3 rounded-card border border-line bg-surface p-card" data-category-pinned>
+        <x-badge tone="info">закреплена</x-badge>
+        <span class="text-sm text-ink-muted">Идёт среди соседей в ручном порядке, а не по количеству товаров.</span>
+        <form method="POST" action="/admin/category/{{ $category->id }}/unpin">
+            @csrf
+            <x-button size="sm" variant="secondary">Вернуть автопорядок</x-button>
+        </form>
+    </div>
+@endif
+
 <form
     method="POST"
     action="{{ $category->exists ? '/admin/category/'.$category->id : '/admin/category' }}"

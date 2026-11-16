@@ -4,16 +4,20 @@ namespace App\Services;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Services\Catalog\CategoryOrder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Дерево категорий для меню каталога (мегаменю и мобильное меню).
+ * Дерево категорий для меню каталога (мегаменю, мобильное меню, /catalog, плитки главной,
+ * подкатегории на странице раздела).
  *
- * Два запроса на всё дерево: категории + счётчики товаров по category_id.
+ * Два запроса на всё дерево: категории + счётчики товаров по category_id (и настройки — из кэша).
  * Счётчик категории включает товары всех вложенных подкатегорий; учитываются
  * только активные и опубликованные товары. Пустые категории в дерево не попадают.
- * Результат кэшируется; кэш сбрасывает CatalogMenuObserver.
+ * Порядок соседей — CategoryOrder (по количеству товаров, закреплённые первыми; вручную; по алфавиту).
+ * Результат кэшируется; кэш сбрасывает CatalogMenuObserver, импорт и обмен номенклатуры,
+ * смена режима порядка и ночная команда catalog:menu-refresh.
  */
 class CatalogMenu
 {
@@ -142,10 +146,14 @@ class CatalogMenu
             ->selectRaw('category_id, COUNT(*) AS aggregate')
             ->pluck('aggregate', 'category_id');
 
-        return $this->branch($categories->groupBy(fn ($c) => (int) $c->parent_id), $counts, 0, 0);
+        return $this->branch($categories->groupBy(fn ($c) => (int) $c->parent_id), $counts, 0, 0, CategoryOrder::mode());
     }
 
-    private function branch(Collection $byParent, Collection $counts, int $parentId, int $depth): array
+    /**
+     * Узлы уровня — в порядке CategoryOrder (по количеству товаров с закреплёнными первыми,
+     * вручную или по алфавиту); пустые (без опубликованных товаров) не показываются.
+     */
+    private function branch(Collection $byParent, Collection $counts, int $parentId, int $depth, string $mode): array
     {
         if ($depth >= self::MAX_DEPTH) {
             return [];
@@ -154,14 +162,14 @@ class CatalogMenu
         $nodes = [];
 
         foreach ($byParent->get($parentId, []) as $category) {
-            $children = $this->branch($byParent, $counts, $category->id, $depth + 1);
+            $children = $this->branch($byParent, $counts, $category->id, $depth + 1, $mode);
             $count = (int) ($counts[$category->id] ?? 0) + array_sum(array_column($children, 'count'));
 
             if ($count === 0) {
                 continue;
             }
 
-            $nodes[] = [
+            $nodes[] = [$category, [
                 'id' => $category->id,
                 'name' => $category->name,
                 'url' => route('catalog.show', $category->slug, false),
@@ -172,9 +180,11 @@ class CatalogMenu
                 'icon_svg' => $category->icon === CategoryIcons::UPLOAD ? $category->icon_svg : null,
                 'count' => $count,
                 'children' => $children,
-            ];
+            ]];
         }
 
-        return $nodes;
+        $sorted = CategoryOrder::sort($nodes, fn ($pair) => $pair[0], fn ($pair) => $pair[1]['count'], $mode);
+
+        return array_map(fn ($pair) => $pair[1], $sorted);
     }
 }

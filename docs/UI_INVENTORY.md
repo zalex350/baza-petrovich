@@ -20,7 +20,7 @@
 | `/partner` | `PartnerController@create` | `partner` | app | `partner` |
 | `/catalog/menu.json` | `CatalogController@menu` | JSON (мега-меню) | — | — |
 | `/product/{id}` | `ProductController@show` | `product` | app | — |
-| `/search` | `SearchController@index` | `search` (ничего не найдено — «Возможно, вы искали …», `ArticleSearch::didYouMean`) | app | — |
+| `/search` (`?q`, `sort` = `relevance` \| `price_asc` \| `price_desc` — по цене только после входа) | `SearchController@index` | `search` (ничего не найдено — «Возможно, вы искали …», `ArticleSearch::didYouMean`) | app | — |
 | `/search/suggest` | `SearchController@suggest` | JSON (подсказки; категории — `name` с путём «Родитель / Категория»; `article` — артикул для покупателя, `brand`, `client_code`; без `sku`; пусто — `did_you_mean`) | — | — |
 
 ### Кабинет клиента (auth)
@@ -64,7 +64,7 @@
 | `/admin/attribute/create`, `…/{id}/edit` | `…@create`, `…@edit` | `admin/attribute_form` | `attribute`, `attribute/{id}` |
 | `/admin/catalog-filters` | `AdminCatalogFilterController@index` | `admin/catalog_filters` | — |
 | `/admin/catalog-filters/{id}` | `…@edit` | `admin/catalog_filter_form` | `catalog-filters/{id}` |
-| `/admin/categories` (`?q`) | `AdminCategoryController@index` | `admin/categories` | `category/{id}/move` (`direction` = `up` \| `down`), `category/{id}/toggle-visibility`, `category/{id}/delete` |
+| `/admin/categories` (`?q`) | `AdminCategoryController@index` | `admin/categories` | `categories/order-mode` (`mode` = `count` \| `manual` \| `alpha`), `category/{id}/move` (`direction` = `up` \| `down`; по количеству — закрепляет), `category/{id}/unpin` («Вернуть автопорядок»), `category/{id}/toggle-visibility`, `category/{id}/delete` |
 | `/admin/category-icons` | `AdminCategoryController@icons` | `admin/category_icons` (превью иконок категорий и набора) | — |
 | `/admin/category/create` (`?parent`), `…/{id}/edit` | `…@create`, `…@edit` | `admin/category_form` | `category`, `category/{id}`, `category/{id}/image`, `category/{id}/image/delete`, `category/{id}/delete` |
 | `/admin/banners` | `AdminBannerController@index` | `admin/banners` | `banner/{id}/toggle`, `banner/{id}/delete` |

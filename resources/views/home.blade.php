@@ -124,7 +124,7 @@
             Категории
         </h2>
 
-        {{-- Разделы (CatalogMenu: только с товарами): фото типичного товара, без фото — иконка --}}
+        {{-- Разделы (CatalogMenu: только с товарами, порядок — CategoryOrder): фото типичного товара, без фото — иконка --}}
         <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
             @foreach($categories as $node)
                 <x-category-tile :node="$node" :tile="$tiles[$node['id']] ?? null" />

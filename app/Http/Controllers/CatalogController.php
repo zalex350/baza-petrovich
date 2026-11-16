@@ -33,7 +33,8 @@ class CatalogController extends Controller
     }
 
     /**
-     * Все разделы: плитки (фото типичного товара или иконка) с подразделами — из дерева меню (кэш).
+     * Все разделы: плитки (фото типичного товара или иконка) с подразделами — из дерева меню (кэш):
+     * порядок и счётчики как в мегаменю (CategoryOrder).
      */
     public function index(CatalogMenu $menu, CategoryTiles $tiles)
     {

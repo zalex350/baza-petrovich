@@ -21,7 +21,7 @@ class HomeController extends Controller
 
     public function index(KeyAttributes $keyAttributes, CartSummary $cart, CatalogMenu $menu, CategoryTiles $tiles)
     {
-        // Плитки разделов — из дерева меню (кэш): видимые разделы с товарами; фото — CategoryTiles, без фото — иконка
+        // Плитки разделов — из дерева меню (кэш): видимые разделы с товарами в порядке CategoryOrder; фото — CategoryTiles, без фото — иконка
         $categories = $menu->tree();
 
         $shown = fn () => Product::with(['mainImage', 'category'])
