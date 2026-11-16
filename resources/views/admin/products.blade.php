@@ -8,6 +8,7 @@
     <h1 class="text-3xl font-bold">Админка — Товары</h1>
 
     <div class="flex flex-wrap items-center gap-3">
+        <x-button variant="secondary" href="/admin/products/images-import" data-images-import-link>Загрузить фото</x-button>
         <x-button variant="secondary" href="/admin/products/new-1c" data-new1c-link>Новые из 1С ({{ $new1cCount }})</x-button>
         @if(config('shop.catalog.manual_products'))
             <x-button href="/admin/product/create">Добавить товар</x-button>

@@ -161,7 +161,9 @@ cd /home/deploy/smesitel_by
    ```nginx
    server {
        server_name test.smesitel.by;
-       client_max_body_size 210M;
+       client_max_body_size 520M;   # ZIP с фото товаров до 500 МБ (админка «Загрузить фото»)
+       proxy_read_timeout 300s;      # предпросмотр большого ZIP
+       proxy_request_buffering off;  # ZIP сразу в контейнер, без копии во временный файл сервера
 
        auth_basic "Staging";
        auth_basic_user_file /etc/nginx/.htpasswd;
@@ -204,8 +206,8 @@ API отвечает 403 всем. Basic auth стенда на `/api/1c/` не 
 | Что | Значение |
 |---|---|
 | nginx сервера | `location /api/1c/` без `auth_basic`, `client_max_body_size 50m`, `X-Forwarded-For $remote_addr` (адрес клиента — для проверки IP) |
-| nginx стенда (`docker/staging/nginx.conf`) | `client_max_body_size 210M` — больше 50 МБ, менять не нужно |
-| PHP (`docker/php/php.ini` в образе) | `post_max_size = 210M` (тело запроса API), `upload_max_filesize = 20M` (фото; на API не влияет) — менять не нужно. Предел API — 50 МБ в приложении (`SHOP_1C_MAX_BODY_MB`), сверх — 413 |
+| nginx стенда (`docker/staging/nginx.conf`) | `client_max_body_size 520M` (ZIP с фото до 500 МБ) — больше 50 МБ, менять не нужно |
+| PHP (`docker/php/php.ini` в образе) | `post_max_size = 520M`, `upload_max_filesize = 512M` (ZIP с фото; формы ограничивают размер своими правилами) — менять не нужно. Предел API — 50 МБ в приложении (`SHOP_1C_MAX_BODY_MB`), сверх — 413 |
 | Файлы обмена | том `smesitel_by_storage`: `storage/app/exchange/ГГГГ/ММ/<job_id>.csv`, удаляются через 90 дней (`exchange:prune`) |
 | Обработка | очередь (сервис `queue`); письма о сбоях — администраторам с галочкой «Сбои обмена с 1С» |
 | Расписание | сервис `scheduler` (`php artisan schedule:work`): `exchange:prune` ежедневно 04:10, `exchange:check` раз в 10 минут. До этапа 2 планировщика на стенде не было — его добавляет `./deploy.sh` |
