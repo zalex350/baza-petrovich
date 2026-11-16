@@ -7,7 +7,8 @@
 import json
 import os
 
-ROOT = r'D:\smesitel_by\src\resources\icons'
+# Запуск из любой папки: python scripts/plumb-icons.py (перезаписывает resources/icons/plumb и plumb.json)
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'resources', 'icons')
 OUT = os.path.join(ROOT, 'plumb')
 
 STROKE = 'var(--ic-stroke,#1E2B45)'
