@@ -36,6 +36,8 @@ class CatalogMenu
     public static function flush(): void
     {
         Cache::forget(self::CACHE_KEY);
+        // Фото плиток разделов зависят от тех же категорий и товаров
+        Cache::forget(CategoryTiles::CACHE_KEY);
     }
 
     /**
@@ -165,7 +167,7 @@ class CatalogMenu
                 'url' => route('catalog.show', $category->slug, false),
                 // Картинка категории (админка «Категории») — плитки подкатегорий
                 'image' => $category->imageUrl(),
-                // Иконка (App\Services\CategoryIcons): мегаменю, плитки
+                // Иконка (CategoryIcons): мегаменю, чипы, плитки без фото (фото плиток — CategoryTiles::forTree)
                 'icon' => $category->icon,
                 'icon_svg' => $category->icon === CategoryIcons::UPLOAD ? $category->icon_svg : null,
                 'count' => $count,

@@ -8,16 +8,21 @@ use Illuminate\Support\HtmlString;
 
 /**
  * Иконки категорий. Значение categories.icon:
- *  - «material:имя» — Material Symbols (Outlined, weight 300) из resources/icons/material/ — только
- *    иконки из списка resources/icons/material.json (копирует `npm run icons` из npm-пакета);
- *  - «custom:имя» — свои SVG 24×24 (контур 1.5) из resources/icons/custom/, слова — custom.json;
- *  - «upload» — SVG, загруженная в админке: очищенная разметка в categories.icon_svg (sanitize()).
- * Выводятся inline (render()): цвет — currentColor, размер — классом; своих цветов нет.
- * Неизвестный ключ или пусто — null: категория показывается без иконки.
+ *  - «plumb:имя» — набор сантехники resources/icons/plumb/ (viewBox 48, двухцветный: контур, заливка
+ *    деталей, вода, рукоятки — CSS-переменные --ic-stroke, --ic-fill, --ic-water, --ic-accent со значениями
+ *    по умолчанию в самой иконке; тема меняет их в resources/css/app.css). Слова для поиска — plumb.json,
+ *    генератор — scripts/plumb-icons.py (README — resources/icons/README.md);
+ *  - «upload» — SVG, загруженная в админке: очищенная разметка в categories.icon_svg (sanitize()),
+ *    одноцветная: currentColor = --ic-stroke.
+ * Выводятся inline (render()), размер — классом. Неизвестный ключ (в том числе прежние material:… и
+ * custom:…) или пусто — null: категория показывается без иконки.
  */
 class CategoryIcons
 {
     public const UPLOAD = 'upload';
+
+    /** Наборы иконок: папка resources/icons/{set}, слова для поиска — {set}.json */
+    public const SETS = ['plumb'];
 
     /** Своя SVG: не больше, байт */
     public const MAX_UPLOAD = 50 * 1024;
@@ -48,7 +53,7 @@ class CategoryIcons
 
         $library = [];
 
-        foreach (['material', 'custom'] as $set) {
+        foreach (self::SETS as $set) {
             $words = json_decode((string) @file_get_contents(resource_path("icons/{$set}.json")), true) ?: [];
 
             foreach ($words as $name => $text) {
@@ -89,20 +94,24 @@ class CategoryIcons
             return null;
         }
 
-        return new HtmlString($this->decorate($svg, $class));
+        return new HtmlString($this->decorate($svg, $class, $key === self::UPLOAD));
     }
 
     /**
-     * Корневой svg: без width / height (размер — классом), aria-hidden, у Material — fill="currentColor"
-     * (в его файлах цвета нет, браузер закрасил бы чёрным).
+     * Корневой svg: без width / height (размер — классом), aria-hidden. Загруженная — одноцветная:
+     * currentColor, цвет — --ic-stroke (без своего fill браузер закрасил бы чёрным).
      */
-    private function decorate(string $svg, string $class): string
+    private function decorate(string $svg, string $class, bool $uploaded = false): string
     {
-        return (string) preg_replace_callback('/<svg\b([^>]*)>/i', function ($m) use ($class) {
+        return (string) preg_replace_callback('/<svg\b([^>]*)>/i', function ($m) use ($class, $uploaded) {
             $attrs = preg_replace('/\s(?:width|height|class|aria-hidden|focusable)="[^"]*"/i', '', $m[1]);
 
-            if (! preg_match('/\sfill="/i', $attrs)) {
-                $attrs .= ' fill="currentColor"';
+            if ($uploaded) {
+                $attrs = preg_replace('/\sstyle="[^"]*"/i', '', $attrs).' style="color:var(--ic-stroke,#1E2B45)"';
+
+                if (! preg_match('/\sfill="/i', $attrs)) {
+                    $attrs .= ' fill="currentColor"';
+                }
             }
 
             return '<svg'.$attrs.' class="'.e($class).'" aria-hidden="true" focusable="false" data-category-icon>';

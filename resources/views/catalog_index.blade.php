@@ -1,53 +1,41 @@
+{{--
+    Каталог: разделы плитками (x-category-tile — фото типичного товара, без фото — иконка), под плиткой —
+    подразделы с иконками и числом товаров (первые 8, остальные — «ещё N»).
+    Данные: $sections — CatalogMenu::tree() (видимые разделы с товарами), $tiles — CategoryTiles::forTree().
+--}}
 @extends('layouts.app')
 
 @section('title', 'Каталог продукции')
 
 @section('content')
 
-<div class="mb-10">
+<h1 class="mb-8 text-3xl font-bold tracking-tight">Каталог продукции</h1>
 
-    <h1 class="text-4xl font-bold text-slate-800">
-        Каталог продукции
-    </h1>
+@php($brief = 8)
 
-</div>
-
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-
-    @foreach($parents as $parent)
-
-        @if($parent->children->count())
-
-            <div>
-
-                <h2 class="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
-                    <x-category-icon :category="$parent" class="h-6 w-6 text-link" />
-                    <span>{{ $parent->name }}</span>
-                </h2>
-
-                @foreach($parent->children as $child)
-
-                    <a
-                        href="{{ route('catalog.show', $child->slug) }}"
-                        class="group flex items-start gap-2 text-sm text-slate-600 hover:text-blue-600 py-1"
-                    >
-                        <x-category-icon :category="$child" class="mt-px h-4 w-4 text-slate-400 group-hover:text-blue-600" />
-                        <span>
-                            {{ $child->name }}
-                            <span class="text-slate-400">
-                                ({{ $child->products_count }})
-                            </span>
-                        </span>
-                    </a>
-
-                @endforeach
-
-            </div>
-
-        @endif
-
+<div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" data-catalog-sections>
+    @foreach($sections as $section)
+        <x-category-tile :node="$section" :tile="$tiles[$section['id']] ?? null">
+            @if(! empty($section['children']))
+                <ul class="space-y-1.5">
+                    @foreach(array_slice($section['children'], 0, $brief) as $child)
+                        <li>
+                            <a href="{{ $child['url'] }}" class="group flex items-center gap-2 text-sm text-ink hover:text-link" data-catalog-child>
+                                <x-category-icon :icon="$child['icon'] ?? null" :svg="$child['icon_svg'] ?? null" class="h-6 w-6" />
+                                <span class="min-w-0 flex-1">{{ $child['name'] }}</span>
+                                <span class="text-meta text-ink-muted tabular-nums">{{ $child['count'] }}</span>
+                            </a>
+                        </li>
+                    @endforeach
+                    @if(count($section['children']) > $brief)
+                        <li>
+                            <a href="{{ $section['url'] }}" class="text-sm text-link hover:underline">ещё {{ count($section['children']) - $brief }}</a>
+                        </li>
+                    @endif
+                </ul>
+            @endif
+        </x-category-tile>
     @endforeach
-
 </div>
 
 @endsection

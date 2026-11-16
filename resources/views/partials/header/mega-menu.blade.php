@@ -1,7 +1,7 @@
 {{--
     Мегаменю каталога (desktop ≥1024px). Данные: $catalogMenu (CatalogMenu::tree()).
     Поведение — resources/js/mega-menu.js: задержка открытия/закрытия, menu-aim,
-    Esc / клик вне панели, клавиатура. Иконка раздела (x-category-icon, цвет — currentColor):
+    Esc / клик вне панели, клавиатура. Иконка раздела (x-category-icon, двухцветная — CSS-переменные --ic-*):
     у корневого — иконка, без неё картинка категории, без них — пустое место той же ширины;
     у подраздела — иконка перед названием, если есть.
 --}}
@@ -138,7 +138,7 @@
                                     <div class="min-w-0">
 
                                         <a href="{{ $child['url'] }}" class="group inline-flex items-start gap-2 font-medium text-sm text-ink hover:text-link">
-                                            <x-category-icon :icon="$child['icon'] ?? null" :svg="$child['icon_svg'] ?? null" class="h-5 w-5 text-ink-muted group-hover:text-link" />
+                                            <x-category-icon :icon="$child['icon'] ?? null" :svg="$child['icon_svg'] ?? null" class="h-6 w-6" />
                                             <span>
                                                 {{ $child['name'] }}
                                                 <span class="text-xs font-normal text-ink-muted">{{ $child['count'] }}</span>

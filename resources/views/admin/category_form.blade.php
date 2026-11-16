@@ -2,9 +2,10 @@
     Категория: создание и редактирование (AdminCategoryController@create / @edit).
     Название, родитель (дерево; при редактировании — без самой категории и её подкатегорий),
     адрес (slug; пусто при создании — из названия; при переименовании сохраняется), скрыть,
-    иконка (x-category-icon-picker: Material Symbols / свои / загрузка SVG — поэтому форма multipart).
+    иконка (x-category-icon-picker: набор сантехники или загрузка SVG — поэтому форма multipart),
+    у раздела верхнего уровня — фото на плитке (x-tile-product-picker).
     При редактировании — картинка (отдельные формы: загрузка и удаление) и удаление пустой категории.
-    Данные: $category, $parents (id => «— — название»).
+    Данные: $category, $parents (id => «— — название»), $tile — null или [candidates, chosen, url].
 --}}
 @extends('layouts.admin')
 
@@ -50,6 +51,11 @@
 
     <x-category-icon-picker :category="$category" />
 
+    {{-- Плитка раздела — только у верхнего уровня (главная, «Каталог») --}}
+    @if($tile)
+        <x-tile-product-picker :category="$category" :candidates="$tile['candidates']" :chosen="$tile['chosen']" :url="$tile['url']" />
+    @endif
+
     <div class="flex flex-wrap gap-3">
         <x-button>{{ $category->exists ? 'Сохранить' : 'Создать' }}</x-button>
         <x-button variant="secondary" href="/admin/categories">Отмена</x-button>
@@ -60,8 +66,9 @@
     <section class="mt-6 max-w-3xl rounded-card border border-line bg-surface p-card" data-category-image-form>
         <h2 class="text-xl font-semibold mb-2">Картинка</h2>
         <p class="text-sm text-ink-muted mb-4">
-            Плитка над списком товаров родительского раздела (если картинка есть хотя бы у одной подкатегории;
-            иначе — чипы с названиями). JPG, PNG или WebP до {{ (int) round(config('shop.images.max_kb') / 1024) }} МБ,
+            У раздела верхнего уровня — фото на плитке главной и «Каталога» (важнее выбранного товара);
+            у подкатегории — плитка над списком товаров родительского раздела (если картинка есть хотя бы у одной
+            подкатегории; иначе — чипы с иконками и названиями). JPG, PNG или WebP до {{ (int) round(config('shop.images.max_kb') / 1024) }} МБ,
             сохраняется в WebP ({{ \App\Http\Controllers\Admin\AdminCategoryController::IMAGE_MAX }} px по длинной стороне).
         </p>
         <form method="POST" action="/admin/category/{{ $category->id }}/image" enctype="multipart/form-data" class="flex flex-wrap items-end gap-3">

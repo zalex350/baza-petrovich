@@ -8,6 +8,7 @@ use App\Services\Catalog\CatalogFilters;
 use App\Services\Catalog\CatalogListing;
 use App\Services\Catalog\KeyAttributes;
 use App\Services\CatalogMenu;
+use App\Services\CategoryTiles;
 use App\Services\ClientCodes;
 
 class CatalogController extends Controller
@@ -31,17 +32,14 @@ class CatalogController extends Controller
         return request('view') === 'grid' ? 'grid' : 'list';
     }
 
-    public function index()
+    /**
+     * Все разделы: плитки (фото типичного товара или иконка) с подразделами — из дерева меню (кэш).
+     */
+    public function index(CatalogMenu $menu, CategoryTiles $tiles)
     {
-        $parents = Category::whereNull('parent_id')
-            ->visible()
-            ->with(['children' => function ($q) {
-                $q->withCount(['products' => fn ($q2) => $q2->where('is_active', 1)]);
-            }])
-            ->ordered()
-            ->get();
+        $sections = $menu->tree();
 
-        return view('catalog_index', compact('parents'));
+        return view('catalog_index', ['sections' => $sections, 'tiles' => $tiles->forTree($sections)]);
     }
 
     /**

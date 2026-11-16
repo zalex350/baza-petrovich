@@ -4,6 +4,18 @@
 
 /* Шрифт Inter (layouts) и табличные цифры: цены, количества и остатки не «прыгают» по ширине */
 @layer base {
+    /*
+     * Цвета иконок категорий (resources/icons/plumb, App\Services\CategoryIcons): контур, заливка деталей,
+     * вода, рукоятки и вентили. Тема меняет только эти значения — иконки не перерисовываются.
+     * Те же значения — по умолчанию в самих SVG (var(--ic-…, цвет)).
+     */
+    :root {
+        --ic-stroke: #1E2B45;
+        --ic-fill: #DCE8FB;
+        --ic-water: #1D5FD1;
+        --ic-accent: #F59E0B;
+    }
+
     body {
         @apply font-sans antialiased tabular-nums;
     }
@@ -11,6 +23,11 @@
 
 [x-cloak] {
     display: none !important;
+}
+
+/* Плитка раздела без фото (x-category-tile): фон поля — --ic-fill с прозрачностью 40 % */
+.bg-ic-tile {
+    background-color: color-mix(in srgb, var(--ic-fill) 40%, transparent);
 }
 
 /*

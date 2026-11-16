@@ -124,24 +124,11 @@
             Категории
         </h2>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-
-            @foreach($categories as $category)
-
-                <a href="/catalog/{{ $category->slug }}"
-                   class="bg-white rounded-xl shadow hover:shadow-lg transition p-8 border">
-
-                    {{-- Иконка категории (нет — плитка без неё) --}}
-                    <x-category-icon :category="$category" class="mb-5 block h-10 w-10 text-link" />
-
-                    <h3 class="text-xl font-semibold">
-                        {{ $category->name }}
-                    </h3>
-
-                </a>
-
+        {{-- Разделы (CatalogMenu: только с товарами): фото типичного товара, без фото — иконка --}}
+        <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+            @foreach($categories as $node)
+                <x-category-tile :node="$node" :tile="$tiles[$node['id']] ?? null" />
             @endforeach
-
         </div>
 
     </section>
