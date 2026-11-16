@@ -338,6 +338,9 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/category/{id}/edit', [AdminCategoryController::class, 'edit']);
     Route::post('/admin/category/{id}', [AdminCategoryController::class, 'update']);
     Route::post('/admin/category/{id}/move', [AdminCategoryController::class, 'move']);
+    // Порядок категорий: режим (по количеству / вручную / по алфавиту) и «вернуть автопорядок»
+    Route::post('/admin/categories/order-mode', [AdminCategoryController::class, 'orderMode']);
+    Route::post('/admin/category/{id}/unpin', [AdminCategoryController::class, 'unpin']);
     Route::post('/admin/category/{id}/toggle-visibility', [AdminCategoryController::class, 'toggleVisibility']);
     Route::post('/admin/category/{id}/delete', [AdminCategoryController::class, 'destroy']);
     Route::post('/admin/category/{id}/image', [AdminCategoryController::class, 'updateImage']);

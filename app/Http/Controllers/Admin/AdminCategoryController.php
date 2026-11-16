@@ -6,6 +6,8 @@ use App\Exceptions\ImageUploadException;
 use App\Http\Controllers\Admin\Concerns\UploadsProductImages;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Setting;
+use App\Services\Catalog\CategoryOrder;
 use App\Services\CatalogMenu;
 use App\Services\CategoryIcons;
 use App\Services\Images\WebpImage;
@@ -42,22 +44,52 @@ class AdminCategoryController extends Controller
         $search = trim((string) request('q'));
 
         $all = Category::query()->withCount(['products', 'children'])->ordered()->get();
+        $mode = CategoryOrder::mode();
+
+        // Опубликованных товаров с подкатегориями — по ним порядок «по количеству»; соседи — в порядке витрины
+        $counts = CategoryOrder::counts($all);
+        $byParent = $all->groupBy(fn ($c) => (int) $c->parent_id)
+            ->map(fn ($group) => collect(CategoryOrder::sort($group, fn ($c) => $c, fn ($c) => $counts[$c->id] ?? 0, $mode)));
 
         // Без поиска — дерево (с отступом по глубине); с поиском — найденные, с путём к ним
         $rows = $search === ''
-            ? $this->flatten($all->groupBy(fn ($c) => (int) $c->parent_id))
+            ? $this->flatten($byParent)
             : $all->filter(fn ($c) => mb_stripos($c->name, $search) !== false)
                 ->map(fn ($c) => ['category' => $c, 'depth' => 0])->values();
 
         $byId = $all->keyBy('id');
-        $siblings = $all->groupBy(fn ($c) => (int) $c->parent_id)->map(fn ($g) => $g->pluck('id')->all());
+        $siblings = $byParent->map(fn ($g) => $g->pluck('id')->all());
 
         return view('admin.categories', [
             'rows' => $rows,
             'search' => $search,
             'path' => fn (Category $c) => $this->path($c, $byId),
             'siblings' => $siblings,
+            'counts' => $counts,
+            'mode' => $mode,
         ]);
+    }
+
+    /**
+     * Режим порядка категорий на витрине (CategoryOrder): по количеству товаров / только вручную / по алфавиту.
+     */
+    public function orderMode(): RedirectResponse
+    {
+        $data = request()->validate(['mode' => ['required', Rule::in(array_keys(CategoryOrder::MODES))]]);
+
+        Setting::put([CategoryOrder::SETTING => $data['mode']]);
+        CatalogMenu::flush();
+
+        return back()->with('success', 'Порядок категорий: '.mb_strtolower(CategoryOrder::MODES[$data['mode']]));
+    }
+
+    /** «Вернуть автопорядок»: категория снова идёт по количеству товаров */
+    public function unpin($id): RedirectResponse
+    {
+        $category = Category::findOrFail($id);
+        $category->update(['is_pinned' => false]);
+
+        return back()->with('success', "«{$category->name}» — снова по количеству товаров");
     }
 
     /**
@@ -131,14 +163,30 @@ class AdminCategoryController extends Controller
         return redirect('/admin/categories')->with('success', "Категория «{$category->name}» сохранена");
     }
 
-    /** Вверх / вниз среди соседей: порядок соседей перенумеровывается 0, 1, 2, … */
+    /**
+     * Вверх / вниз среди соседей в порядке витрины (CategoryOrder).
+     *  - «только вручную» — соседи перенумеровываются 0, 1, 2, …;
+     *  - «по количеству» — категория и все соседи выше её нового места закрепляются (is_pinned) в этом
+     *    порядке (уже закреплённые — перенумеровываются): закреплённые идут первыми, остальные —
+     *    по-прежнему по количеству товаров;
+     *  - «по алфавиту» — не действует.
+     */
     public function move($id): RedirectResponse
     {
         $category = Category::findOrFail($id);
         $direction = request('direction') === 'up' ? -1 : 1;
+        $mode = CategoryOrder::mode();
 
-        DB::transaction(function () use ($category, $direction) {
-            $ids = Category::where('parent_id', $category->parent_id)->ordered()->lockForUpdate()->pluck('id')->all();
+        if ($mode === CategoryOrder::ALPHA) {
+            return back()->with('warning', 'Сейчас порядок категорий — по алфавиту: ↑ / ↓ не действуют. Смените режим выше.');
+        }
+
+        $counts = CategoryOrder::counts(Category::query()->get(['id', 'parent_id']));
+        $pinned = false;
+
+        DB::transaction(function () use ($category, $direction, $mode, $counts, &$pinned) {
+            $siblings = Category::where('parent_id', $category->parent_id)->lockForUpdate()->get();
+            $ids = array_map(fn ($c) => $c->id, CategoryOrder::sort($siblings, fn ($c) => $c, fn ($c) => $counts[$c->id] ?? 0, $mode));
             $at = array_search($category->id, $ids, true);
             $to = $at + $direction;
 
@@ -147,17 +195,35 @@ class AdminCategoryController extends Controller
             }
 
             [$ids[$at], $ids[$to]] = [$ids[$to], $ids[$at]];
+            $byId = $siblings->keyBy('id');
+            // До нового места категории: сосед, ушедший ниже, остаётся по количеству товаров
+            $pinUpTo = $to;
 
             foreach ($ids as $order => $siblingId) {
+                $sibling = $byId[$siblingId];
+                $changes = ['sort_order' => $order];
+
+                if ($mode === CategoryOrder::COUNT) {
+                    // Выше нового места (и уже закреплённые) — закреплены в новом порядке
+                    if ($order > $pinUpTo && ! $sibling->is_pinned) {
+                        continue;
+                    }
+                    $changes['is_pinned'] = true;
+                }
+
                 // Через модель — CatalogMenuObserver сбросит кэш меню
-                $sibling = Category::find($siblingId);
-                if ($sibling->sort_order !== $order) {
-                    $sibling->update(['sort_order' => $order]);
+                $sibling->fill($changes);
+                if ($sibling->isDirty()) {
+                    $sibling->save();
                 }
             }
+
+            $pinned = $mode === CategoryOrder::COUNT;
         });
 
-        return back()->with('success', "Порядок изменён: «{$category->name}»");
+        return back()->with('success', $pinned
+            ? "«{$category->name}» закреплена на новом месте; незакреплённые идут ниже по количеству товаров"
+            : "Порядок изменён: «{$category->name}»");
     }
 
     public function toggleVisibility($id): RedirectResponse

@@ -8,15 +8,34 @@
 
 <x-breadcrumbs :items="[['label' => 'Главная', 'url' => '/'], ['label' => 'Поиск']]" />
 
-<div class="mt-3 mb-5">
-    <h1 class="text-3xl font-bold tracking-tight">
-        @if($query !== '')
-            Поиск: «{{ $query }}»
-        @else
-            Поиск
-        @endif
-    </h1>
-    <p class="mt-1 text-ink-muted" data-found>Найдено товаров: {{ $products->total() }}</p>
+<div class="mt-3 mb-5 flex flex-wrap items-end justify-between gap-3">
+    <div>
+        <h1 class="text-3xl font-bold tracking-tight">
+            @if($query !== '')
+                Поиск: «{{ $query }}»
+            @else
+                Поиск
+            @endif
+        </h1>
+        <p class="mt-1 text-ink-muted" data-found>Найдено товаров: {{ $products->total() }}</p>
+    </div>
+
+    {{-- Сортировка (SearchController::sorts): по цене — только после входа; в адресе — sort, с первой страницы --}}
+    @if($products->total() > 1 && count(\App\Http\Controllers\SearchController::sorts()) > 1)
+        <form method="GET" action="{{ route('search.index') }}" class="flex items-center gap-2" data-search-sort>
+            <input type="hidden" name="q" value="{{ $query }}">
+            <label for="f-sort" class="text-sm text-ink-muted">Сортировка</label>
+            <x-select
+                name="sort"
+                :options="\App\Http\Controllers\SearchController::sorts()"
+                :value="$sort ?? 'relevance'"
+                class="text-sm"
+                x-data
+                x-on:change="$el.form.submit()"
+            />
+            <noscript><x-button size="sm" variant="secondary">Применить</x-button></noscript>
+        </form>
+    @endif
 </div>
 
 @if($products->isEmpty())

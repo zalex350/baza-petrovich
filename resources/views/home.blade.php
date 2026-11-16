@@ -126,16 +126,18 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
-            @foreach($categories as $category)
+            {{-- Разделы из дерева меню (CatalogMenu): только с товарами, порядок — CategoryOrder --}}
+            @foreach($categories as $node)
 
-                <a href="/catalog/{{ $category->slug }}"
-                   class="bg-white rounded-xl shadow hover:shadow-lg transition p-8 border">
+                <a href="{{ $node['url'] }}"
+                   class="bg-white rounded-xl shadow hover:shadow-lg transition p-8 border"
+                   data-home-category="{{ $node['id'] }}">
 
                     {{-- Иконка категории (нет — плитка без неё) --}}
-                    <x-category-icon :category="$category" class="mb-5 block h-10 w-10 text-link" />
+                    <x-category-icon :icon="$node['icon'] ?? null" :svg="$node['icon_svg'] ?? null" class="mb-5 block h-10 w-10 text-link" />
 
                     <h3 class="text-xl font-semibold">
-                        {{ $category->name }}
+                        {{ $node['name'] }}
                     </h3>
 
                 </a>

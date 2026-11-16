@@ -205,8 +205,8 @@ class CatalogHandler implements ExchangeHandler
             fn (array $changes) => array_intersect_key($changes, array_flip(SearchIndex::FIELDS)) !== []
         )));
 
-        // BulkUpdate идёт мимо модели — меню каталога (видимость товаров) сбрасывается вручную
-        if ($plan->hidden !== [] || $plan->shown !== []) {
+        // BulkUpdate идёт мимо модели — меню каталога (видимость, счётчики и порядок категорий) сбрасывается вручную
+        if ($plan->updated > 0 || $plan->creates !== [] || $plan->hidden !== [] || $plan->shown !== []) {
             CatalogMenu::flush();
         }
     }

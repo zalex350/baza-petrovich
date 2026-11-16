@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Storage;
 /**
  * is_hidden — служебная категория («Без категории»): нет в меню и каталоге, товары находятся поиском.
  * icon — иконка (App\Services\CategoryIcons: material:имя | custom:имя | upload), icon_svg — загруженная SVG.
+ * is_pinned — закреплена кнопками ↑ / ↓ в админке: при порядке «по количеству товаров» идёт первой
+ * в своём порядке sort_order (App\Services\Catalog\CategoryOrder).
  */
 class Category extends Model
 {
@@ -20,6 +22,7 @@ class Category extends Model
         'slug',
         'parent_id',
         'sort_order',
+        'is_pinned',
         'is_hidden',
         'image',
         'icon',
@@ -28,6 +31,7 @@ class Category extends Model
 
     protected $casts = [
         'is_hidden' => 'boolean',
+        'is_pinned' => 'boolean',
         'sort_order' => 'integer',
     ];
 

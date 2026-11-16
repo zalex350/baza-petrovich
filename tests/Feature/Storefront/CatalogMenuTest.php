@@ -4,6 +4,8 @@ namespace Tests\Feature\Storefront;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\User;
+use App\Services\Catalog\CategoryOrder;
 use App\Services\CatalogMenu;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -25,12 +27,12 @@ class CatalogMenuTest extends TestCase
     private function product(Category $category, array $attributes = []): Product
     {
         return Product::create(array_merge([
-            'name'         => 'Товар '.++$this->sku,
-            'sku'          => 'SKU-'.$this->sku,
-            'price'        => 100,
-            'stock'        => 5,
-            'category_id'  => $category->id,
-            'is_active'    => true,
+            'name' => 'Товар '.++$this->sku,
+            'sku' => 'SKU-'.$this->sku,
+            'price' => 100,
+            'stock' => 5,
+            'category_id' => $category->id,
+            'is_active' => true,
             'is_published' => true,
         ], $attributes));
     }
@@ -122,6 +124,9 @@ class CatalogMenuTest extends TestCase
             }
         }
 
+        // Режим порядка категорий — из настроек (кэш на всю страницу, читается и подвалом)
+        CategoryOrder::mode();
+
         DB::enableQueryLog();
         app(CatalogMenu::class)->build();
 
@@ -166,7 +171,7 @@ class CatalogMenuTest extends TestCase
 
     public function test_cache_is_flushed_via_admin_publish_and_toggle(): void
     {
-        $admin = \App\Models\User::factory()->admin()->create();
+        $admin = User::factory()->admin()->create();
         $product = $this->product($this->category('Смесители'), ['is_published' => false]);
         $this->assertSame([], $this->menu());
 

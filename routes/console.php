@@ -16,5 +16,8 @@ Artisan::command('inspire', function () {
 // Обмен с 1С: архив принятых файлов старше shop.exchange_1c.archive_days (90) — удалить
 Schedule::command('exchange:prune')->dailyAt('04:10')->withoutOverlapping();
 
+// Меню каталога: счётчики товаров и порядок категорий «по количеству» — пересчёт ночью
+Schedule::command('catalog:menu-refresh')->dailyAt('03:50')->withoutOverlapping();
+
 // Обмен с 1С: письма о давно не приходивших ценах и ждущих передачи заказах
 Schedule::command('exchange:check')->everyTenMinutes()->withoutOverlapping();

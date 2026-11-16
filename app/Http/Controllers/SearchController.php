@@ -23,6 +23,19 @@ class SearchController extends Controller
     /** Товаров на странице результатов */
     public const PER_PAGE = 24;
 
+    /** Сортировки поиска; по цене — только после входа (гость цен не видит), как в каталоге */
+    public const SORTS = [
+        'relevance' => 'По релевантности',
+        'price_asc' => 'Цена ↑',
+        'price_desc' => 'Цена ↓',
+    ];
+
+    /** @return array<string, string> доступные сортировки */
+    public static function sorts(): array
+    {
+        return auth()->check() ? self::SORTS : ['relevance' => self::SORTS['relevance']];
+    }
+
     public function index(KeyAttributes $keyAttributes, CartSummary $cart, ClientCodes $codes, ArticleSearch $articles, ProductSearch $search)
     {
         $query = trim((string) request('q', ''));
@@ -38,12 +51,21 @@ class SearchController extends Controller
         // Коды товаров — только своей организации; гость и пользователь без организации — без них
         $organizationId = $codes->organizationId();
 
+        // Сортировка: по релевантности (ProductSearch) или по цене без НДС — без цены в конце;
+        // у гостя sort=price_* не действует
+        $sort = (string) request('sort', 'relevance');
+        $sort = array_key_exists($sort, self::sorts()) ? $sort : 'relevance';
+
         $products = Product::query()
             ->with(['mainImage', 'category'])
             ->where('is_active', 1)
             ->where('is_published', true)
             // Слова — по основам и синонимам, артикул / код — подстрокой; порядок — ProductSearch
             ->tap(fn ($q) => $search->apply($q, $search->parse($query), $organizationId, withDescription: true))
+            ->when($sort !== 'relevance', fn ($q) => $q->reorder()
+                ->orderByRaw('products.price IS NULL')
+                ->orderBy('products.price', $sort === 'price_desc' ? 'desc' : 'asc')
+                ->orderBy('products.id'))
             // Страницы по 24; q и прочие параметры — в ссылках пагинации
             ->paginate(self::PER_PAGE)
             ->withQueryString();
@@ -59,6 +81,7 @@ class SearchController extends Controller
         return view('search', [
             'query' => $query,
             'products' => $products,
+            'sort' => $sort,
             'cartItems' => $cart->items(auth()->user()),
             // Ничего не нашлось — «Возможно, вы искали L4755-2» (артикул без учёта дефисов)
             'didYouMean' => $products->total() === 0 ? $articles->didYouMean($this->shown(), $query) : [],

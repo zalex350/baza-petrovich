@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Banner;
-use App\Models\Category;
 use App\Models\Product;
 use App\Services\CartSummary;
 use App\Services\Catalog\KeyAttributes;
+use App\Services\CatalogMenu;
 use App\Services\ClientCodes;
 
 /**
@@ -18,13 +18,10 @@ class HomeController extends Controller
 {
     public const CAROUSEL = 10;
 
-    public function index(KeyAttributes $keyAttributes, CartSummary $cart)
+    public function index(KeyAttributes $keyAttributes, CartSummary $cart, CatalogMenu $menu)
     {
-        $categories = Category::whereNull('parent_id')
-            ->visible()
-            ->with('children')
-            ->ordered()
-            ->get();
+        // Плитки разделов — из дерева меню (кэш): разделы с товарами в порядке CategoryOrder
+        $categories = $menu->tree();
 
         $shown = fn () => Product::with(['mainImage', 'category'])
             ->where('is_active', true)

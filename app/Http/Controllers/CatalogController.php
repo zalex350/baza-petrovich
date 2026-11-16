@@ -31,17 +31,12 @@ class CatalogController extends Controller
         return request('view') === 'grid' ? 'grid' : 'list';
     }
 
-    public function index()
+    /**
+     * Все разделы с подразделами — из дерева меню (кэш): порядок и счётчики как в мегаменю (CategoryOrder).
+     */
+    public function index(CatalogMenu $menu)
     {
-        $parents = Category::whereNull('parent_id')
-            ->visible()
-            ->with(['children' => function ($q) {
-                $q->withCount(['products' => fn ($q2) => $q2->where('is_active', 1)]);
-            }])
-            ->ordered()
-            ->get();
-
-        return view('catalog_index', compact('parents'));
+        return view('catalog_index', ['sections' => $menu->tree()]);
     }
 
     /**
