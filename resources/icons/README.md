@@ -1,15 +1,25 @@
 # Иконки категорий
 
-Используются `App\Services\CategoryIcons` (поле `categories.icon`), компонентами `x-category-icon`
-и `x-category-icon-picker`, превью — `/admin/category-icons`.
+Используются `App\Services\CategoryIcons` (поле `categories.icon` = `plumb:имя` или `upload`),
+компонентами `x-category-icon`, `x-category-icon-picker`, `x-category-tile`; превью — `/admin/category-icons`.
 
 | Папка / файл | Что |
 | --- | --- |
-| `material.json` | Какие иконки Material Symbols есть в проекте: имя → слова для поиска в админке |
-| `material/` | Их SVG — копирует `docker-compose exec node npm run icons` из npm-пакета `@material-symbols/svg-300` (Outlined, weight 300; devDependency, на сервер не нужен). Файлы коммитятся; вручную не править |
-| `custom.json`, `custom/` | Свои иконки сантехники: 24×24, `fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"`, без своих цветов |
+| `plumb/` | Набор сантехники: каждая иконка — конкретный товар (смеситель, сифон, шаровой кран, радиатор…) |
+| `plumb.json` | Имя иконки → слова для поиска в админке |
+| `../../scripts/plumb-icons.py` | Генератор: иконки описаны в нём фигурами; правка — там, затем `python scripts/plumb-icons.py` (перезаписывает `plumb/` и `plumb.json`) |
 
-Новая иконка Material: добавить имя и слова в `material.json` → `npm run icons` → закоммитить SVG.
-Новая своя: файл в `custom/` в том же стиле + слова в `custom.json` (`CategoryIconsTest` проверяет стиль).
+Стиль: `viewBox="0 0 48 48"`, контур 2px со скруглёнными концами и углами, двухцветный. Цвета —
+CSS-переменные со значением по умолчанию прямо в SVG (`style="fill:var(--ic-fill,#DCE8FB)"`), поэтому
+иконка правильная и без CSS сайта; тема меняет их в `resources/css/app.css` без перерисовки:
 
-Material Symbols — © Google, лицензия Apache 2.0 (https://github.com/google/material-design-icons/blob/master/LICENSE).
+| Переменная | По умолчанию | Что |
+| --- | --- | --- |
+| `--ic-stroke` | `#1E2B45` | Контур (и загруженные одноцветные SVG) |
+| `--ic-fill` | `#DCE8FB` | Заливка деталей |
+| `--ic-water` | `#1D5FD1` | Вода, капли, струи |
+| `--ic-accent` | `#F59E0B` | Рукоятки, вентили, кнопки |
+
+Общие иконки (гаечный ключ, болт, «категория») в набор не входят. Material Symbols больше не используются.
+Стартовые соответствия категорий — `database/data/category_icons.php` (прежние — `category_icons_v1.php`,
+нужен миграции `plumb_category_icons`, чтобы заменить только стартовые значения).

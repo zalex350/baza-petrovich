@@ -6,8 +6,11 @@ use App\Exceptions\ImageUploadException;
 use App\Http\Controllers\Admin\Concerns\UploadsProductImages;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Product;
+use App\Services\ArticleSearch;
 use App\Services\CatalogMenu;
 use App\Services\CategoryIcons;
+use App\Services\CategoryTiles;
 use App\Services\Images\WebpImage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
@@ -61,10 +64,10 @@ class AdminCategoryController extends Controller
     }
 
     /**
-     * Превью иконок: категории 1-го и 2-го уровня с иконками (в трёх размерах, на светлом и на цветном фоне)
-     * и вся библиотека иконок с числом категорий, где иконка выбрана.
+     * Превью иконок: категории 1-го и 2-го уровня с иконками (24, 48, 72 px), у разделов — фото плитки
+     * (CatalogMenu, как на главной), и весь набор с числом категорий, где иконка выбрана.
      */
-    public function icons(CategoryIcons $icons)
+    public function icons(CategoryIcons $icons, CatalogMenu $menu)
     {
         $all = Category::query()->ordered()->get(['id', 'name', 'parent_id', 'is_hidden', 'icon', 'icon_svg']);
         $byParent = $all->groupBy(fn ($c) => (int) $c->parent_id);
@@ -82,6 +85,7 @@ class AdminCategoryController extends Controller
             'library' => $icons->library(),
             'used' => $all->whereNotNull('icon')->countBy('icon')->all(),
             'missing' => $rows->filter(fn ($r) => ! $r['category']->is_hidden && ! $icons->render($r['category']->icon, $r['category']->icon_svg))->count(),
+            'tiles' => app(CategoryTiles::class)->forTree($menu->tree()),
         ]);
     }
 
@@ -89,7 +93,7 @@ class AdminCategoryController extends Controller
     {
         $category = new Category(['parent_id' => request()->integer('parent') ?: null]);
 
-        return view('admin.category_form', ['category' => $category, 'parents' => $this->parentOptions()]);
+        return view('admin.category_form', ['category' => $category, 'parents' => $this->parentOptions(), 'tile' => null]);
     }
 
     public function store(): RedirectResponse
@@ -107,7 +111,19 @@ class AdminCategoryController extends Controller
     {
         $category = Category::withCount(['products', 'children'])->findOrFail($id);
 
-        return view('admin.category_form', ['category' => $category, 'parents' => $this->parentOptions($category)]);
+        // Фото на плитке — только у раздела верхнего уровня (главная, «Каталог»)
+        $tile = null;
+        if (! $category->parent_id) {
+            $tiles = app(CategoryTiles::class);
+            $ids = $this->descendantIds($category);
+            $tile = [
+                'candidates' => $tiles->candidates($ids),
+                'chosen' => $tiles->chosen($category),
+                'url' => $tiles->url($category, $ids),
+            ];
+        }
+
+        return view('admin.category_form', ['category' => $category, 'parents' => $this->parentOptions($category), 'tile' => $tile]);
     }
 
     public function update($id): RedirectResponse
@@ -256,7 +272,55 @@ class AdminCategoryController extends Controller
         // Иконку определяет iconData(): загруженный файл важнее выбранной в сетке
         unset($data['icon'], $data['icon_file']);
 
-        return array_merge($data, $this->iconData($category));
+        $data = array_merge($data, $this->iconData($category));
+
+        // Фото на плитке — только если блок был в форме (раздел верхнего уровня)
+        if (request()->boolean('tile_sent')) {
+            $data['tile_product_id'] = $this->tileProductId();
+        }
+
+        unset($data['tile_product'], $data['tile_sku'], $data['tile_sent']);
+
+        return $data;
+    }
+
+    /**
+     * Товар для плитки: артикул / SKU (точно, без учёта регистра — ArticleSearch) важнее выбора из списка;
+     * товар должен быть на витрине и с фото. Пусто — автоматически (null).
+     */
+    private function tileProductId(): ?int
+    {
+        $shown = fn () => Product::query()->where('is_active', true)->where('is_published', true)->with('mainImage');
+        $sku = trim((string) request('tile_sku'));
+
+        if ($sku !== '') {
+            $found = app(ArticleSearch::class)->whereExact($shown(), $sku)->limit(2)->get();
+
+            $error = match (true) {
+                $found->isEmpty() => "Товар с артикулом или SKU «{$sku}» на витрине не найден",
+                $found->count() > 1 => "Артикул «{$sku}» у нескольких товаров — выберите товар из списка или укажите SKU",
+                ! $found->first()->mainImage => 'У товара нет фото — выберите другой',
+                default => null,
+            };
+
+            if ($error) {
+                throw ValidationException::withMessages(['tile_sku' => $error]);
+            }
+
+            return $found->first()->id;
+        }
+
+        $id = (int) request('tile_product');
+
+        if ($id === 0) {
+            return null;
+        }
+
+        if (! $shown()->whereKey($id)->whereHas('mainImage')->exists()) {
+            throw ValidationException::withMessages(['tile_product' => 'Этот товар не подходит: нужен товар витрины с фото']);
+        }
+
+        return $id;
     }
 
     /**

@@ -1,6 +1,6 @@
 {{--
     Выбор иконки категории (админка, форма категории): поиск по имени и словам, сетка иконок
-    (Material Symbols и свои — CategoryIcons::library(); при поиске группы без подходящих иконок
+    (набор сантехники — CategoryIcons::library(); при поиске группы без подходящих иконок
     скрываются, ничего не нашлось — подсказка), предпросмотр выбранной, «Без иконки»
     и загрузка своей SVG (поле icon_file; форма — multipart). Значение — скрытое поле icon.
     <x-category-icon-picker :category="$category" />
@@ -11,9 +11,9 @@
 @php
     $icons = app(\App\Services\CategoryIcons::class);
     $value = old('icon', $category->icon);
-    $uploaded = $category->icon === \App\Services\CategoryIcons::UPLOAD ? $icons->render('upload', $category->icon_svg, 'h-6 w-6') : null;
+    $uploaded = $category->icon === \App\Services\CategoryIcons::UPLOAD ? $icons->render('upload', $category->icon_svg, 'h-10 w-10') : null;
     $groups = collect($icons->library())->groupBy('set');
-    $titles = ['material' => 'Material Symbols', 'custom' => 'Свои (сантехника)'];
+    $titles = ['plumb' => 'Сантехника'];
 @endphp
 
 <fieldset
@@ -33,14 +33,14 @@
 >
     <legend class="mb-1 font-medium text-ink">Иконка</legend>
     <p class="text-sm text-ink-muted">
-        Плитки на главной и в каталоге, мегаменю. Цвет — из темы сайта. Нет иконки — категория показывается без неё.
+        Мегаменю, чипы подкатегорий, плитки без фото. Цвета — из темы сайта. Нет иконки — категория показывается без неё.
     </p>
 
     <input type="hidden" name="icon" :value="value" value="{{ $value }}">
 
     <div class="flex flex-wrap items-center gap-4">
-        <span class="flex h-16 w-16 items-center justify-center rounded-control border border-line bg-media text-link [&>svg]:h-10 [&>svg]:w-10" x-html="preview()" data-icon-preview aria-hidden="true">
-            @if($value && ($html = $icons->render($value, $category->icon_svg, 'h-10 w-10')))
+        <span class="flex h-16 w-16 items-center justify-center rounded-control border border-line bg-media [&>svg]:h-12 [&>svg]:w-12" x-html="preview()" data-icon-preview aria-hidden="true">
+            @if($value && ($html = $icons->render($value, $category->icon_svg, 'h-12 w-12')))
                 {{ $html }}
             @endif
         </span>
@@ -50,7 +50,7 @@
         </div>
     </div>
 
-    <x-input name="icon_search" type="search" label="Поиск иконки" placeholder="кран, фильтр, сифон, valve…" x-model="q" autocomplete="off" class="max-w-sm" />
+    <x-input name="icon_search" type="search" label="Поиск иконки" placeholder="кран, фильтр, сифон, radiator…" x-model="q" autocomplete="off" class="max-w-sm" />
 
     <div class="max-h-80 space-y-4 overflow-y-auto rounded-control border border-line p-3" data-icon-grid>
         @if($uploaded)
@@ -59,8 +59,8 @@
                 <button type="button" data-icon-option="upload" data-words="upload своя загруженная" title="Загруженная SVG"
                         x-show="matches($el.dataset.words)" @click="value = 'upload'"
                         :aria-pressed="(value === 'upload').toString()"
-                        :class="value === 'upload' ? 'border-primary bg-tone-info-bg text-primary' : 'border-line text-ink hover:border-primary'"
-                        class="flex h-11 w-11 items-center justify-center rounded-control border">
+                        :class="value === 'upload' ? 'border-primary bg-tone-info-bg' : 'border-line hover:border-primary'"
+                        class="flex h-14 w-14 items-center justify-center rounded-control border">
                     {{ $uploaded }}
                 </button>
             </div>
@@ -79,9 +79,9 @@
                                 x-show="matches($el.dataset.words)"
                                 @click="value = '{{ $icon['key'] }}'"
                                 :aria-pressed="(value === '{{ $icon['key'] }}').toString()"
-                                :class="value === '{{ $icon['key'] }}' ? 'border-primary bg-tone-info-bg text-primary' : 'border-line text-ink hover:border-primary'"
-                                class="flex h-11 w-11 items-center justify-center rounded-control border">
-                            {{ $icons->render($icon['key'], null, 'h-6 w-6') }}
+                                :class="value === '{{ $icon['key'] }}' ? 'border-primary bg-tone-info-bg' : 'border-line hover:border-primary'"
+                                class="flex h-14 w-14 items-center justify-center rounded-control border">
+                            {{ $icons->render($icon['key'], null, 'h-10 w-10') }}
                         </button>
                     @endforeach
                 </div>
@@ -92,5 +92,5 @@
     </div>
 
     <x-file name="icon_file" label="Своя SVG" accept=".svg,image/svg+xml"
-            hint="Вместо выбранной выше. До {{ intdiv(\App\Services\CategoryIcons::MAX_UPLOAD, 1024) }} КБ; цвета заменяются цветом темы, скрипты и ссылки удаляются" class="max-w-sm" />
+            hint="Вместо выбранной выше. До {{ intdiv(\App\Services\CategoryIcons::MAX_UPLOAD, 1024) }} КБ; одноцветная — цвет контура темы, скрипты и ссылки удаляются" class="max-w-sm" />
 </fieldset>

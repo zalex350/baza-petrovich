@@ -1,8 +1,9 @@
 {{--
-    Иконка категории (App\Services\CategoryIcons): inline-SVG, цвет — currentColor (задаётся цветом
-    текста родителя или классом), размер — классом. Нет иконки — ничего не выводит.
+    Иконка категории (App\Services\CategoryIcons): inline-SVG набора сантехники (двухцветная, цвета —
+    CSS-переменные --ic-stroke, --ic-fill, --ic-water, --ic-accent) или загруженная (одноцветная),
+    размер — классом. Нет иконки или ключ не из набора — ничего не выводит.
     <x-category-icon :category="$category" class="h-6 w-6" />                     — модель Category
-    <x-category-icon :icon="$node['icon']" :svg="$node['icon_svg']" class="h-5 w-5" />  — узел CatalogMenu
+    <x-category-icon :icon="$node['icon']" :svg="$node['icon_svg']" class="h-6 w-6" />  — узел CatalogMenu
 --}}
 @props(['category' => null, 'icon' => null, 'svg' => null])
 

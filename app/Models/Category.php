@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\Storage;
 
 /**
  * is_hidden — служебная категория («Без категории»): нет в меню и каталоге, товары находятся поиском.
- * icon — иконка (App\Services\CategoryIcons: material:имя | custom:имя | upload), icon_svg — загруженная SVG.
+ * icon — иконка (App\Services\CategoryIcons: plumb:имя | upload), icon_svg — загруженная SVG.
+ * tile_product_id — товар, чьё фото на плитке раздела (App\Services\CategoryTiles), если нет своей картинки.
  */
 class Category extends Model
 {
@@ -24,6 +25,7 @@ class Category extends Model
         'image',
         'icon',
         'icon_svg',
+        'tile_product_id',
     ];
 
     protected $casts = [
@@ -55,6 +57,12 @@ class Category extends Model
     public function children()
     {
         return $this->hasMany(Category::class, 'parent_id')->ordered();
+    }
+
+    /** Товар для плитки раздела (CategoryTiles) */
+    public function tileProduct()
+    {
+        return $this->belongsTo(Product::class, 'tile_product_id');
     }
 
     public function parent()
