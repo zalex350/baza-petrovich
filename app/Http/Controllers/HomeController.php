@@ -24,7 +24,9 @@ class HomeController extends Controller
         // Плитки разделов — из дерева меню (кэш): видимые разделы с товарами в порядке CategoryOrder; фото — CategoryTiles, без фото — иконка
         $categories = $menu->tree();
 
+        // Цена — покупателя (тип цены организации), одним join
         $shown = fn () => Product::with(['mainImage', 'category'])
+            ->withEffectivePrice()
             ->where('is_active', true)
             ->where('is_published', true);
 

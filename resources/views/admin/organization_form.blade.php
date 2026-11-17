@@ -44,6 +44,18 @@
         <x-input name="bank_address" label="Адрес банка" :value="$organization->bank_address" maxlength="255" />
     </fieldset>
 
+    {{-- «Применяемая цена» (PriceContext): клиент название типа не видит; скрытый тип не действует --}}
+    @php($priceTypes = \App\Models\PriceType::query()->ordered()->get())
+    <x-select
+        name="price_type_id"
+        label="Применяемая цена"
+        :options="$priceTypes->mapWithKeys(fn ($t) => [$t->id => $t->label().($t->is_default ? ' — по умолчанию' : '').($t->is_hidden ? ' — скрыт, действует цена по умолчанию' : '')])->all()"
+        :value="$organization->price_type_id"
+        :placeholder="'По умолчанию ('.($priceTypes->firstWhere('is_default', true)?->name ?? '—').')'"
+        hint="Цены клиента на сайте, в корзине, заказах и выгрузках. Нет цены этого типа у товара — цена по умолчанию, нет и её — «Цена уточняется». Клиент название типа не видит."
+        data-price-type
+    />
+
     <x-textarea name="comment" label="Комментарий" :value="$organization->comment" rows="4" />
 
     @if($organization->exists)

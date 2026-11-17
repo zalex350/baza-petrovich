@@ -37,7 +37,7 @@ class CartController extends Controller
      */
     public function index()
     {
-        $cart = auth()->user()->cart()->with('items.product.mainImage')->first();
+        $cart = auth()->user()->cart()->with(['items.product.mainImage', 'items.product.clientPrice'])->first();
         $items = $cart?->items ?? collect();
 
         // «Ваш код» в позициях — коды организации одной выборкой
@@ -375,7 +375,7 @@ class CartController extends Controller
      */
     public function selectAll()
     {
-        $cart = auth()->user()->cart()->with('items.product')->first();
+        $cart = auth()->user()->cart()->with(['items.product.clientPrice'])->first();
         $items = $cart?->items ?? collect();
 
         // «Ваш код» в позициях — коды организации одной выборкой
@@ -453,7 +453,7 @@ class CartController extends Controller
      */
     public function acceptPrices()
     {
-        $cart = auth()->user()->cart()->with('items.product')->first();
+        $cart = auth()->user()->cart()->with(['items.product.clientPrice'])->first();
 
         $validation = $this->validator->validate($cart);
 

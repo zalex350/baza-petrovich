@@ -94,8 +94,10 @@
 
     <div class="max-w-3xl space-y-6">
         <p class="text-sm text-ink-muted">
-            Тот же формат, что присылает 1С (раздел 5 спецификации): колонки <code>guid</code>, <code>sku</code>, <code>price</code>,
-            <code>stock</code>, <code>stock_status</code>, <code>updated_at</code> в любом порядке. CSV с разделителем «;»
+            Тот же формат, что присылает 1С (раздел 5 спецификации): колонки <code>guid</code>, <code>sku</code>, цены по типам
+            <code>price_&lt;код&gt;</code> (<code>price_opt</code>, <code>price_retail</code>…; старая <code>price</code> — то же, что <code>price_opt</code>),
+            <code>stock</code>, <code>stock_status</code>, <code>updated_at</code> в любом порядке. Цены — {{ \App\Support\ExchangeSettings::pricesWithVat() ? 'с НДС (настройка «Цены из 1С с НДС»)' : 'без НДС' }};
+            колонки типа нет — его цены не меняются, новый код — тип создаётся скрытым ({{ '«Типы цен»' }}). CSV с разделителем «;»
             (UTF-8 или Windows-1251 из Excel) или .xlsx (первый лист). Сначала — предпросмотр, база меняется только после «Применить».
             Загрузка попадает в журнал с пометкой «вручную».
         </p>
@@ -284,6 +286,14 @@
                 <x-input :name="$key" type="number" :min="$min" :max="$max" step="1" :label="$label" :value="$settings[$key]" :hint="'По умолчанию — '.$default" required />
             @endforeach
         </div>
+
+        <x-checkbox
+            :name="\App\Support\ExchangeSettings::PRICES_WITH_VAT"
+            label="Цены из 1С с НДС"
+            hint="Цены в файле цен и остатков (price, price_<код>) — с НДС: сайт выделяет НДС по ставке товара (до копеек) и хранит цену без НДС. Снять — если 1С присылает цены без НДС."
+            :checked="\App\Support\ExchangeSettings::pricesWithVat()"
+            data-prices-with-vat
+        />
 
         <x-checkbox
             :name="\App\Support\ExchangeSettings::PENDING_ORDERS_ALERT"

@@ -156,6 +156,8 @@ class AdminOrganizationController extends Controller
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
             'comment' => ['nullable', 'string'],
+            // «Применяемая цена»: пусто — по умолчанию
+            'price_type_id' => ['nullable', 'integer', Rule::exists('price_types', 'id')],
         ], [
             'unp.digits' => 'УНП должен состоять ровно из 9 цифр.',
             'unp.unique' => 'Клиент с таким УНП уже существует.',

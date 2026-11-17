@@ -8,6 +8,7 @@ use App\Models\CategoryFilter;
 use App\Models\Product;
 use App\Models\ProductAttribute;
 use App\Models\ProductAttributeValue;
+use App\Services\Pricing\PriceContext;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -160,6 +161,15 @@ class CatalogListing
 
     // --- Запросы ---
 
+    /** Диапазон цен покупателя в категории (фасет «Цена») */
+    private function priceRange(): ?object
+    {
+        $query = $this->base();
+        $price = app(PriceContext::class)->expression($query);
+
+        return $query->whereRaw("{$price} IS NOT NULL")->toBase()->selectRaw("MIN({$price}) as min, MAX({$price}) as max")->first();
+    }
+
     /**
      * Товары категории с подкатегориями, активные и опубликованные — до фильтров.
      */
@@ -188,12 +198,13 @@ class CatalogListing
 
         [$from, $to] = $s['price'];
 
+        // Цена покупателя (PriceContext): тип цены организации, нет — по умолчанию
         if ($from !== null) {
-            $query->where('products.price', '>=', $from);
+            $query->whereRaw(app(PriceContext::class)->expression($query).' >= CAST(? AS DECIMAL(10,2))', [$from]);
         }
 
         if ($to !== null) {
-            $query->where('products.price', '<=', $to);
+            $query->whereRaw(app(PriceContext::class)->expression($query).' <= CAST(? AS DECIMAL(10,2))', [$to]);
         }
 
         if ($s['stock']) {
@@ -240,14 +251,15 @@ class CatalogListing
      */
     public function products(): LengthAwarePaginator
     {
-        $query = $this->filtered()->select('products.*')->with(['category', 'mainImage']);
+        $query = $this->filtered()->select('products.*')->withEffectivePrice()->with(['category', 'mainImage']);
+        $price = app(PriceContext::class)->expression($query);
 
         match ($this->sort) {
             'name_asc' => $query->orderByRaw("COALESCE(NULLIF(products.display_name, ''), products.name) asc"),
             'name_desc' => $query->orderByRaw("COALESCE(NULLIF(products.display_name, ''), products.name) desc"),
             // Товары без цены — в конце при любом направлении
-            'price_asc' => $query->orderByRaw('products.price IS NULL')->orderBy('products.price'),
-            'price_desc' => $query->orderByRaw('products.price IS NULL')->orderByDesc('products.price'),
+            'price_asc' => $query->orderByRaw("{$price} IS NULL")->orderByRaw("{$price} asc"),
+            'price_desc' => $query->orderByRaw("{$price} IS NULL")->orderByRaw("{$price} desc"),
             'popular' => $query->leftJoinSub($this->popularity(), 'pop', 'pop.product_id', '=', 'products.id')
                 ->orderByRaw('COALESCE(pop.units, 0) desc'),
             default => $query->latest('products.created_at'),
@@ -319,7 +331,7 @@ class CatalogListing
                             'checked' => in_array($r->value, $this->selected['brand'], true)])->all(),
                 ],
                 CategoryFilter::PRICE => $this->rangeFacet('Цена без НДС, BYN', 'price',
-                    $this->base()->whereNotNull('price')->toBase()->selectRaw('MIN(price) as min, MAX(price) as max')->first(),
+                    $this->priceRange(),
                     $this->selected['price']),
                 CategoryFilter::STOCK => [
                     'kind' => 'list',

@@ -263,7 +263,7 @@ class AdminExchangeController extends Controller
             ->map(fn ($f) => ['required', 'integer', "min:{$f[2]}", "max:{$f[3]}"])
             ->all();
 
-        $data = request()->validate($rules + [ExchangeSettings::PENDING_ORDERS_ALERT => ['sometimes', 'boolean']], collect(ExchangeSettings::FIELDS)
+        $data = request()->validate($rules + [ExchangeSettings::PENDING_ORDERS_ALERT => ['sometimes', 'boolean'], ExchangeSettings::PRICES_WITH_VAT => ['sometimes', 'boolean']], collect(ExchangeSettings::FIELDS)
             ->flatMap(fn ($f, $key) => [
                 "{$key}.required" => "«{$f[0]}» — укажите число",
                 "{$key}.integer" => "«{$f[0]}» — целое число",
@@ -272,7 +272,8 @@ class AdminExchangeController extends Controller
             ])->all());
 
         Setting::put(collect(ExchangeSettings::FIELDS)->map(fn ($f, $key) => (string) (int) $data[$key])->all()
-            + [ExchangeSettings::PENDING_ORDERS_ALERT => request()->boolean(ExchangeSettings::PENDING_ORDERS_ALERT) ? '1' : '0']);
+            + [ExchangeSettings::PENDING_ORDERS_ALERT => request()->boolean(ExchangeSettings::PENDING_ORDERS_ALERT) ? '1' : '0']
+            + [ExchangeSettings::PRICES_WITH_VAT => request()->boolean(ExchangeSettings::PRICES_WITH_VAT) ? '1' : '0']);
 
         return redirect('/admin/exchange?tab=settings')->with('success', 'Настройки обмена сохранены');
     }

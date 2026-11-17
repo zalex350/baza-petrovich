@@ -21,7 +21,10 @@
     $limit = \App\Services\Exchange\ManualPricesUpload::PREVIEW_LIMIT;
     $title = fn ($id) => $products->get($id)?->title() ?? '—';
     $sku = fn ($id) => $products->get($id)?->sku ?? '—';
-    $money = fn ($price) => $price === null ? 'Цена уточняется' : money((float) $price);
+    $money = fn ($price) => $price === null ? '—' : money((float) $price);
+    // Названия типов цен для колонок (новые типы — по коду)
+    $typeNames = \App\Models\PriceType::query()->pluck('name', 'code');
+    $withVat = \App\Support\ExchangeSettings::pricesWithVat();
 @endphp
 
 @if($failed)
@@ -31,6 +34,26 @@
 @else
 
     @php $r = $plan->result; @endphp
+
+    <p class="mb-4 text-sm text-ink-muted" data-preview-price-codes>
+        @if($plan->priceCodes)
+            Цены в файле: {{ collect($plan->priceCodes)->map(fn ($c) => ($typeNames[$c] ?? $c)." ({$c})")->implode(', ') }}.
+            {{ $withVat ? 'Цены в файле — с НДС: ниже — без НДС, выделенный по ставке товара.' : 'Цены в файле — без НДС (настройка «Цены из 1С с НДС» выключена).' }}
+            Типов, которых нет в файле, загрузка не меняет.
+        @else
+            Колонок цен в файле нет — цены не меняются, только остатки.
+        @endif
+    </p>
+
+    @if($r->warnings)
+        <x-alert type="warning" title="Предупреждения" class="mb-6" data-preview-warnings>
+            <ul class="list-disc space-y-1 pl-5">
+                @foreach($r->warnings as $warning)
+                    <li>{{ $warning['message'] }}</li>
+                @endforeach
+            </ul>
+        </x-alert>
+    @endif
 
     <dl class="mb-6 grid gap-4 sm:grid-cols-3 lg:grid-cols-6" data-preview-summary>
         @foreach([
@@ -54,7 +77,9 @@
             <x-slot:head>
                 <x-table.th>SKU</x-table.th>
                 <x-table.th>Товар</x-table.th>
-                <x-table.th>Цена без НДС</x-table.th>
+                @foreach($plan->priceCodes as $code)
+                    <x-table.th>{{ $typeNames[$code] ?? $code }}, без НДС</x-table.th>
+                @endforeach
                 <x-table.th>Остаток 1С</x-table.th>
                 <x-table.th>Под заказ</x-table.th>
             </x-slot:head>
@@ -62,9 +87,13 @@
                 <tr data-preview-updated="{{ $id }}">
                     <x-table.td label="SKU" nowrap>{{ $sku($id) }}</x-table.td>
                     <x-table.td label="Товар">{{ $title($id) }}</x-table.td>
-                    <x-table.td label="Цена без НДС" nowrap>
-                        @if($b['price'] !== $a['price']){{ $money($b['price']) }} → <strong>{{ $money($a['price']) }}</strong>@else {{ $money($a['price']) }} @endif
-                    </x-table.td>
+                    @foreach($plan->priceCodes as $code)
+                        @php($was = $b['prices'][$code] ?? null)
+                        @php($will = $a['prices'][$code] ?? null)
+                        <x-table.td :label="($typeNames[$code] ?? $code).', без НДС'" nowrap data-preview-price="{{ $code }}">
+                            @if($was !== $will){{ $money($was) }} → <strong>{{ $money($will) }}</strong>@else {{ $money($will) }} @endif
+                        </x-table.td>
+                    @endforeach
                     <x-table.td label="Остаток 1С" nowrap>
                         @if($b['stock_1c'] !== $a['stock_1c']){{ $b['stock_1c'] }} → <strong>{{ $a['stock_1c'] }}</strong>@else {{ $a['stock_1c'] }} @endif
                     </x-table.td>

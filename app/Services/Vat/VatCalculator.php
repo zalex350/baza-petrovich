@@ -38,6 +38,21 @@ class VatCalculator
     }
 
     /**
+     * Цена без НДС из цены с НДС (цены 1С приходят с НДС): цена с НДС / (1 + ставка), до копеек.
+     * «Без НДС» (null) и 0 % — та же цена. Результат — строка «832.26».
+     */
+    public static function netFromGross($gross, $rate): string
+    {
+        $rate = self::normalizeRate($rate);
+        $kopecks = self::toKopecks($gross);
+
+        // В целых: ставка в сотых долях процента (10,5 % → 1050)
+        $net = $rate === null || $rate == 0 ? $kopecks : (int) round($kopecks * 10000 / (10000 + (int) round($rate * 100)));
+
+        return number_format($net / 100, 2, '.', '');
+    }
+
+    /**
      * @param  iterable<VatLine>  $lines
      */
     public function total(iterable $lines): VatTotal
@@ -63,7 +78,7 @@ class VatCalculator
             return 'Без НДС';
         }
 
-        return rtrim(rtrim(number_format($rate, 2, ',', ''), '0'), ',') . '%';
+        return rtrim(rtrim(number_format($rate, 2, ',', ''), '0'), ',').'%';
     }
 
     /**

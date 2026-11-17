@@ -7,14 +7,15 @@ use App\Http\Controllers\Admin\AdminCategoryController;
 use App\Http\Controllers\Admin\AdminClientCodeController;
 use App\Http\Controllers\Admin\AdminDeliveryAddressController;
 use App\Http\Controllers\Admin\AdminExchangeController;
+use App\Http\Controllers\Admin\AdminImageImportController;
 use App\Http\Controllers\Admin\AdminNewFrom1cController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminOrganizationController;
 use App\Http\Controllers\Admin\AdminPageController;
 use App\Http\Controllers\Admin\AdminPartnerRequestController;
+use App\Http\Controllers\Admin\AdminPriceTypeController;
 use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminProductDocumentController;
-use App\Http\Controllers\Admin\AdminImageImportController;
 use App\Http\Controllers\Admin\AdminProductImageController;
 use App\Http\Controllers\Admin\AdminSearchSynonymController;
 use App\Http\Controllers\Admin\AdminSettingsController;
@@ -137,6 +138,12 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     );
 
     // Массовая загрузка фото: ZIP или CSV «код;ссылка» → предпросмотр → очередь; журнал (BulkImages)
+    // Типы цен: справочник, «по умолчанию» (PriceTypes)
+    Route::get('/admin/price-types', [AdminPriceTypeController::class, 'index']);
+    Route::post('/admin/price-types', [AdminPriceTypeController::class, 'store']);
+    Route::post('/admin/price-type/{id}', [AdminPriceTypeController::class, 'update'])->whereNumber('id');
+    Route::post('/admin/price-type/{id}/default', [AdminPriceTypeController::class, 'makeDefault'])->whereNumber('id');
+
     Route::get('/admin/products/images-import', [AdminImageImportController::class, 'index']);
     Route::post('/admin/products/images-import', [AdminImageImportController::class, 'upload']);
     Route::get('/admin/products/images-import/{id}', [AdminImageImportController::class, 'show'])->whereNumber('id');

@@ -76,6 +76,16 @@
         <dt class="text-slate-500">Email</dt>
         <dd>{{ $organization->email ?? '—' }}</dd>
 
+        <dt class="text-slate-500">Применяемая цена</dt>
+        <dd data-price-type>
+            @if($organization->priceType)
+                {{ $organization->priceType->label() }}
+                @if($organization->priceType->is_hidden)<span class="text-ink-muted"> — скрыт, действует цена по умолчанию</span>@endif
+            @else
+                По умолчанию
+            @endif
+        </dd>
+
         <dt class="text-slate-500">Комментарий</dt>
         <dd class="whitespace-pre-line">{{ $organization->comment ?? '—' }}</dd>
 
