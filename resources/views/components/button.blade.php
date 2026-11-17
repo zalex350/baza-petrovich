@@ -13,7 +13,7 @@
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
         'disabled:opacity-50 disabled:cursor-not-allowed',
         match ($variant) {
-            'primary'   => 'bg-primary text-white hover:bg-primary-hover',
+            'primary'   => 'bg-accent text-accent-fg font-semibold hover:bg-accent-hover',
             'secondary' => 'border border-line-control bg-surface text-primary hover:bg-field',
             'danger'    => 'bg-danger text-white hover:bg-danger-hover focus-visible:ring-danger',
             'link'      => 'text-link underline underline-offset-2 hover:text-link-hover',

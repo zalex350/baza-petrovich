@@ -22,6 +22,6 @@ class CancelRequestNotification extends AdminOrderNotification
             ->line('**Причина:** '.self::text($order->cancel_reason))
             ->line('Подтвердите отмену или отклоните запрос в карточке заказа.')
             ->action('Открыть заказ в админке', $this->orderUrl())
-            ->salutation('smesitel.by');
+            ->salutation(config('shop.name'));
     }
 }

@@ -23,13 +23,13 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                // Inter подключается из Google Fonts в layouts (app, admin, guest)
-                sans: ['Inter', ...defaultTheme.fontFamily.sans],
+                // Manrope подключается из Google Fonts в layouts (app, admin, guest)
+                sans: ['Manrope', ...defaultTheme.fontFamily.sans],
             },
 
             colors: {
                 // Основа: фон страницы, поверхность карточек, граница, текст
-                canvas: '#F5F6F8',
+                canvas: '#F6F7F9',
                 surface: '#FFFFFF',
                 line: {
                     DEFAULT: '#E3E6EB',
@@ -51,26 +51,36 @@ export default {
                 // Фон поля поиска, шапки таблиц, кнопок «−/+»
                 field: '#F9FAFB',
                 ink: {
-                    DEFAULT: '#111827',
+                    DEFAULT: '#1A1F2B',
                     muted: '#5B6472',
                 },
                 link: {
-                    DEFAULT: '#1D5FD1',
-                    hover: '#174BA6',
+                    DEFAULT: '#1F5FBF',
+                    hover: '#174A96',
                 },
 
+                // Графит «Петровича»: шапка, текст на кнопках-контурах, фокус
                 primary: {
-                    DEFAULT: '#1E2B45',
-                    hover: '#2C3D5E',
+                    DEFAULT: '#1A1F2B',
+                    hover: '#2A3142',
                     // Текст на тёмном фоне (верхняя полоса шапки)
-                    fg: '#DDE3EE',
+                    fg: '#D9DEE7',
+                },
+                // Фирменный жёлтый: главные кнопки («В корзину», «Оформить»), счётчик корзины, знак логотипа
+                accent: {
+                    DEFAULT: '#FFC93C',
+                    hover: '#F5B800',
+                    // Текст на жёлтом
+                    fg: '#1A1F2B',
+                    // Светлая подложка (плашки, выделение)
+                    soft: '#FFF6DB',
                 },
                 danger: {
                     DEFAULT: '#B42318',
                     hover: '#912018',
                 },
                 // Яркие смысловые цвета (индикатор наличия, иконки); текст на светлом фоне — tone.*.text
-                success: '#1F8A4C',
+                success: '#2E9E6A',
                 warning: '#C27803',
 
                 // Нейтральные/смысловые тона: бейджи, алерты, пустые состояния
@@ -87,8 +97,8 @@ export default {
                 badge: {
                     hit: tone('#FDECEC', '#9B1C1C'),
                     new: tone('#E8EEF9', '#1E3A8A'),
-                    // «%» — акция
-                    promo: tone('#FDF0E1', '#9A3412'),
+                    // «%» / «−15%» — акция и скидка
+                    promo: tone('#E5484D', '#FFFFFF'),
                 },
 
                 // Единая карта цветов статусов заказа (App\Enums\OrderStatus::color())

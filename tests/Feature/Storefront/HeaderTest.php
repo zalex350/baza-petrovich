@@ -102,12 +102,12 @@ class HeaderTest extends TestCase
             ->assertSee('Контакты');
     }
 
-    public function test_brands_renamed_to_manufacturers(): void
+    public function test_services_link_instead_of_manufacturers(): void
     {
         $this->get('/')
-            ->assertSee('Производители')
-            ->assertSee('href="#brands"', false)
-            ->assertDontSee('Бренды');
+            ->assertSee('data-services-link', false)
+            ->assertSee('href="/uslugi"', false)
+            ->assertDontSee('Производители');
     }
 
     public function test_header_has_catalog_search_cart_and_mobile_controls(): void
@@ -223,7 +223,7 @@ class HeaderTest extends TestCase
 
     public function test_active_catalog_section_is_highlighted(): void
     {
-        $active = '#bg-link text-white[^>]*data-mega-button#s';
+        $active = '#bg-accent text-accent-fg[^>]*data-mega-button#s';
 
         $this->assertMatchesRegularExpression($active, $this->get('/catalog')->assertOk()->getContent());
         $this->assertDoesNotMatchRegularExpression($active, $this->get('/')->getContent());

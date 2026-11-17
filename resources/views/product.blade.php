@@ -115,9 +115,12 @@
 
                 {{-- Эффективный минимум: min_qty, округлённый вверх до кратности (OrderQuantity) --}}
                 @php($qtyRule = \App\Support\OrderQuantity::for($product))
-                <div class="text-meta text-ink-muted" data-qty-rules>
-                    Мин. заказ {{ $qtyRule->first }} шт. · кратность {{ $qtyRule->step }} шт.
-                </div>
+                {{-- Розница: без особых правил (1 / 1) строка не нужна; единица — товара --}}
+                @if(! config('shop.retail') || $qtyRule->first > 1 || $qtyRule->step > 1)
+                    <div class="text-meta text-ink-muted" data-qty-rules>
+                        Мин. заказ {{ $qtyRule->first }} {{ unit_label($product->unit) }} · кратность {{ $qtyRule->step }} {{ unit_label($product->unit) }}
+                    </div>
+                @endif
 
             </section>
 

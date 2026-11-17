@@ -34,13 +34,13 @@ class UserInvitation extends ResetPassword
     protected function buildMailMessage($url): MailMessage
     {
         return (new MailMessage)
-            ->subject('Приглашение на smesitel.by')
+            ->subject('Приглашение на сайт '.config('shop.name'))
             ->greeting('Здравствуйте!')
-            ->line('Для вас создана учётная запись на smesitel.by.')
+            ->line('Для вас создана учётная запись на сайте '.config('shop.name').'.')
             ->line('Чтобы войти, установите пароль по ссылке ниже.')
             ->action('Установить пароль', $url)
             ->line('Ссылка действительна '.self::expireText().'. Если срок истёк, попросите менеджера отправить приглашение ещё раз или воспользуйтесь восстановлением пароля на странице входа.')
-            ->salutation('Команда smesitel.by');
+            ->salutation('Команда '.config('shop.name'));
     }
 
     /**

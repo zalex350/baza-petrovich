@@ -40,7 +40,7 @@ class NewOrderNotification extends AdminOrderNotification
 
         return $mail
             ->action('Открыть заказ в админке', $this->orderUrl())
-            ->salutation('smesitel.by');
+            ->salutation(config('shop.name'));
     }
 
     /**

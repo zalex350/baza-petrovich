@@ -53,6 +53,6 @@ class ExchangeAlertNotification extends Notification implements ShouldQueue
             $mail->line($line);
         }
 
-        return $mail->action('Открыть журнал обмена', $this->url)->salutation('smesitel.by');
+        return $mail->action('Открыть журнал обмена', $this->url)->salutation(config('shop.name'));
     }
 }

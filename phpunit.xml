@@ -22,6 +22,7 @@
         <!-- Тесты наследия smesitel.by проверяют номера SM-… и подписи с прежним именем -->
         <env name="SHOP_ORDER_PREFIX" value="SM"/>
         <env name="SHOP_NAME" value="SMESITEL.BY"/>
+        <env name="SHOP_TAGLINE" value=""/>
         <env name="APP_LOCALE" value="ru"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

@@ -10,6 +10,9 @@ return [
 
     'name' => env('SHOP_NAME', 'Петрович'),
 
+    // Подпись под логотипом
+    'tagline' => env('SHOP_TAGLINE', 'металлобаза'),
+
     // Префикс номера заказа: BP-2026-000001
     'order_prefix' => env('SHOP_ORDER_PREFIX', 'BP'),
 
@@ -17,9 +20,9 @@ return [
     // начальные для переноса миграцией 2026_10_30_100000_move_contacts_to_settings
     'phone' => env('SHOP_PHONE', '+375 (29) 000-00-00'),
 
-    'email' => env('SHOP_EMAIL', 'info@smesitel.by'),
+    'email' => env('SHOP_EMAIL', 'snab@baza-petrovich.by'),
 
-    'working_hours' => env('SHOP_WORKING_HOURS', 'Пн–Пт 9:00–18:00'),
+    'working_hours' => env('SHOP_WORKING_HOURS', 'Пн–Пт 9:00–17:30'),
 
     /*
     | Розница (baza-petrovich.by): цены видны всем без входа, гость кладёт товары в корзину

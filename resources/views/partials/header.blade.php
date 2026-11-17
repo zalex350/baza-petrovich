@@ -19,8 +19,8 @@
     $mainMenu = [
         ['label' => 'Главная', 'url' => '/', 'active' => request()->is('/')],
         ['label' => 'Каталог', 'url' => route('catalog.index', [], false), 'active' => $isCatalog],
+        ['label' => 'Услуги', 'url' => '/uslugi', 'active' => request()->is('uslugi*')],
         ['label' => 'Акции', 'url' => '/promo', 'active' => request()->is('promo')],
-        ['label' => 'Новинки', 'url' => '/new', 'active' => request()->is('new')],
         ['label' => 'Доставка и оплата', 'url' => '/delivery', 'active' => request()->is('delivery')],
         ['label' => 'О компании', 'url' => '/about', 'active' => request()->is('about')],
         ['label' => 'Контакты', 'url' => '/contacts', 'active' => request()->is('contacts')],
@@ -64,6 +64,7 @@
             </div>
 
             <nav class="flex items-center gap-5" aria-label="Информация">
+                <a href="{{ route('lead.create', ['type' => 'callback']) }}" class="font-semibold text-accent hover:text-white" data-callback-link>Обратный звонок</a>
                 <a href="/delivery" class="hover:text-white">Доставка</a>
                 <a href="/contacts" class="hover:text-white">Контакты</a>
             </nav>
@@ -84,10 +85,11 @@
             @include('partials.header.search', ['id' => 'desktop'])
 
             <a
-                href="#brands"
+                href="/uslugi"
                 class="font-medium text-ink hover:text-link shrink-0"
+                data-services-link
             >
-                Производители
+                Услуги
             </a>
 
             {{-- Корзина --}}
@@ -106,7 +108,7 @@
                 <span class="relative">
                     @svg('heroicon-o-shopping-cart', $iconClass)
                     {{-- Пустая корзина — счётчик скрыт; cart-actions.js показывает его после «В корзину» --}}
-                    <span class="absolute -top-2 -right-2.5 min-w-4 px-1.5 rounded-full bg-link text-white text-counter font-bold text-center tabular-nums" data-cart-count @if($cartSummary['count'] < 1) hidden @endif>{{ $cartSummary['count'] }}</span>
+                    <span class="absolute -top-2 -right-2.5 min-w-4 px-1.5 rounded-full bg-accent text-accent-fg text-counter font-bold text-center tabular-nums" data-cart-count @if($cartSummary['count'] < 1) hidden @endif>{{ $cartSummary['count'] }}</span>
                 </span>
                 {{-- На 1024px подписи скрыты, чтобы поиску хватило ширины --}}
                 <span class="leading-tight hidden xl:block">
@@ -124,7 +126,7 @@
             {{-- Пользователь --}}
             @guest
 
-                <x-button variant="secondary" size="sm" href="/partner" class="shrink-0" data-partner-link>Стать партнёром</x-button>
+                <x-button variant="secondary" size="sm" href="/partner" class="shrink-0" data-partner-link>Оптовым клиентам</x-button>
 
                 <a
                     href="{{ route('login') }}"

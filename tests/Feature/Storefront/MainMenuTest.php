@@ -15,7 +15,7 @@ class MainMenuTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const ITEMS = ['Главная', 'Каталог', 'Акции', 'Новинки', 'Доставка и оплата', 'О компании', 'Контакты'];
+    private const ITEMS = ['Главная', 'Каталог', 'Услуги', 'Акции', 'Доставка и оплата', 'О компании', 'Контакты'];
 
     public function test_menu_has_all_items_in_order(): void
     {
@@ -28,7 +28,7 @@ class MainMenuTest extends TestCase
 
     public function test_active_item_is_highlighted(): void
     {
-        foreach (['/' => 'Главная', '/promo' => 'Акции', '/new' => 'Новинки', '/delivery' => 'Доставка и оплата', '/about' => 'О компании', '/contacts' => 'Контакты', '/catalog' => 'Каталог'] as $url => $label) {
+        foreach (['/' => 'Главная', '/promo' => 'Акции', '/uslugi' => 'Услуги', '/delivery' => 'Доставка и оплата', '/about' => 'О компании', '/contacts' => 'Контакты', '/catalog' => 'Каталог'] as $url => $label) {
             $menu = $this->between($this->get($url)->assertOk()->getContent(), 'data-main-menu', '</nav>');
 
             $this->assertMatchesRegularExpression('#aria-current="page"\s*>'.preg_quote($label, '#').'</a>#u', $menu, $url);
@@ -46,7 +46,7 @@ class MainMenuTest extends TestCase
 
     public function test_partner_button_only_for_guest(): void
     {
-        $this->get('/')->assertSee('href="/partner"', false)->assertSee('Стать партнёром');
+        $this->get('/')->assertSee('href="/partner"', false)->assertSee('Оптовым клиентам');
 
         $client = User::factory()->create(['organization_id' => Organization::factory()->create()->id]);
 

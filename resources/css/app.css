@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Шрифт Inter (layouts) и табличные цифры: цены, количества и остатки не «прыгают» по ширине */
+/* Шрифт Manrope (layouts) и табличные цифры: цены, количества и остатки не «прыгают» по ширине */
 @layer base {
     /*
      * Цвета иконок категорий (resources/icons/plumb, App\Services\CategoryIcons): контур, заливка деталей,
@@ -10,10 +10,10 @@
      * Те же значения — по умолчанию в самих SVG (var(--ic-…, цвет)).
      */
     :root {
-        --ic-stroke: #1E2B45;
-        --ic-fill: #DCE8FB;
-        --ic-water: #1D5FD1;
-        --ic-accent: #F59E0B;
+        --ic-stroke: #1A1F2B;
+        --ic-fill: #FFF1C7;
+        --ic-water: #5B6472;
+        --ic-accent: #FFC93C;
     }
 
     body {

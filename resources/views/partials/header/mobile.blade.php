@@ -36,7 +36,7 @@
                 @class(['relative w-touch h-touch -mr-2.5 flex items-center justify-center', 'text-link' => $isCart, 'text-primary' => ! $isCart])
             >
                 @svg('heroicon-o-shopping-cart', 'w-6 h-6')
-                <span class="absolute top-1 right-0.5 min-w-4 px-1.5 rounded-full bg-link text-white text-counter font-bold text-center tabular-nums" data-cart-count-mobile @if($cartSummary['count'] < 1) hidden @endif>{{ $cartSummary['count'] }}</span>
+                <span class="absolute top-1 right-0.5 min-w-4 px-1.5 rounded-full bg-accent text-accent-fg text-counter font-bold text-center tabular-nums" data-cart-count-mobile @if($cartSummary['count'] < 1) hidden @endif>{{ $cartSummary['count'] }}</span>
             </a>
 
         </div>
@@ -103,9 +103,14 @@
                     >{{ $item['label'] }}</a>
                 @endforeach
 
-                <a href="#brands" @click="closePanel()" class="flex items-center gap-3 px-4 py-3 hover:bg-canvas">
-                    @svg('heroicon-o-tag', 'w-5 h-5 text-ink-muted')
-                    Производители
+                <a href="/uslugi" class="flex items-center gap-3 px-4 py-3 hover:bg-canvas" data-services-link>
+                    @svg('heroicon-o-wrench-screwdriver', 'w-5 h-5 text-ink-muted')
+                    Услуги
+                </a>
+
+                <a href="{{ route('lead.create', ['type' => 'callback']) }}" class="flex items-center gap-3 px-4 py-3 hover:bg-canvas" data-callback-link>
+                    @svg('heroicon-o-phone-arrow-down-left', 'w-5 h-5 text-ink-muted')
+                    Обратный звонок
                 </a>
 
                 <div class="my-2 border-t border-line"></div>
@@ -119,7 +124,7 @@
 
                     <a href="/partner" class="flex items-center gap-3 px-4 py-3 hover:bg-canvas" data-partner-link>
                         @svg('heroicon-o-briefcase', 'w-5 h-5 text-ink-muted')
-                        Стать партнёром
+                        Оптовым клиентам
                     </a>
 
                 @else

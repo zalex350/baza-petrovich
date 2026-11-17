@@ -21,6 +21,7 @@ class AdminUserTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private Organization $org;
 
     protected function setUp(): void
@@ -34,13 +35,13 @@ class AdminUserTest extends TestCase
     private function payload(array $overrides = []): array
     {
         return array_merge([
-            'name'            => 'Иванов Иван Иванович',
-            'email'           => 'ivanov@santeh.by',
-            'phone'           => '+375 29 111-22-33',
-            'role'            => 'client',
+            'name' => 'Иванов Иван Иванович',
+            'email' => 'ivanov@santeh.by',
+            'phone' => '+375 29 111-22-33',
+            'role' => 'client',
             'organization_id' => $this->org->id,
-            'password_mode'   => 'manual',
-            'password'        => 'Secret-pass-123',
+            'password_mode' => 'manual',
+            'password' => 'Secret-pass-123',
         ], $overrides);
     }
 
@@ -49,15 +50,15 @@ class AdminUserTest extends TestCase
     public static function urlsProvider(): array
     {
         return [
-            'список'          => ['get', '/admin/users'],
-            'форма'           => ['get', '/admin/user/create'],
-            'создание'        => ['post', '/admin/user'],
-            'карточка'        => ['get', '/admin/user/{id}'],
-            'редактирование'  => ['get', '/admin/user/{id}/edit'],
-            'сохранение'      => ['post', '/admin/user/{id}'],
-            'блокировка'      => ['post', '/admin/user/{id}/block'],
-            'разблокировка'   => ['post', '/admin/user/{id}/unblock'],
-            'сброс пароля'    => ['post', '/admin/user/{id}/reset-password'],
+            'список' => ['get', '/admin/users'],
+            'форма' => ['get', '/admin/user/create'],
+            'создание' => ['post', '/admin/user'],
+            'карточка' => ['get', '/admin/user/{id}'],
+            'редактирование' => ['get', '/admin/user/{id}/edit'],
+            'сохранение' => ['post', '/admin/user/{id}'],
+            'блокировка' => ['post', '/admin/user/{id}/block'],
+            'разблокировка' => ['post', '/admin/user/{id}/unblock'],
+            'сброс пароля' => ['post', '/admin/user/{id}/reset-password'],
             'новая ссылка приглашения' => ['post', '/admin/user/{id}/invitation'],
         ];
     }
@@ -114,8 +115,8 @@ class AdminUserTest extends TestCase
     public static function searchProvider(): array
     {
         return [
-            'по ФИО'         => ['Петров'],
-            'по email'       => ['petrov@'],
+            'по ФИО' => ['Петров'],
+            'по email' => ['petrov@'],
             'по организации' => ['Сантехторг'],
         ];
     }
@@ -228,8 +229,8 @@ class AdminUserTest extends TestCase
             $this->assertTrue(Password::broker(UserInvitation::BROKER)->tokenExists($user, $notification->token));
 
             $mail = $notification->toMail($user);
-            $this->assertSame('Приглашение на smesitel.by', $mail->subject);
-            $this->assertStringContainsString('smesitel.by', implode(' ', $mail->introLines));
+            $this->assertSame('Приглашение на сайт '.config('shop.name'), $mail->subject);
+            $this->assertStringContainsString(config('shop.name'), implode(' ', $mail->introLines));
             $this->assertSame('Установить пароль', $mail->actionText);
             $this->assertStringContainsString($notification->token, $mail->actionUrl);
 
@@ -254,10 +255,10 @@ class AdminUserTest extends TestCase
         });
 
         $this->post('/reset-password', [
-            'invite'                => 1,
-            'token'                 => $token,
-            'email'                 => 'ivanov@santeh.by',
-            'password'              => 'My-new-pass-123',
+            'invite' => 1,
+            'token' => $token,
+            'email' => 'ivanov@santeh.by',
+            'password' => 'My-new-pass-123',
             'password_confirmation' => 'My-new-pass-123',
         ])->assertSessionHasNoErrors();
 
@@ -353,10 +354,10 @@ class AdminUserTest extends TestCase
 
         $this->actingAs($this->admin)
             ->post("/admin/user/{$user->id}", [
-                'name'            => 'Новое ФИО',
-                'email'           => 'new@santeh.by',
-                'phone'           => '+375 44 000-00-00',
-                'role'            => 'client',
+                'name' => 'Новое ФИО',
+                'email' => 'new@santeh.by',
+                'phone' => '+375 44 000-00-00',
+                'role' => 'client',
                 'organization_id' => $newOrg->id,
             ])
             ->assertRedirect("/admin/user/{$user->id}");
@@ -372,17 +373,17 @@ class AdminUserTest extends TestCase
     {
         $user = User::factory()->create(['organization_id' => $this->org->id]);
         $order = Order::create([
-            'user_id'         => $user->id,
+            'user_id' => $user->id,
             'organization_id' => $this->org->id,
-            'status'          => OrderStatus::New,
-            'total'           => 150,
+            'status' => OrderStatus::New,
+            'total' => 150,
         ]);
         $newOrg = Organization::factory()->create();
 
         $this->actingAs($this->admin)->post("/admin/user/{$user->id}", [
-            'name'            => $user->name,
-            'email'           => $user->email,
-            'role'            => 'admin',
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => 'admin',
             'organization_id' => $newOrg->id,
         ])->assertSessionHasNoErrors();
 
@@ -398,9 +399,9 @@ class AdminUserTest extends TestCase
         $user = User::factory()->create(['organization_id' => $this->org->id]);
 
         $this->actingAs($this->admin)->post("/admin/user/{$user->id}", [
-            'name'            => $user->name,
-            'email'           => $user->email,
-            'role'            => 'client',
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => 'client',
             'organization_id' => '',
         ])->assertSessionHasErrors('organization_id');
 
@@ -412,9 +413,9 @@ class AdminUserTest extends TestCase
         $user = User::factory()->create(['email' => 'same@santeh.by', 'organization_id' => $this->org->id]);
 
         $this->actingAs($this->admin)->post("/admin/user/{$user->id}", [
-            'name'            => 'Имя',
-            'email'           => 'same@santeh.by',
-            'role'            => 'client',
+            'name' => 'Имя',
+            'email' => 'same@santeh.by',
+            'role' => 'client',
             'organization_id' => $this->org->id,
         ])->assertSessionHasNoErrors();
     }
@@ -424,9 +425,9 @@ class AdminUserTest extends TestCase
         $this->actingAs($this->admin)
             ->from("/admin/user/{$this->admin->id}/edit")
             ->post("/admin/user/{$this->admin->id}", [
-                'name'            => $this->admin->name,
-                'email'           => $this->admin->email,
-                'role'            => 'client',
+                'name' => $this->admin->name,
+                'email' => $this->admin->email,
+                'role' => 'client',
                 'organization_id' => $this->org->id,
             ])
             ->assertRedirect("/admin/user/{$this->admin->id}/edit")
@@ -438,9 +439,9 @@ class AdminUserTest extends TestCase
     public function test_admin_can_edit_own_profile_keeping_role(): void
     {
         $this->actingAs($this->admin)->post("/admin/user/{$this->admin->id}", [
-            'name'  => 'Админ Переименован',
+            'name' => 'Админ Переименован',
             'email' => $this->admin->email,
-            'role'  => 'admin',
+            'role' => 'admin',
         ])->assertSessionHasNoErrors();
 
         $this->assertSame('Админ Переименован', $this->admin->fresh()->name);
@@ -451,9 +452,9 @@ class AdminUserTest extends TestCase
         $other = User::factory()->admin()->create();
 
         $this->actingAs($this->admin)->post("/admin/user/{$other->id}", [
-            'name'            => $other->name,
-            'email'           => $other->email,
-            'role'            => 'client',
+            'name' => $other->name,
+            'email' => $other->email,
+            'role' => 'client',
             'organization_id' => $this->org->id,
         ])->assertSessionHasNoErrors();
 

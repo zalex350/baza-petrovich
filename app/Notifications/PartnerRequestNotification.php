@@ -57,6 +57,6 @@ class PartnerRequestNotification extends Notification implements ShouldQueue
             ->line('**Email:** '.self::text($r->email))
             ->line('**Комментарий:** '.self::text($r->comment))
             ->action('Открыть заявки в админке', url('/admin/partners'))
-            ->salutation('smesitel.by');
+            ->salutation(config('shop.name'));
     }
 }

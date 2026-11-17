@@ -137,7 +137,7 @@ class CategoryIconsTest extends TestCase
     {
         $css = file_get_contents(resource_path('css/app.css'));
 
-        foreach (['--ic-stroke: #1E2B45', '--ic-fill: #DCE8FB', '--ic-water: #1D5FD1', '--ic-accent: #F59E0B'] as $var) {
+        foreach (['--ic-stroke: #1A1F2B', '--ic-fill: #FFF1C7', '--ic-water: #5B6472', '--ic-accent: #FFC93C'] as $var) {
             $this->assertStringContainsString($var, $css);
         }
     }

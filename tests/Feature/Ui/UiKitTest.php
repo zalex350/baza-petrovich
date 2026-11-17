@@ -20,7 +20,7 @@ class UiKitTest extends TestCase
     {
         $this->blade('<x-button>Сохранить</x-button>')
             ->assertSee('<button type="submit"', false)
-            ->assertSee('bg-primary', false)
+            ->assertSee('bg-accent', false)
             ->assertSee('px-btn-x py-btn-y', false);
 
         $this->blade('<x-button variant="danger" size="sm" type="button">Удалить</x-button>')

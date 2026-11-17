@@ -28,7 +28,7 @@
         :aria-expanded="open.toString()"
         @class([
             'flex items-center gap-2.5 h-touch px-4 rounded-control font-semibold transition',
-            'bg-link text-white' => $isCatalog,
+            'bg-accent text-accent-fg' => $isCatalog,
             'bg-primary hover:bg-primary-hover text-white' => ! $isCatalog,
         ])
         :class="open && 'ring-2 ring-link/30'"
