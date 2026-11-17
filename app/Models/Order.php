@@ -162,7 +162,7 @@ class Order extends Model
     }
 
     /**
-     * Следующий номер заказа вида SM-ГГГГ-000001 (BR-132), сквозной в пределах года.
+     * Следующий номер заказа вида BP-ГГГГ-000001 (префикс — shop.order_prefix; BR-132), сквозной в пределах года.
      * Вызывать только внутри транзакции, создающей заказ: upsert атомарно увеличивает
      * счётчик года и держит его строку до коммита, поэтому параллельные оформления
      * получают разные номера, а при откате номер не теряется.
@@ -180,6 +180,6 @@ class Order extends Model
 
         $next = (int) DB::table('order_sequences')->where('year', $year)->value('last_number');
 
-        return sprintf('SM-%d-%06d', $year, $next);
+        return sprintf('%s-%d-%06d', config('shop.order_prefix', 'BP'), $year, $next);
     }
 }

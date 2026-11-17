@@ -4,11 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\ExchangeJobType;
 use App\Exceptions\ExchangeApiException;
+use App\Exceptions\OrderExchangeException;
 use App\Http\Controllers\Controller;
 use App\Models\ExchangeJob;
+use App\Models\Order;
 use App\Services\Exchange\ExchangeJobs;
 use App\Services\Exchange\ExchangeUpload;
+use App\Services\Exchange\OrdersFeed;
 use App\Services\Exchange\SkuMap;
+use App\Services\OrderExchange;
 use App\Support\ExchangeTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -34,6 +38,57 @@ class ExchangeController extends Controller
             'token' => $request->attributes->get('exchange_token')->name,
             'ip' => $request->ip(),
         ], 200, [], JSON_UNESCAPED_UNICODE);
+    }
+
+    /** Поток 3: подтверждённые менеджером заказы для записи в 1С (раздел 6) */
+    public function ordersNew(Request $request, OrdersFeed $feed): JsonResponse
+    {
+        $orders = $feed->pending($request->integer('limit', 50));
+
+        return response()->json([
+            'orders' => $orders->map(fn (Order $order) => $feed->payload($order))->values(),
+        ], 200, [], JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
+    }
+
+    /** Поток 4: 1С записала заказ */
+    public function orderConfirm(Request $request, string $number, OrderExchange $exchange): JsonResponse
+    {
+        $data = $request->validate([
+            'guid_1c' => ['required', 'string', 'max:64'],
+            'number_1c' => ['nullable', 'string', 'max:64'],
+            'registered_at' => ['nullable', 'string', 'max:40'],
+        ]);
+
+        $registeredAt = ExchangeTime::parse($data['registered_at'] ?? null) ?? now();
+        $order = $this->exchangeOrder($number);
+
+        try {
+            $order = $exchange->confirm($order, $data['guid_1c'], $data['number_1c'] ?? null, $registeredAt);
+        } catch (OrderExchangeException $e) {
+            throw new ExchangeApiException(409, $e->error, $e->getMessage());
+        }
+
+        return response()->json(['status' => 'ok', 'number' => $order->number, 'order_status' => $order->status->value], 200, [], JSON_UNESCAPED_UNICODE);
+    }
+
+    /** Поток 4: 1С не смогла записать заказ */
+    public function orderReject(Request $request, string $number, OrderExchange $exchange): JsonResponse
+    {
+        $data = $request->validate(['reason' => ['required', 'string', 'max:1000']]);
+
+        try {
+            $exchange->reject($this->exchangeOrder($number), $data['reason']);
+        } catch (OrderExchangeException $e) {
+            throw new ExchangeApiException(409, $e->error, $e->getMessage());
+        }
+
+        return response()->json(['status' => 'ok', 'number' => $number], 200, [], JSON_UNESCAPED_UNICODE);
+    }
+
+    private function exchangeOrder(string $number): Order
+    {
+        return Order::where('number', $number)->first()
+            ?? throw new ExchangeApiException(404, 'not_found', "Заказ {$number} не найден");
     }
 
     /** Поток 1: номенклатура (CSV); dry_run=1 — пробный прогон без записи (раздел 4, правило 10) */

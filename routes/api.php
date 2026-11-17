@@ -19,4 +19,8 @@ Route::middleware([AuthenticateExchange::class, 'throttle:exchange-1c'])->group(
     Route::get('/catalog/sku-map', [ExchangeController::class, 'skuMap']);
     Route::post('/prices-stock', [ExchangeController::class, 'pricesStock']);
     Route::get('/jobs/{id}', [ExchangeController::class, 'job']);
+    // Поток 3, 4: заказы (раздел 6)
+    Route::get('/orders/new', [ExchangeController::class, 'ordersNew']);
+    Route::post('/orders/{number}/confirm', [ExchangeController::class, 'orderConfirm']);
+    Route::post('/orders/{number}/reject', [ExchangeController::class, 'orderReject']);
 });

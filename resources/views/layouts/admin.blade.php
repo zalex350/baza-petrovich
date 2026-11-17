@@ -41,6 +41,7 @@
         ['url' => '/admin/organizations', 'label' => 'Клиенты',      'icon' => 'heroicon-o-building-office-2',       'active' => ['admin/organizations', 'admin/organization/*']],
         ['url' => '/admin/price-types',   'label' => 'Типы цен',     'icon' => 'heroicon-o-banknotes',               'active' => ['admin/price-types', 'admin/price-type/*']],
         ['url' => '/admin/users',         'label' => 'Пользователи', 'icon' => 'heroicon-o-users',                   'active' => ['admin/users', 'admin/user/*']],
+        ['url' => '/admin/prices',        'label' => 'Цены',         'icon' => 'heroicon-o-currency-dollar',        'active' => ['admin/prices', 'admin/prices/*']],
         ['url' => '/admin/leads',         'label' => 'Заявки с сайта', 'icon' => 'heroicon-o-inbox',                'active' => ['admin/leads', 'admin/lead/*']],
         ['url' => '/admin/partners',      'label' => 'Партнёры',       'icon' => 'heroicon-o-briefcase',               'active' => ['admin/partners', 'admin/partner/*']],
         ['url' => '/admin/categories',    'label' => 'Категории',    'icon' => 'heroicon-o-folder',                  'active' => ['admin/categories', 'admin/category/*']],

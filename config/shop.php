@@ -8,7 +8,10 @@
 
 return [
 
-    'name' => env('SHOP_NAME', 'SMESITEL.BY'),
+    'name' => env('SHOP_NAME', 'Петрович'),
+
+    // Префикс номера заказа: BP-2026-000001
+    'order_prefix' => env('SHOP_ORDER_PREFIX', 'BP'),
 
     // Контакты на сайте — «Настройки» в админке (App\Models\Setting). Эти значения — только
     // начальные для переноса миграцией 2026_10_30_100000_move_contacts_to_settings

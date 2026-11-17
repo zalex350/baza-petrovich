@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminOrganizationController;
 use App\Http\Controllers\Admin\AdminPageController;
 use App\Http\Controllers\Admin\AdminPartnerRequestController;
+use App\Http\Controllers\Admin\AdminPriceController;
 use App\Http\Controllers\Admin\AdminPriceTypeController;
 use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminProductDocumentController;
@@ -388,6 +389,9 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post('/admin/settings', [AdminSettingsController::class, 'update']);
 
     // Заявки «Стать партнёром»
+    Route::get('/admin/prices', [AdminPriceController::class, 'index']);
+    Route::get('/admin/prices/export', [AdminPriceController::class, 'export']);
+    Route::post('/admin/prices/import', [AdminPriceController::class, 'import']);
     Route::get('/admin/leads', [AdminLeadController::class, 'index']);
     Route::post('/admin/lead/{id}/status', [AdminLeadController::class, 'updateStatus']);
     Route::get('/admin/partners', [AdminPartnerRequestController::class, 'index']);
