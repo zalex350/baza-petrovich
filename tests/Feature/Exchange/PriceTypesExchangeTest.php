@@ -83,6 +83,7 @@ class PriceTypesExchangeTest extends TestCase
     {
         $vat20 = $this->product('A-1');
         $noVat = $this->product('B-1', ['vat_rate' => null]);
+        Setting::put([ExchangeSettings::PRICES_WITH_VAT => '1']);
 
         $job = $this->import("guid;sku;price_opt;price_retail;price_vip;stock;updated_at\n"
             .';A-1;998.71;1098.58;;7;'.self::AT."\n"
@@ -103,7 +104,6 @@ class PriceTypesExchangeTest extends TestCase
     {
         $product = $this->product('A-1');
         ProductPrice::create(['product_id' => $product->id, 'price_type_id' => PriceType::where('code', 'vip')->value('id'), 'price' => 77]);
-        Setting::put([ExchangeSettings::PRICES_WITH_VAT => '0']);
 
         // Только розничная: оптовая и VIP не меняются
         $this->import("guid;sku;price_retail;stock;updated_at\n;A-1;120;7;".self::AT."\n");
@@ -126,7 +126,6 @@ class PriceTypesExchangeTest extends TestCase
     public function test_legacy_price_column_is_opt_and_price_opt_wins(): void
     {
         $product = $this->product('A-1');
-        Setting::put([ExchangeSettings::PRICES_WITH_VAT => '0']);
 
         $this->import("guid;sku;price;stock;updated_at\n;A-1;150;7;".self::AT."\n");
         $this->assertSame(['opt' => '150.00'], $this->prices($product));
@@ -139,7 +138,6 @@ class PriceTypesExchangeTest extends TestCase
     public function test_unknown_code_creates_hidden_type_with_warning(): void
     {
         $product = $this->product('A-1');
-        Setting::put([ExchangeSettings::PRICES_WITH_VAT => '0']);
 
         $job = $this->import("guid;sku;price_Dealer;price_опт;stock;updated_at\n;A-1;95;1;7;".self::AT."\n");
 
@@ -175,6 +173,7 @@ class PriceTypesExchangeTest extends TestCase
     {
         $admin = User::factory()->admin()->create();
         $product = $this->product('A-1');
+        Setting::put([ExchangeSettings::PRICES_WITH_VAT => '1']);
 
         $csv = "guid;sku;price_opt;price_retail;price_dealer;stock;updated_at\n;A-1;120;132;110;5;".self::AT."\n";
         $this->actingAs($admin)->post('/admin/exchange/prices', ['file' => UploadedFile::fake()->createWithContent('p.csv', $csv), 'mode' => 'delta'])
@@ -196,7 +195,9 @@ class PriceTypesExchangeTest extends TestCase
     public function test_settings_toggle_prices_with_vat(): void
     {
         $admin = User::factory()->admin()->create();
-        $this->assertTrue(ExchangeSettings::pricesWithVat());
+        // Решение заказчика: 1С передаёт цены без НДС — миграция выключила настройку
+        $this->assertSame('0', Setting::value(ExchangeSettings::PRICES_WITH_VAT));
+        $this->assertFalse(ExchangeSettings::pricesWithVat());
 
         $this->actingAs($admin)->get('/admin/exchange?tab=settings')->assertSee('data-prices-with-vat', false)->assertSee('Цены из 1С с НДС');
 
@@ -205,5 +206,22 @@ class PriceTypesExchangeTest extends TestCase
         $this->assertFalse(ExchangeSettings::pricesWithVat());
         $this->actingAs($admin)->post('/admin/exchange/settings', $form + [ExchangeSettings::PRICES_WITH_VAT => '1']);
         $this->assertTrue(ExchangeSettings::pricesWithVat());
+
+        // Нет строки настройки — тоже без НДС
+        Setting::query()->whereKey(ExchangeSettings::PRICES_WITH_VAT)->delete();
+        Setting::flush();
+        $this->assertFalse(ExchangeSettings::pricesWithVat());
+    }
+
+    public function test_default_prices_are_stored_as_is(): void
+    {
+        $product = $this->product('A-1');
+
+        $this->import('guid;sku;price_opt;price_retail;stock;updated_at
+;A-1;998.71;1098.58;7;'.self::AT.'
+');
+
+        $this->assertSame(['opt' => '998.71', 'retail' => '1098.58'], $this->prices($product));
+        $this->assertSame('998.71', self::money($product->fresh()->getRawOriginal('price')));
     }
 }
