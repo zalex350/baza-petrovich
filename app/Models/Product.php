@@ -2,13 +2,18 @@
 
 namespace App\Models;
 
+use App\Services\Pricing\PriceContext;
+use App\Services\Pricing\PriceTypes;
 use App\Services\Search\SearchIndex;
 use App\Services\StockReserve;
 use App\Services\Vat\VatCalculator;
 use App\Services\Vat\VatLine;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
+use LogicException;
 
 /**
  * guid — GUID номенклатуры 1С: заполняется только обменом с 1С, поэтому не в $fillable.
@@ -89,9 +94,19 @@ class Product extends Model
         'hidden_by_1c' => 'boolean',
     ];
 
+    /**
+     * Отметка в выборке: колонка price — уже цена покупателя (PriceContext::select), аксессор её не
+     * пересчитывает. Такую модель не сохранить: price в ней не products.price.
+     */
+    public const PRICE_RESOLVED = 'price_resolved';
+
     protected static function booted(): void
     {
         static::saving(function (Product $product) {
+            if (array_key_exists(self::PRICE_RESOLVED, $product->getAttributes())) {
+                throw new LogicException('Товар выбран с ценой покупателя (withEffectivePrice) — сохранять нельзя');
+            }
+
             // Остаток 1С и доступный остаток (stock = stock_1c − резерв сайта) — согласованы
             app(StockReserve::class)->sync($product);
 
@@ -104,6 +119,48 @@ class Product extends Model
                 $product->search_text = app(SearchIndex::class)->textFor($product);
             }
         });
+
+        // products.price — цена типа по умолчанию: строка product_prices следует за ней
+        static::saved(function (Product $product) {
+            // В saved original ещё прежний — новое значение берём из атрибутов
+            $price = $product->getAttributes()['price'] ?? null;
+
+            if ($product->wasRecentlyCreated && ! $product->wasChanged() ? $price !== null : $product->wasChanged('price')) {
+                app(PriceTypes::class)->syncDefaultRow($product->id, $price);
+            }
+        });
+    }
+
+    /**
+     * Цена без НДС для текущего покупателя (PriceContext): тип цены его организации, нет цены этого
+     * типа — цена по умолчанию (products.price), нет и её — null («Цена уточняется»).
+     * Сырое products.price — getRawOriginal('price').
+     */
+    protected function price(): Attribute
+    {
+        return Attribute::get(fn ($value, array $attributes) => array_key_exists(self::PRICE_RESOLVED, $attributes)
+            ? $value
+            : app(PriceContext::class)->priceOf($this, $value));
+    }
+
+    /** Цены по всем типам */
+    public function prices()
+    {
+        return $this->hasMany(ProductPrice::class);
+    }
+
+    /** Цена типа текущего покупателя (PriceContext::typeIdFor) — для аксессора price и eager load */
+    public function clientPrice()
+    {
+        return $this->hasOne(ProductPrice::class)->where('price_type_id', app(PriceContext::class)->typeIdFor($this));
+    }
+
+    /** Списки: колонка price — цена покупателя одним join (без запроса на товар) */
+    public function scopeWithEffectivePrice(Builder $query, ?int $typeId = null): Builder
+    {
+        app(PriceContext::class)->select($query, $typeId);
+
+        return $query;
     }
 
     /**

@@ -9,6 +9,7 @@ use App\Services\ArticleSearch;
 use App\Services\CartSummary;
 use App\Services\Catalog\KeyAttributes;
 use App\Services\ClientCodes;
+use App\Services\Pricing\PriceContext;
 use App\Services\Search\ProductSearch;
 use App\Support\OrderQuantity;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -62,9 +63,11 @@ class SearchController extends Controller
             ->where('is_published', true)
             // Слова — по основам и синонимам, артикул / код — подстрокой; порядок — ProductSearch
             ->tap(fn ($q) => $search->apply($q, $search->parse($query), $organizationId, withDescription: true))
+            // Цена покупателя (тип цены его организации) — в колонке price и в сортировке
+            ->withEffectivePrice()
             ->when($sort !== 'relevance', fn ($q) => $q->reorder()
-                ->orderByRaw('products.price IS NULL')
-                ->orderBy('products.price', $sort === 'price_desc' ? 'desc' : 'asc')
+                ->orderByRaw(($price = app(PriceContext::class)->expression($q)).' IS NULL')
+                ->orderByRaw($price.($sort === 'price_desc' ? ' desc' : ' asc'))
                 ->orderBy('products.id'))
             // Страницы по 24; q и прочие параметры — в ссылках пагинации
             ->paginate(self::PER_PAGE)

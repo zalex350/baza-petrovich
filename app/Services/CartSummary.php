@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\CartItem;
 use App\Models\User;
+use App\Services\Pricing\PriceContext;
 use App\Services\Vat\VatCalculator;
 use App\Support\Money;
 use Illuminate\Support\Collection;
@@ -40,7 +41,8 @@ class CartSummary
             ->whereNull('products.deleted_at')
             ->where('products.is_active', true)
             ->where('products.is_published', true)
-            ->whereNotNull('products.price')
+            // Без цены покупателя (тип цены организации, иначе по умолчанию) — не в сводке
+            ->tap(fn ($q) => $q->whereRaw(app(PriceContext::class)->expression($q).' IS NOT NULL'))
             ->get(['cart_items.quantity', 'cart_items.price_at_add', 'products.vat_rate']);
 
         $totals = $this->vat->total($rows->map(

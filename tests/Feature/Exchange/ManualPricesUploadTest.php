@@ -8,10 +8,12 @@ use App\Models\ExchangeIp;
 use App\Models\ExchangeJob;
 use App\Models\ExchangeToken;
 use App\Models\Product;
+use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\ExchangeAlertNotification;
 use App\Services\Exchange\ExchangeAlerts;
 use App\Services\Exchange\ManualPricesUpload;
+use App\Support\ExchangeSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
@@ -41,6 +43,8 @@ class ManualPricesUploadTest extends TestCase
 
         Storage::fake('exchange');
         Notification::fake();
+        // Сопоставление и формат: цены в файлах — без НДС (выделение НДС и типы цен — PriceTypesExchangeTest)
+        Setting::put([ExchangeSettings::PRICES_WITH_VAT => '0']);
         $this->admin = User::factory()->admin()->create(['name' => 'Мария Менеджер']);
     }
 
@@ -255,9 +259,11 @@ class ManualPricesUploadTest extends TestCase
         }
         $reader->close();
 
-        $this->assertSame(['guid', 'sku', 'price', 'stock', 'stock_status', 'updated_at'], $rows[0]);
+        // Цена — по каждому типу справочника
+        $this->assertSame(['guid', 'sku', 'price_opt', 'price_retail', 'price_special', 'price_vip', 'stock', 'stock_status', 'updated_at'], $rows[0]);
         $this->assertSame('LEDEME-L4755-2', $rows[1][1]);
-        $this->assertStringEndsWith('+03:00', $rows[1][5]);
+        $this->assertSame('998.71', $rows[1][2]);
+        $this->assertStringEndsWith('+03:00', $rows[1][8]);
     }
 
     public function test_upload_is_admin_only(): void

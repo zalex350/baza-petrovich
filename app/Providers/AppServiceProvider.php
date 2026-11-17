@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Observers\CatalogMenuObserver;
 use App\Services\ClientCodes;
+use App\Services\Pricing\PriceContext;
 use App\View\Composers\CatalogMenuComposer;
 use App\View\Composers\HeaderComposer;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -20,6 +21,8 @@ class AppServiceProvider extends ServiceProvider
     {
         // Коды клиента: «есть ли коды у организации» — один запрос за HTTP-запрос
         $this->app->scoped(ClientCodes::class);
+        // Типы цен: справочник — один запрос; тип покупателя — один раз за HTTP-запрос
+        $this->app->singleton(PriceContext::class);
     }
 
     public function boot(): void

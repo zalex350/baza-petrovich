@@ -98,13 +98,32 @@
             type="number"
             step="0.01"
             :min="$isNew ? '0.01' : '0'"
-            label="Цена без НДС, BYN"
+            :label="'Цена без НДС, BYN — '.(\App\Models\PriceType::query()->where('is_default', true)->value('name') ?? 'по умолчанию')"
             :value="$product->price"
             :hint="$hint1c('price', $priceOptional ? 'Цены нет — на сайте «Цена уточняется», заказать товар нельзя. Можно сохранить без цены.' : ($isNew ? 'Обязательна, больше 0.' : null))"
             :form="$form"
             :disabled="$lock('price')"
             :required="! $lock('price') && ! $priceOptional"
         />
+
+        {{-- Цены остальных типов — только из 1С (файл цен, price_<код>); здесь — просмотр --}}
+        @unless($isNew)
+            @php
+                $typePrices = $product->prices()->with('type')->get()->sortBy(fn ($p) => [$p->type?->sort_order, $p->price_type_id]);
+            @endphp
+            <div class="text-sm" data-type-prices>
+                <p class="mb-1 font-medium text-ink">Цены по типам, без НДС</p>
+                @if($typePrices->isEmpty())
+                    <p class="text-ink-muted">Нет — цены придут из 1С.</p>
+                @else
+                    <ul class="space-y-0.5">
+                        @foreach($typePrices as $typePrice)
+                            <li>{{ $typePrice->type?->name ?? '—' }} <span class="text-ink-muted">({{ $typePrice->type?->code }})</span>: {{ money((float) $typePrice->price) }}</li>
+                        @endforeach
+                    </ul>
+                @endif
+            </div>
+        @endunless
 
         <x-field id="f-vat" label="Ставка НДС, %" error="vat_rate" :hint="$hint1c('vat_rate')" :required="! $lock('vat_rate')">
             @include('partials.vat_rate_select', ['current' => old('vat_rate', $product->vat_rate), 'form' => $form, 'disabled' => $lock('vat_rate'), 'id' => 'f-vat'])

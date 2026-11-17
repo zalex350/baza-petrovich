@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Organization;
 use App\Models\Product;
+use App\Services\Pricing\PriceContext;
 use OpenSpout\Common\Entity\Cell;
 use OpenSpout\Common\Entity\Row;
 use OpenSpout\Common\Entity\Style\Style;
@@ -71,6 +72,8 @@ class AssortmentExport
         return Product::query()
             ->select(['products.id', 'products.sku', 'products.article', 'products.brand', 'products.name', 'products.display_name', 'products.price', 'products.vat_rate', 'products.stock'])
             ->addSelect('product_client_codes.code as export_code')
+            // Цена — «Применяемая цена» организации (нет цены типа — по умолчанию); тип клиенту не показывается
+            ->withEffectivePrice(app(PriceContext::class)->typeIdForOrganization($organization))
             ->leftJoin('product_client_codes', fn ($join) => $join
                 ->on('product_client_codes.product_id', '=', 'products.id')
                 ->where('product_client_codes.organization_id', $organization->id))

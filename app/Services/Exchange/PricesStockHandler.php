@@ -5,7 +5,11 @@ namespace App\Services\Exchange;
 use App\Enums\ExchangeJobType;
 use App\Exceptions\ExchangeJobFailedException;
 use App\Models\ExchangeJob;
+use App\Models\PriceType;
+use App\Services\Pricing\PriceContext;
+use App\Services\Pricing\PriceTypes;
 use App\Services\StockReserve;
+use App\Services\Vat\VatCalculator;
 use App\Support\BulkUpdate;
 use App\Support\ExchangeSettings;
 use App\Support\ExchangeTime;
@@ -19,15 +23,19 @@ use Illuminate\Support\Facades\DB;
  * Файл (колонки по заголовку в любом порядке) читает openspout. plan() — без записи:
  *  1. разбор и проверка всех строк: товар — по guid, иначе по sku (код сайта: точное
  *     совпадение без учёта регистра и пробелов по краям, только у товара без другого GUID;
- *     по артикулу — если включено SHOP_1C_MATCH_BY_ARTICLE); цена (точка,
- *     до 2 знаков, ≥ 0, пусто — «Цена уточняется»), остаток (целое ≥ 0), stock_status,
+ *     по артикулу — если включено SHOP_1C_MATCH_BY_ARTICLE); цены по типам — колонки price_<код>
+ *     (price — то же, что price_opt; точка, до 2 знаков, ≥ 0; пусто — цены этого типа нет, у типа
+ *     по умолчанию — «Цена уточняется»; колонки нет — цена не меняется; с НДС — выделяется НДС
+ *     по ставке товара, если включено «Цены из 1С с НДС»; неизвестный код — тип создаётся скрытым
+ *     + предупреждение), остаток (целое ≥ 0), stock_status,
  *     updated_at (ExchangeTime::parse, любое смещение; дата .xlsx без пояса — по Минску).
  *     Строка старше уже применённого (отдельно для цены — price_synced_at и остатка —
  *     stock_synced_at) — rows_skipped;
  *  2. mode=full: товары с GUID, которых нет в файле, — stock_1c = 0; предохранитель:
  *     не хватает больше доли из настроек (10 %) — ExchangeJobFailedException.
- * handle() — план и запись пачками по 500 товаров в транзакции: BulkUpdate (stock_1c, price,
- * on_order, *_synced_at) и пересчёт доступного остатка StockReserve::recalculate.
+ * handle() — план и запись пачками по 500 товаров в транзакции: BulkUpdate (stock_1c, price — цена
+ * типа по умолчанию, on_order, *_synced_at), product_prices (все типы из файла) и пересчёт доступного
+ * остатка StockReserve::recalculate.
  * stock_status: on_order — «под заказ», in_stock / none — нет; колонки нет или пусто —
  * признак не меняется.
  */
@@ -43,17 +51,59 @@ class PricesStockHandler implements ExchangeHandler
     /** @var array<string, list<int>> артикул => товары без GUID (SHOP_1C_MATCH_BY_ARTICLE) */
     private array $byArticle = [];
 
-    public function __construct(private readonly StockReserve $reserve) {}
+    /** @var array<string, int> код типа цены => id */
+    private array $typeIds = [];
+
+    private string $defaultCode = PriceType::LEGACY_CODE;
+
+    public function __construct(
+        private readonly StockReserve $reserve,
+        private readonly PriceTypes $priceTypes,
+        private readonly PriceContext $priceContext,
+    ) {}
 
     public function handle(ExchangeJob $job, string $path, ExchangeResult $result): void
     {
         $plan = $this->plan($path, $job->mode, $result);
 
+        // Новые типы — скрытыми, до записи цен
+        foreach ($plan->newTypes as $code) {
+            $this->typeIds[$code] = $this->priceTypes->ensure($code)->id;
+        }
+
         foreach (array_chunk($plan->changes, self::BATCH, true) as $chunk) {
-            DB::transaction(function () use ($chunk) {
+            DB::transaction(function () use ($chunk, $plan) {
                 BulkUpdate::run('products', $chunk);
+                $this->writePrices(array_intersect_key($plan->prices, $chunk));
                 $this->reserve->recalculate(array_keys($chunk));
             });
+        }
+    }
+
+    /**
+     * product_prices: цена есть — upsert, пусто — строка удаляется.
+     *
+     * @param  array<int, array<string, ?string>>  $prices
+     */
+    private function writePrices(array $prices): void
+    {
+        $upsert = [];
+        $now = now();
+
+        foreach ($prices as $productId => $byCode) {
+            foreach ($byCode as $code => $price) {
+                $typeId = $this->typeIds[$code];
+
+                if ($price === null) {
+                    DB::table('product_prices')->where('product_id', $productId)->where('price_type_id', $typeId)->delete();
+                } else {
+                    $upsert[] = ['product_id' => $productId, 'price_type_id' => $typeId, 'price' => $price, 'created_at' => $now, 'updated_at' => $now];
+                }
+            }
+        }
+
+        foreach (array_chunk($upsert, 1000) as $rows) {
+            DB::table('product_prices')->upsert($rows, ['product_id', 'price_type_id'], ['price', 'updated_at']);
         }
     }
 
@@ -71,6 +121,8 @@ class PricesStockHandler implements ExchangeHandler
 
         $present = [];
         $snapshot = null;
+        $withVat = ExchangeSettings::pricesWithVat();
+        $columns = null;
 
         foreach (ExchangeFile::rows($path, ExchangeJobType::PricesStock) as $line => $row) {
             $result->total++;
@@ -85,7 +137,14 @@ class PricesStockHandler implements ExchangeHandler
                 $present[$id] = true;
             }
 
-            $price = $this->price((string) ($row['price'] ?? ''), $errors);
+            // Колонки цен — по первой строке (у всех строк одни и те же ключи)
+            $columns ??= $this->priceColumns(array_keys($row), $plan);
+
+            $prices = [];
+            foreach ($columns as $code => $column) {
+                $prices[$code] = $this->price((string) $row[$column], $errors, $column);
+            }
+
             $stock = $this->stock((string) ($row['stock'] ?? ''), $errors);
             $status = strtolower(trim((string) ($row['stock_status'] ?? '')));
 
@@ -121,11 +180,25 @@ class PricesStockHandler implements ExchangeHandler
 
             $before = $current['values'];
 
-            if ($applyPrice) {
-                $plan->changes[$id]['price'] = $price;
+            // Колонок цен нет в файле — цены и отметка их обмена не трогаются
+            if ($applyPrice && $prices !== []) {
+                foreach ($prices as $code => $gross) {
+                    $net = $gross === null || ! $withVat ? $gross : VatCalculator::netFromGross($gross, $current['vat_rate']);
+                    $plan->prices[$id][$code] = $net;
+
+                    if ($net === null) {
+                        unset($current['values']['prices'][$code]);
+                    } else {
+                        $current['values']['prices'][$code] = $net;
+                    }
+
+                    if ($code === $this->defaultCode) {
+                        $plan->changes[$id]['price'] = $net;
+                    }
+                }
+
                 $plan->changes[$id]['price_synced_at'] = $updatedAt->format('Y-m-d H:i:s');
                 $current['price_synced_at'] = $updatedAt;
-                $current['values']['price'] = $price;
             }
 
             if ($applyStock) {
@@ -171,10 +244,22 @@ class PricesStockHandler implements ExchangeHandler
         $this->byArticle = [];
         $byArticle = (bool) config('shop.exchange_1c.match_by_article', false);
 
+        // Типы цен: код => id; цены товаров по кодам
+        $this->priceContext->flush();
+        $types = PriceType::query()->ordered()->get(['id', 'code', 'is_default']);
+        $this->typeIds = $types->pluck('id', 'code')->all();
+        $this->defaultCode = $types->firstWhere('is_default', true)?->code ?? PriceType::LEGACY_CODE;
+        $codeOf = $types->pluck('code', 'id')->all();
+        $prices = [];
+        DB::table('product_prices')->orderBy('id')->select(['id', 'product_id', 'price_type_id', 'price'])->lazy(5000)
+            ->each(function ($p) use (&$prices, $codeOf) {
+                $prices[$p->product_id][$codeOf[$p->price_type_id]] = number_format((float) $p->price, 2, '.', '');
+            });
+
         DB::table('products')->orderBy('id')
-            ->select(['id', 'guid', 'sku', 'article', 'price', 'stock_1c', 'on_order', 'price_synced_at', 'stock_synced_at', 'deleted_at'])
+            ->select(['id', 'guid', 'sku', 'article', 'vat_rate', 'stock_1c', 'on_order', 'price_synced_at', 'stock_synced_at', 'deleted_at'])
             ->lazy(2000)
-            ->each(function ($p) use (&$byGuid, &$bySku, &$state, $byArticle) {
+            ->each(function ($p) use (&$byGuid, &$bySku, &$state, $byArticle, &$prices) {
                 if ($p->guid !== null && $p->guid !== '') {
                     $byGuid[strtolower($p->guid)] = $p->id;
                 }
@@ -193,8 +278,9 @@ class PricesStockHandler implements ExchangeHandler
                     'deleted' => $p->deleted_at !== null,
                     'price_synced_at' => $p->price_synced_at ? Carbon::parse($p->price_synced_at) : null,
                     'stock_synced_at' => $p->stock_synced_at ? Carbon::parse($p->stock_synced_at) : null,
+                    'vat_rate' => $p->vat_rate,
                     'values' => [
-                        'price' => $p->price === null ? null : number_format((float) $p->price, 2, '.', ''),
+                        'prices' => $prices[$p->id] ?? [],
                         'stock_1c' => (int) $p->stock_1c,
                         'on_order' => (bool) $p->on_order,
                     ],
@@ -270,11 +356,64 @@ class PricesStockHandler implements ExchangeHandler
     }
 
     /**
-     * Цена с 2 знаками («832.3» → «832.30») или null — «Цена уточняется».
+     * Колонки цен файла: код типа => колонка. price_<код> (код — латиница, цифры, «_», «-»);
+     * price — то же, что price_opt (если price_opt тоже есть — берётся price_opt). Неизвестный код —
+     * в план новых типов с предупреждением; неверный — предупреждение, колонка не читается.
+     *
+     * @param  list<string>  $keys
+     * @return array<string, string>
+     */
+    private function priceColumns(array $keys, PricesStockPlan $plan): array
+    {
+        $columns = [];
+
+        foreach ($keys as $column) {
+            if ($column === 'price') {
+                $columns[PriceType::LEGACY_CODE] ??= 'price';
+
+                continue;
+            }
+
+            if (! str_starts_with($column, 'price_')) {
+                continue;
+            }
+
+            $code = substr($column, strlen('price_'));
+
+            if (! preg_match(PriceType::CODE_PATTERN, $code)) {
+                $plan->result->warning(null, null, null, "Колонка «{$column}»: код типа цены — латиница, цифры, «_», «-», до 30 знаков; колонка не читается");
+
+                continue;
+            }
+
+            if ($code === PriceType::LEGACY_CODE && in_array('price', $keys, true)) {
+                $plan->result->warning(null, null, null, 'Есть и price, и price_opt — берётся price_opt');
+            }
+
+            $columns[$code] = $column;
+        }
+
+        foreach (array_keys($columns) as $code) {
+            if (! isset($this->typeIds[$code])) {
+                $plan->newTypes[] = $code;
+                $plan->result->warning(null, null, null, "Колонка «{$columns[$code]}»: типа цены «{$code}» нет — он создаётся скрытым и клиентам не применяется, пока его не включат в админке («Типы цен»)");
+            }
+        }
+
+        // Порядок — как в справочнике, новые — в конце
+        $order = array_flip(array_keys($this->typeIds));
+        uksort($columns, fn ($a, $b) => [$order[$a] ?? PHP_INT_MAX, $a] <=> [$order[$b] ?? PHP_INT_MAX, $b]);
+        $plan->priceCodes = array_keys($columns);
+
+        return $columns;
+    }
+
+    /**
+     * Цена с 2 знаками («832.3» → «832.30») или null — цены этого типа нет.
      *
      * @param  list<string>  $errors
      */
-    private function price(string $value, array &$errors): ?string
+    private function price(string $value, array &$errors, string $column = 'price'): ?string
     {
         if ($value === '') {
             return null;
@@ -284,10 +423,11 @@ class PricesStockHandler implements ExchangeHandler
             return number_format((float) $value, 2, '.', '');
         }
 
+        $label = $column === 'price' ? 'Цена' : "Цена {$column}";
         $errors[] = match (true) {
-            str_contains($value, ',') => "Цена «{$value}»: ожидается точка",
-            str_starts_with($value, '-') => "Цена «{$value}»: отрицательная",
-            default => "Цена «{$value}»: ожидается число до 2 знаков после точки, без пробелов",
+            str_contains($value, ',') => "{$label} «{$value}»: ожидается точка",
+            str_starts_with($value, '-') => "{$label} «{$value}»: отрицательная",
+            default => "{$label} «{$value}»: ожидается число до 2 знаков после точки, без пробелов",
         };
 
         return null;

@@ -39,6 +39,7 @@
         ['url' => '/admin/search-synonyms', 'label' => 'Синонимы поиска', 'icon' => 'heroicon-o-language', 'active' => ['admin/search-synonyms', 'admin/search-synonym/*']],
         ['url' => '/admin/orders',        'label' => 'Заказы',       'icon' => 'heroicon-o-clipboard-document-list', 'active' => ['admin/orders', 'admin/order/*']],
         ['url' => '/admin/organizations', 'label' => 'Клиенты',      'icon' => 'heroicon-o-building-office-2',       'active' => ['admin/organizations', 'admin/organization/*']],
+        ['url' => '/admin/price-types',   'label' => 'Типы цен',     'icon' => 'heroicon-o-banknotes',               'active' => ['admin/price-types', 'admin/price-type/*']],
         ['url' => '/admin/users',         'label' => 'Пользователи', 'icon' => 'heroicon-o-users',                   'active' => ['admin/users', 'admin/user/*']],
         ['url' => '/admin/partners',      'label' => 'Заявки',       'icon' => 'heroicon-o-briefcase',               'active' => ['admin/partners', 'admin/partner/*']],
         ['url' => '/admin/categories',    'label' => 'Категории',    'icon' => 'heroicon-o-folder',                  'active' => ['admin/categories', 'admin/category/*']],

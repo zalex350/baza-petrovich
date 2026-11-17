@@ -53,6 +53,7 @@
 | `/admin/orders` | `AdminOrderController@index` | `admin/orders` | — |
 | `/admin/order/{id}` | `…@show` | `admin/order` (+ `order_items`, `order_delivery`, `order_history`) | `order/{id}`, `status`, `cancel-request/approve`, `cancel-request/reject`, `invoice`, `invoice/delete` (GET `invoice` — скачать) |
 | `/admin/organizations` | `AdminOrganizationController@index` | `admin/organizations` | — |
+| `/admin/price-types` | `AdminPriceTypeController@index` | `admin/price_types` | `price-types` (POST: `code`, `name`, `is_hidden`), `price-type/{id}` (`name`, `sort_order`, `is_hidden`), `price-type/{id}/default` |
 | `/admin/organization/{id}` | `…@show` | `admin/organization` (+ `address_list`; вкладка `?tab=codes` — `admin_organization_codes`) | `organization/{id}/delete`, `codes/{code}/delete`, `codes/import` (GET `codes/template` — шаблон .xlsx) |
 | `/admin/organization/{id}/codes/import` | `AdminClientCodeController@preview` | `admin/organization_codes_import` (+ `admin_client_code_errors`) | `codes/import/apply`, `codes/import/cancel` |
 | `/admin/organization/create`, `…/{id}/edit` | `…@create`, `…@edit` | `admin/organization_form` | `organization`, `organization/{id}` |

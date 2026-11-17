@@ -25,6 +25,8 @@ class Organization extends Model
         'phone',
         'email',
         'comment',
+        // «Применяемая цена» (PriceContext); null — по умолчанию
+        'price_type_id',
     ];
 
     /** IBAN группами по 4 для чтения: «BY13 NBRB 3600 …»; хранится без пробелов */
@@ -60,5 +62,11 @@ class Organization extends Model
             ->orderByDesc('is_default')
             ->orderBy('title')
             ->orderBy('id');
+    }
+
+    /** «Применяемая цена»: null — тип по умолчанию */
+    public function priceType()
+    {
+        return $this->belongsTo(PriceType::class);
     }
 }
