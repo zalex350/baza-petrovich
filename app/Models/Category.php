@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Pricing\Discounts;
 use App\Services\Search\SearchIndex;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
@@ -25,6 +26,7 @@ class Category extends Model
         'sort_order',
         'is_pinned',
         'is_hidden',
+        'discount_percent',
         'image',
         'icon',
         'icon_svg',
@@ -44,6 +46,11 @@ class Category extends Model
         static::updated(function (Category $category) {
             if ($category->wasChanged(['name', 'parent_id'])) {
                 app(SearchIndex::class)->reindexCategory($category->id);
+            }
+
+            // Скидка категории действует на товары её и подкатегорий (Discounts)
+            if ($category->wasChanged(['discount_percent', 'parent_id'])) {
+                app(Discounts::class)->recalculateCategory($category->id);
             }
         });
     }

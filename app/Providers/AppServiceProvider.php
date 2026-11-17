@@ -23,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(ClientCodes::class);
         // Типы цен: справочник — один запрос; тип покупателя — один раз за HTTP-запрос
         $this->app->singleton(PriceContext::class);
+        $this->app->singleton(\App\Services\Pricing\Discounts::class);
     }
 
     public function boot(): void

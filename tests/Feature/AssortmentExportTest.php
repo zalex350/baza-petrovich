@@ -18,6 +18,7 @@ use Tests\TestCase;
  */
 class AssortmentExportTest extends TestCase
 {
+    use \Tests\Concerns\B2bPricing;
     use RefreshDatabase;
 
     private Organization $org;

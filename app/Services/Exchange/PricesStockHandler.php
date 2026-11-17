@@ -78,6 +78,9 @@ class PricesStockHandler implements ExchangeHandler
                 $this->reserve->recalculate(array_keys($chunk));
             });
         }
+
+        // Цена со скидкой — от новых цен
+        app(\App\Services\Pricing\Discounts::class)->recalculate(array_keys($plan->changes));
     }
 
     /**
@@ -183,7 +186,8 @@ class PricesStockHandler implements ExchangeHandler
             // Колонок цен нет в файле — цены и отметка их обмена не трогаются
             if ($applyPrice && $prices !== []) {
                 foreach ($prices as $code => $gross) {
-                    $net = $gross === null || ! $withVat ? $gross : VatCalculator::netFromGross($gross, $current['vat_rate']);
+                    // Розница: цены хранятся с НДС — цена 1С записывается как есть
+                    $net = $gross === null || ! $withVat || VatCalculator::pricesIncludeVat() ? $gross : VatCalculator::netFromGross($gross, $current['vat_rate']);
                     $plan->prices[$id][$code] = $net;
 
                     if ($net === null) {

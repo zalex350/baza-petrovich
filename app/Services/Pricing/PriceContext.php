@@ -13,6 +13,9 @@ use Illuminate\Support\Facades\DB;
 /**
  * Какая цена у товара для текущего покупателя.
  *
+ * Розница: цена по умолчанию — со скидкой, если она есть (products.sale_price, App\Services\Pricing\Discounts);
+ * прежняя цена — Product::old_price. К особым типам цен скидки не применяются.
+ *
  * Тип цены — «Применяемая цена» организации пользователя (organizations.price_type_id); не задан,
  * скрыт или удалён — тип по умолчанию. Цены нет у товара в этом типе — цена по умолчанию
  * (products.price), нет и её — «Цена уточняется» (null). В админке, в очереди и в консоли — всегда
@@ -138,7 +141,10 @@ class PriceContext
     public function priceOf(Product $product, mixed $default): mixed
     {
         if (! $this->isSpecial($this->typeIdFor($product))) {
-            return $default;
+            // Розничная цена со скидкой (Discounts → products.sale_price)
+            $sale = $product->getAttributes()['sale_price'] ?? null;
+
+            return $sale !== null && $default !== null ? $sale : $default;
         }
 
         return $product->clientPrice?->price ?? $default;
@@ -153,7 +159,7 @@ class PriceContext
         $typeId ??= $this->typeId();
 
         if (! $this->isSpecial($typeId)) {
-            return 'products.price';
+            return 'COALESCE(products.sale_price, products.price)';
         }
 
         $base = method_exists($query, 'getQuery') ? $query->getQuery() : $query;

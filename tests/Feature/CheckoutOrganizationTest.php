@@ -13,6 +13,7 @@ use Tests\TestCase;
 
 class CheckoutOrganizationTest extends TestCase
 {
+    use \Tests\Concerns\B2bPricing;
     use RefreshDatabase;
 
     private Product $product;

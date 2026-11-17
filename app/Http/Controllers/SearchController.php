@@ -34,7 +34,7 @@ class SearchController extends Controller
     /** @return array<string, string> доступные сортировки */
     public static function sorts(): array
     {
-        return auth()->check() ? self::SORTS : ['relevance' => self::SORTS['relevance']];
+        return prices_visible() ? self::SORTS : ['relevance' => self::SORTS['relevance']];
     }
 
     public function index(KeyAttributes $keyAttributes, CartSummary $cart, ClientCodes $codes, ArticleSearch $articles, ProductSearch $search)
@@ -125,7 +125,7 @@ class SearchController extends Controller
             ->take(5);
 
         // Цена — только после входа, как в каталоге и карточке товара
-        $withPrices = auth()->check();
+        $withPrices = prices_visible();
 
         return response()->json([
             'guest' => ! $withPrices,

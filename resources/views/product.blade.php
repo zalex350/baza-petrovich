@@ -104,29 +104,11 @@
             <section aria-label="Цена и заказ" class="flex flex-col gap-4 rounded-card border border-line bg-surface p-5" data-buy-card>
 
                 <div class="flex flex-wrap items-end justify-between gap-3 tabular-nums">
-                    <div>
-                        @auth
-                            @if($product->price === null)
-                                <div class="text-xl font-semibold text-ink-muted" data-price-tbd>Цена уточняется</div>
-                            @else
-                                <div class="text-meta text-ink-muted">Цена без НДС, за шт.</div>
-                                <x-price :amount="$product->price" class="block text-price font-bold" data-card-price />
-                                <div class="text-sm text-ink-muted" data-card-vat>
-                                    @if($product->vat_rate === null)
-                                        НДС не облагается
-                                    @else
-                                        с НДС {{ $product->vat_rate_label }} — {{ money($product->price_with_vat) }}
-                                    @endif
-                                </div>
-                            @endif
-                        @else
-                            <div class="text-ink-muted" data-guest-price>Цена и наличие — после входа</div>
-                        @endauth
-                    </div>
+                    <x-product-price :product="$product" layout="card" />
 
-                    @auth
+                    @if(prices_visible())
                         <x-stock :product="$product" />
-                    @endauth
+                    @endif
                 </div>
 
                 <x-product-row.buy :product="$product" :in-cart="$inCart" layout="card" />

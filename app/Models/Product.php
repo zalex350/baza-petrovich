@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Pricing\Discounts;
 use App\Services\Pricing\PriceContext;
 use App\Services\Pricing\PriceTypes;
 use App\Services\Search\SearchIndex;
@@ -38,6 +39,8 @@ class Product extends Model
         'sku',
         'article',
         'price',
+        'discount_percent',
+        'discount_amount',
         'vat_rate',
         'stock',
         'on_order',
@@ -114,6 +117,11 @@ class Product extends Model
                 $product->match_key = self::matchKey($product->brand, $product->article);
             }
 
+            // Цена со скидкой (Discounts): цена, скидка или категория изменились
+            if (! $product->exists || $product->isDirty(['price', 'discount_percent', 'discount_amount', 'category_id'])) {
+                $product->sale_price = app(Discounts::class)->forProduct($product);
+            }
+
             // Слова и основы для поиска (SearchIndex): названия, бренд, категория
             if (! $product->exists || $product->search_text === null || $product->isDirty(SearchIndex::FIELDS)) {
                 $product->search_text = app(SearchIndex::class)->textFor($product);
@@ -147,6 +155,30 @@ class Product extends Model
     public function prices()
     {
         return $this->hasMany(ProductPrice::class);
+    }
+
+    /**
+     * Цена до скидки (зачёркнутая): у покупателя действует розничная цена со скидкой — products.price,
+     * иначе null.
+     */
+    public function getOldPriceAttribute(): ?float
+    {
+        $raw = $this->getAttributes()['price'] ?? null;
+        $sale = $this->getAttributes()['sale_price'] ?? null;
+
+        if ($raw === null || $sale === null || app(PriceContext::class)->isSpecial(app(PriceContext::class)->typeIdFor($this))) {
+            return null;
+        }
+
+        return (float) $this->price < (float) $raw ? (float) $raw : null;
+    }
+
+    /** Скидка в процентах от прежней цены (бейдж «−15%»); нет скидки — null */
+    public function getDiscountBadgeAttribute(): ?int
+    {
+        $old = $this->old_price;
+
+        return $old ? (int) round((1 - (float) $this->price / $old) * 100) : null;
     }
 
     /** Цена типа текущего покупателя (PriceContext::typeIdFor) — для аксессора price и eager load */

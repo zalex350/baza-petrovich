@@ -3,9 +3,10 @@
 namespace App\Services\Vat;
 
 /**
- * Расчёт НДС (B2B, как в счёт-фактуре РБ). Единственное место, где считается НДС.
+ * Расчёт НДС. Единственное место, где считается НДС.
  *
- * Цена товара хранится без НДС. По позиции: сумма без НДС = цена × количество,
+ * Розница (shop.prices_include_vat = true): цена товара — с НДС, НДС выделяется из суммы позиции.
+ * B2B (false, как в счёт-фактуре РБ): цена товара хранится без НДС. По позиции: сумма без НДС = цена × количество,
  * НДС = сумма без НДС × ставка, округлённый до копеек, сумма с НДС = их сумма.
  * Итог документа — сумма позиций, а не НДС от итоговой суммы.
  *
@@ -24,6 +25,21 @@ class VatCalculator
     {
         $rate = self::normalizeRate($rate);
 
+        if (self::pricesIncludeVat()) {
+            // Розница: цена — с НДС, НДС выделяется из суммы позиции: НДС = сумма × ставка / (100 + ставка)
+            $gross = self::toKopecks($price) * $quantity;
+            $vat = $rate === null ? 0 : (int) round($gross * $rate / (100 + $rate));
+
+            return new VatLine(
+                price: self::toKopecks($price) / 100,
+                quantity: $quantity,
+                rate: $rate,
+                net: ($gross - $vat) / 100,
+                vat: $vat / 100,
+                gross: $gross / 100,
+            );
+        }
+
         $net = self::toKopecks($price) * $quantity;
         $vat = $rate === null ? 0 : (int) round($net * $rate / 100);
 
@@ -35,6 +51,15 @@ class VatCalculator
             vat: $vat / 100,
             gross: ($net + $vat) / 100,
         );
+    }
+
+    /**
+     * Режим розницы (shop.prices_include_vat): цены товаров хранятся и показываются с НДС,
+     * НДС выделяется из суммы. Выключен — B2B: цена без НДС, НДС начисляется сверху.
+     */
+    public static function pricesIncludeVat(): bool
+    {
+        return (bool) config('shop.prices_include_vat', false);
     }
 
     /**

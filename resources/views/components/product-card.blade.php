@@ -2,8 +2,8 @@
     Плитка товара: вид «плитка» в каталоге и подборках, карусели на главной.
     <x-product-card :product="$product" :in-cart="$cartItems[$product->id] ?? null" />
     Фото, бейджи (%, НОВИНКА, ХИТ), «Арт.» (Product::displayArticle — артикул, без него sku) и «Ваш код:» (client_code(), коды страницы
-    загружает контроллер — ClientCodes::load), название, наличие, цена (без НДС и с НДС; гостю вместо
-    наличия и цены — одна строка «Цена и наличие — после входа»),
+    загружает контроллер — ClientCodes::load), название, наличие, цена (x-product-price: со скидкой — зачёркнутая прежняя;
+    цены скрыты (B2B, гость) — «Цена и наличие — после входа»),
     покупка — x-product-row.buy layout="tile" (количество + «В корзину», «В корзине: N шт.»).
     product — с mainImage. Плитка тянется на высоту ряда: покупка прижата к низу.
 --}}
@@ -38,24 +38,11 @@
 
     <a href="{{ $url }}" class="line-clamp-2 min-h-10 text-sm font-semibold text-ink hover:text-link" data-product-link title="{{ $name }}">{{ $name }}</a>
 
-    @auth
+    @if(prices_visible())
         <x-stock :product="$product" class="text-sm" />
-    @endauth
+    @endif
 
-    <div class="tabular-nums" data-card-price>
-        @auth
-            @if($product->price === null)
-                <span class="text-ink-muted" data-price-tbd>Цена уточняется</span>
-            @else
-                <x-price :amount="$product->price" class="text-lg font-bold text-ink" />
-                <div class="text-meta text-ink-muted">
-                    без НДС · {{ $product->vat_rate === null ? 'НДС не облагается' : 'с НДС '.money($product->price_with_vat, false) }}
-                </div>
-            @endif
-        @else
-            <span class="text-sm text-ink-muted" data-guest-price>Цена и наличие — после входа</span>
-        @endauth
-    </div>
+    <x-product-price :product="$product" layout="tile" data-card-price />
 
     <x-product-row.buy :product="$product" :in-cart="$inCart" layout="tile" class="mt-auto" />
 </article>

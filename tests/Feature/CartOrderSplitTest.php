@@ -20,6 +20,7 @@ use Tests\TestCase;
  */
 class CartOrderSplitTest extends TestCase
 {
+    use \Tests\Concerns\B2bPricing;
     use RefreshDatabase;
 
     private User $client;

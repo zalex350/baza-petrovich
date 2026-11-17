@@ -11,6 +11,7 @@ use Tests\TestCase;
 
 class ProductVatTest extends TestCase
 {
+    use \Tests\Concerns\B2bPricing;
     use RefreshDatabase;
 
     private function makeProduct(array $attributes = []): Product

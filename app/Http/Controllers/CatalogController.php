@@ -68,7 +68,7 @@ class CatalogController extends Controller
             $menu->descendantIds($category),
             $filters,
             request()->query(),
-            auth()->check(),
+            prices_visible(),
         );
 
         // Подкатегории над списком: прямые потомки из дерева меню (кэш, без запросов);
@@ -94,7 +94,7 @@ class CatalogController extends Controller
         // Страница без категории: заголовок — из «категории»-заглушки, фильтры — по умолчанию
         $category = new Category(['name' => $title, 'slug' => $key]);
 
-        $listing = new CatalogListing($category, null, $filters, request()->query(), auth()->check(), $flag);
+        $listing = new CatalogListing($category, null, $filters, request()->query(), prices_visible(), $flag);
 
         return $this->listingView($listing, '/'.$key, $keyAttributes, $cart, [
             'category' => $category,

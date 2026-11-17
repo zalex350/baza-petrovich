@@ -18,6 +18,15 @@ return [
 
     'working_hours' => env('SHOP_WORKING_HOURS', 'Пн–Пт 9:00–18:00'),
 
+    /*
+    | Розница (baza-petrovich.by): цены видны всем без входа, гость кладёт товары в корзину
+    | и оформляет заказ. Цены товаров — розничные, с НДС (VatCalculator выделяет НДС из суммы).
+    | false — прежний B2B-режим: цены после входа, цена хранится без НДС.
+    */
+    'retail' => (bool) env('SHOP_RETAIL', true),
+
+    'prices_include_vat' => (bool) env('SHOP_PRICES_INCLUDE_VAT', true),
+
     // Время жизни кэша дерева категорий для меню, секунд
     'catalog_menu_ttl' => (int) env('SHOP_CATALOG_MENU_TTL', 3600),
 

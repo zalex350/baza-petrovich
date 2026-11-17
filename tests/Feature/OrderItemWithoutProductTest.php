@@ -17,6 +17,7 @@ use Tests\TestCase;
  */
 class OrderItemWithoutProductTest extends TestCase
 {
+    use \Tests\Concerns\B2bPricing;
     use RefreshDatabase;
 
     private User $client;

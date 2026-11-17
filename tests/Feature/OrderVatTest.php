@@ -18,6 +18,7 @@ use Tests\TestCase;
  */
 class OrderVatTest extends TestCase
 {
+    use \Tests\Concerns\B2bPricing;
     use RefreshDatabase;
 
     private User $client;

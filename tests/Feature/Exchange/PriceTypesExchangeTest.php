@@ -26,6 +26,7 @@ use Tests\TestCase;
  */
 class PriceTypesExchangeTest extends TestCase
 {
+    use \Tests\Concerns\B2bPricing;
     use RefreshDatabase;
 
     private const AT = '2026-11-10T18:30:00+03:00';

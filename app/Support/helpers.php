@@ -45,3 +45,24 @@ if (! function_exists('client_code')) {
         return app(ClientCodes::class)->codeFor($product);
     }
 }
+
+if (! function_exists('prices_visible')) {
+    /**
+     * Показывать ли цены и наличие текущему посетителю: розница (shop.retail) — всем,
+     * B2B — только после входа.
+     */
+    function prices_visible(): bool
+    {
+        return (bool) config('shop.retail') || auth()->check();
+    }
+}
+
+if (! function_exists('unit_label')) {
+    /** Единица товара для подписи цены «за м.п.»; пусто — «шт.» */
+    function unit_label(?string $unit): string
+    {
+        $unit = trim((string) $unit);
+
+        return $unit === '' ? 'шт.' : $unit;
+    }
+}

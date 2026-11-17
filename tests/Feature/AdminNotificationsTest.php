@@ -25,6 +25,7 @@ use Tests\TestCase;
  */
 class AdminNotificationsTest extends TestCase
 {
+    use \Tests\Concerns\B2bPricing;
     use RefreshDatabase;
 
     private User $client;
