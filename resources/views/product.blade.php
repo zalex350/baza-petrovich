@@ -172,7 +172,12 @@
 
                     @if($description !== '')
                         <h2 @class(['mb-2 text-xl font-bold', 'mt-6' => $hasSpecs])>Описание</h2>
-                        <p class="max-w-prose text-ink" data-description>{!! nl2br(e($description)) !!}</p>
+                        @if(str_contains($description, '<'))
+                            {{-- HTML (импорт с baza-petrovich.by) — очищенный --}}
+                            <div class="prose-page max-w-prose text-ink" data-description>{!! \App\Support\Html::clean($description) !!}</div>
+                        @else
+                            <p class="max-w-prose text-ink" data-description>{!! nl2br(e($description)) !!}</p>
+                        @endif
                     @endif
 
                     @if($package !== '')

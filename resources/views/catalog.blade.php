@@ -88,4 +88,11 @@
 
 </div>
 
+{{-- Текст раздела (HTML, очищенный) — на первой странице списка --}}
+@if(filled($category->description ?? null) && $products->currentPage() === 1)
+    <section class="prose-page mt-10 max-w-4xl rounded-card border border-line bg-surface p-card text-ink" data-category-description>
+        {!! \App\Support\Html::clean($category->description) !!}
+    </section>
+@endif
+
 @endsection

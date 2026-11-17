@@ -18,7 +18,10 @@ class Page extends Model
         'contacts' => '/contacts',
     ];
 
-    protected $fillable = ['title', 'slug', 'body', 'seo_title', 'seo_description', 'is_published'];
+    protected $fillable = ['title', 'slug', 'type', 'sort_order', 'body', 'seo_title', 'seo_description', 'is_published'];
+
+    /** Услуга (раздел «Услуги», /uslugi/{slug}) — иначе обычная страница */
+    public const SERVICE = 'service';
 
     protected $casts = [
         'is_published' => 'boolean',
@@ -29,8 +32,17 @@ class Page extends Model
         return $query->where('is_published', true);
     }
 
+    public function scopeServices($query)
+    {
+        return $query->where('type', self::SERVICE)->orderBy('sort_order')->orderBy('title');
+    }
+
     public function url(): string
     {
+        if ($this->type === self::SERVICE) {
+            return '/uslugi/'.$this->slug;
+        }
+
         return self::MENU[$this->slug] ?? '/page/'.$this->slug;
     }
 

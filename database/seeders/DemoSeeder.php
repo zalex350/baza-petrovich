@@ -51,7 +51,7 @@ class DemoSeeder extends Seeder
     public function run(): void
     {
         if (! app()->environment(self::ALLOWED_ENVIRONMENTS)) {
-            $this->command?->error('DemoSeeder запускается только на тестовом стенде (APP_ENV=staging). Сейчас: ' . app()->environment());
+            $this->command?->error('DemoSeeder запускается только на тестовом стенде (APP_ENV=staging). Сейчас: '.app()->environment());
 
             return;
         }
@@ -89,20 +89,20 @@ class DemoSeeder extends Seeder
         $category = Category::firstOrCreate(['slug' => self::CATEGORY_SLUG], ['name' => 'Демо-товары']);
 
         $items = [
-            ['DEMO-1', 'Смеситель для кухни (демо)', 'Grohe', 189.90],
-            ['DEMO-2', 'Душевая система (демо)', 'Hansgrohe', 649.00],
-            ['DEMO-3', 'Инсталляция для унитаза (демо)', 'Geberit', 412.50],
+            ['DEMO-1', 'Профильная труба 40x20x2 (демо)', null, 5.67],
+            ['DEMO-2', 'Профнастил С8 0,45 (демо)', null, 29.56],
+            ['DEMO-3', 'Сетка рабица 50x50 1,6 мм (демо)', null, 41.20],
         ];
 
         return collect($items)->map(fn ($item) => Product::updateOrCreate(['sku' => $item[0]], [
-            'name'         => $item[1],
-            'brand'        => $item[2],
-            'price'        => $item[3],
-            'vat_rate'     => 20,
-            'stock'        => 100,
-            'category_id'  => $category->id,
-            'description'  => 'Демо-товар тестового стенда',
-            'is_active'    => true,
+            'name' => $item[1],
+            'brand' => $item[2],
+            'price' => $item[3],
+            'vat_rate' => 20,
+            'stock' => 100,
+            'category_id' => $category->id,
+            'description' => 'Демо-товар тестового стенда',
+            'is_active' => true,
             'is_published' => true,
         ]));
     }
@@ -110,12 +110,12 @@ class DemoSeeder extends Seeder
     private function organization(string $name, string $unp, string $email, array $addresses): Organization
     {
         $organization = Organization::updateOrCreate(['unp' => $unp], [
-            'name'       => $name,
+            'name' => $name,
             'legal_name' => $name,
-            'address'    => $addresses[0][1],
-            'phone'      => $addresses[0][3],
-            'email'      => $email,
-            'comment'    => 'Демо-данные тестового стенда',
+            'address' => $addresses[0][1],
+            'phone' => $addresses[0][3],
+            'email' => $email,
+            'comment' => 'Демо-данные тестового стенда',
         ]);
 
         foreach ($addresses as [$title, $address, $contact, $phone, $default]) {
@@ -137,9 +137,9 @@ class DemoSeeder extends Seeder
 
         $user = User::firstOrNew(['email' => $email]);
         $user->fill([
-            'name'            => $name,
-            'phone'           => $organization?->phone,
-            'password'        => $password,
+            'name' => $name,
+            'phone' => $organization?->phone,
+            'password' => $password,
             'organization_id' => $organization?->id,
         ]);
         $user->role = $role;
@@ -159,7 +159,7 @@ class DemoSeeder extends Seeder
      */
     private function orders($products, User $admin, User $ivanov, User $petrova, User $sidorenko): array
     {
-        if (Order::where('comment', 'like', self::MARK . '%')->exists()) {
+        if (Order::where('comment', 'like', self::MARK.'%')->exists()) {
             $this->command?->warn('Демо-заказы уже есть — новые не создаются.');
 
             return [];
@@ -183,7 +183,7 @@ class DemoSeeder extends Seeder
         $created = [];
 
         foreach ($plan as [$client, $target, $lines, $note]) {
-            $order = $this->place($client, $products, $lines, self::MARK . " Заказ {$note}");
+            $order = $this->place($client, $products, $lines, self::MARK." Заказ {$note}");
 
             if ($target === OrderStatus::Cancelled) {
                 $statuses->change($order, OrderStatus::Cancelled, $admin, 'Демо: клиент передумал');
@@ -217,10 +217,10 @@ class DemoSeeder extends Seeder
             $product = $products[$index % $products->count()];
 
             CartItem::create([
-                'cart_id'      => $cart->id,
-                'product_id'   => $product->id,
+                'cart_id' => $cart->id,
+                'product_id' => $product->id,
                 'product_name' => $product->display_name ?: $product->name,
-                'quantity'     => $qty,
+                'quantity' => $qty,
                 'price_at_add' => $product->price,
             ]);
         }

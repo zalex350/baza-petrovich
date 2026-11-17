@@ -27,6 +27,7 @@ class Category extends Model
         'is_pinned',
         'is_hidden',
         'discount_percent',
+        'description',
         'image',
         'icon',
         'icon_svg',

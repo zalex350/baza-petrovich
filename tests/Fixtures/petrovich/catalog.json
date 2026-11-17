@@ -1,0 +1,17 @@
+{
+ "source": "https://baza-petrovich.by",
+ "categories": [
+  {"path": "metalloprokat", "parent": null, "name": "Металлопрокат", "slug_part": "metalloprokat", "description": "<p>Металлопрокат в розницу</p><script>alert(1)</script>", "sort": 0},
+  {"path": "metalloprokat/profilnaya-truba", "parent": "metalloprokat", "name": "Профильная труба", "slug_part": "profilnaya-truba", "description": "", "sort": 1000},
+  {"path": "setka", "parent": null, "name": "Сетка", "slug_part": "setka", "description": "", "sort": 1}
+ ],
+ "products": [
+  {"path": "catalog/metalloprokat/profilnaya-truba/truba-20x20", "category": "metalloprokat/profilnaya-truba", "name": "Профильная труба 20x20x1.5", "slug": "truba-20x20", "price": 3.36, "status": "in", "unit": "м.п.", "weight": 0.95, "hit": true, "attributes": {"Толщина": "1,5 мм"}, "images": [], "description": "<p><strong>Труба</strong> для забора</p>", "volume_price": "Со скидкой от 100 кг: 3,20 руб.", "source_url": "https://baza-petrovich.by/catalog/metalloprokat/profilnaya-truba/truba-20x20/"},
+  {"path": "catalog/setka/rabica-zapros", "category": "setka", "name": "Сетка рабица ПВХ", "slug": "rabica-zapros", "price": null, "status": "request", "unit": "", "weight": null, "hit": false, "attributes": {}, "images": [], "description": "", "volume_price": null, "source_url": "x"},
+  {"path": "catalog/setka/net", "category": "setka", "name": "Сетка кладочная", "slug": "net", "price": null, "status": "out", "unit": "шт", "weight": null, "hit": false, "attributes": {}, "images": [], "description": "", "volume_price": null, "source_url": "x"}
+ ],
+ "services": [
+  {"slug": "rezka-metalla", "title": "Резка металла", "description": "<p>Резка в размер заказчика</p>", "source_url": "x"},
+  {"slug": "dostavka", "title": "Доставка", "description": "<p>По звонку</p>", "source_url": "x"}
+ ]
+}

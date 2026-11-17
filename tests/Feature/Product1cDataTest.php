@@ -2,19 +2,17 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
-use PDO;
 use Tests\TestCase;
 
 /**
  * Подготовка данных к обмену с 1С (docs/1C_EXCHANGE_SPEC.md, разделы 4–5), этап 1:
  * поля номенклатуры, ключ сопоставления, название сайта в display_name,
- * catalog:fill-articles, удаление product_stocks.
+ * удаление product_stocks.
  */
 class Product1cDataTest extends TestCase
 {
@@ -143,113 +141,7 @@ class Product1cDataTest extends TestCase
         $this->assertSame('Смеситель для кухни A1', $real->refresh()->title());
     }
 
-    // --- catalog:fill-articles ---
-
-    private function catalog(array $rows): string
-    {
-        $path = $this->dir.'/catalog.db';
-        $pdo = new PDO('sqlite:'.$path);
-        $pdo->exec('CREATE TABLE products (id INTEGER PRIMARY KEY, sku TEXT NOT NULL, article TEXT, brand TEXT)');
-        $stmt = $pdo->prepare('INSERT INTO products (sku, article, brand) VALUES (?, ?, ?)');
-
-        foreach ($rows as $row) {
-            $stmt->execute($row);
-        }
-
-        return $path;
-    }
-
-    private function fill(string $path, array $options = [])
-    {
-        return $this->artisan('catalog:fill-articles', ['path' => $path, '--report-dir' => $this->dir] + $options);
-    }
-
-    private function report(): string
-    {
-        return File::get($this->dir.'/articles-report.md');
-    }
-
-    public function test_fills_articles_and_keys_idempotently_with_report(): void
-    {
-        $path = $this->catalog([
-            ['LEDEME-L4755-2', 'L4755-2', 'LEDEME'],
-            ['tim-bl5800', 'BL 5800', 'TIM'],       // sku — без учёта регистра; нестандартная: пробел в артикуле
-            ['L2124', 'L2124', null],               // нестандартная: нет бренда
-            ['SAVOL-S1', 'S1', 'SAVOL'],
-            ['SAVOL-S-1', 'S-1', 'SAVOL'],          // дефис значим — другой ключ
-            ['SAVOL-А1', 'А1', 'SAVOL'],            // кириллица «А» — тот же ключ, что SAVOL-A1
-            ['SAVOL-A1', 'A1', 'SAVOL'],
-            ['GHOST-1', '1', 'GHOST'],              // нет на сайте
-        ]);
-
-        $l4755 = $this->product('LEDEME-L4755-2', ['brand' => 'LEDEME']);
-        $tim = $this->product('TIM-BL5800', ['brand' => 'TIM']);
-        $noBrand = $this->product('L2124');
-        $s1 = $this->product('SAVOL-S1', ['brand' => 'SAVOL']);
-        $s1dash = $this->product('SAVOL-S-1', ['brand' => 'SAVOL']);
-        $a1cyr = $this->product('SAVOL-А1', ['brand' => 'SAVOL']);
-        $a1 = $this->product('SAVOL-A1', ['brand' => 'SAVOL']);
-        $own = $this->product('OWN-1', ['brand' => 'OWN']);           // нет в каталоге
-        $own->forceFill(['article' => 'O-1'])->save();
-
-        $this->fill($path, ['--dry-run' => true])->assertSuccessful();
-        $this->assertNull($l4755->refresh()->article);
-        $this->assertStringContainsString('| Изменится / изменено (article, match_key) | 7 |', $this->report());
-
-        $this->fill($path)->assertSuccessful();
-
-        $this->assertSame(['L4755-2', 'LEDEME:L4755-2'], [$l4755->refresh()->article, $l4755->match_key]);
-        $this->assertSame(['BL 5800', 'TIM:BL 5800'], [$tim->refresh()->article, $tim->match_key]);
-        $this->assertSame(['L2124', null], [$noBrand->refresh()->article, $noBrand->match_key]);
-        $this->assertSame(['O-1', 'OWN:O-1'], [$own->refresh()->article, $own->match_key]);
-        $this->assertNotSame($s1->refresh()->match_key, $s1dash->refresh()->match_key);
-        $this->assertSame('SAVOL:A1', $a1->refresh()->match_key);
-        $this->assertSame('SAVOL:A1', $a1cyr->refresh()->match_key);
-
-        $report = $this->report();
-        $this->assertStringContainsString('| Нестандартных строк каталога (sku ≠ «БРЕНД-артикул») | 2 |', $report);
-        $this->assertStringContainsString('| L2124 | — | L2124 | — | — |', $report);
-        $this->assertStringContainsString('| SAVOL:A1 | SAVOL-А1, SAVOL-A1 |', $report);
-        $this->assertStringNotContainsString('| SAVOL:S1 |', $report);
-        $this->assertStringContainsString("| {$own->id} | OWN-1 | OWN | O-1 |", $report);
-        $this->assertStringContainsString('| Строк catalog.db без товара на сайте | 1 |', $report);
-
-        // Одинаковые ключи — CSV для заказчика
-        $mixers = Category::create(['name' => 'Смесители', 'slug' => 'm']);
-        $a1->update(['display_name' => 'Смеситель A1', 'category_id' => Category::create(['name' => 'Для кухни', 'slug' => 'k', 'parent_id' => $mixers->id])->id]);
-        $a1cyr->update(['is_published' => false]);
-        // sku отличается от OWN-1 только пробелами и регистром
-        $this->product('own - 1');
-        $this->fill($path, ['--dry-run' => true])->assertSuccessful();
-
-        $csv = File::get($this->dir.'/duplicate-keys.csv');
-        $this->assertStringStartsWith("\u{FEFF}", $csv);
-        $rows = array_map(fn ($line) => str_getcsv($line, ';'), array_filter(explode("\n", substr($csv, 3))));
-        $this->assertSame([
-            ['группа', 'ключ', 'sku', 'название', 'бренд', 'категория', 'опубликован'],
-            ['бренд + артикул', 'SAVOL:A1', 'SAVOL-A1', 'Смеситель A1', 'SAVOL', 'Смесители / Для кухни', 'да'],
-            ['бренд + артикул', 'SAVOL:A1', 'SAVOL-А1', 'SAVOL А1', 'SAVOL', '', 'нет'],
-            ['различие в пробелах', 'OWN-1', 'OWN-1', 'OWN 1', 'OWN', '', 'да'],
-            ['различие в пробелах', 'OWN-1', 'own - 1', 'own - 1', '', '', 'да'],
-        ], array_values($rows));
-
-        // Повтор — ничего не меняет
-        $this->fill($path)->assertSuccessful();
-        $this->assertStringContainsString('| Изменится / изменено (article, match_key) | 0 |', $this->report());
-    }
-
-    public function test_fill_articles_repairs_stale_key_after_bulk_brand_update(): void
-    {
-        $path = $this->catalog([['LEDEME-A1', 'A1', 'LEDEME']]);
-        $product = $this->product('LEDEME-A1', ['brand' => 'LEDEME']);
-        $this->fill($path)->assertSuccessful();
-
-        // Массовое обновление мимо модели оставило старый ключ
-        DB::table('products')->where('id', $product->id)->update(['brand' => 'Ledeme Pro']);
-
-        $this->fill($path)->assertSuccessful();
-        $this->assertSame('LEDEME PRO:A1', $product->refresh()->match_key);
-    }
+    // --- catalog:match-keys ---
 
     public function test_match_keys_command_recalculates_stale_keys_idempotently(): void
     {
@@ -267,10 +159,5 @@ class Product1cDataTest extends TestCase
         $this->assertSame('TIM:X-1', Product::withTrashed()->find($trashed->id)->match_key);
 
         $this->artisan('catalog:match-keys')->expectsOutputToContain('изменится ключей: 0')->assertSuccessful();
-    }
-
-    public function test_fill_articles_fails_on_missing_file(): void
-    {
-        $this->fill($this->dir.'/nope.db')->assertFailed();
     }
 }

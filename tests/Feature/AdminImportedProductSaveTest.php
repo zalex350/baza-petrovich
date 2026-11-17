@@ -29,7 +29,7 @@ class AdminImportedProductSaveTest extends TestCase
 
         $this->admin = User::factory()->admin()->create();
 
-        // Как создаёт CatalogImportApplier: без цены, остаток 0, черновик
+        // Как товар из импорта: без цены, остаток 0, черновик
         $this->imported = Product::create([
             'name' => 'Смеситель для кухни L4755-2',
             'sku' => 'LEDEME-L4755-2',

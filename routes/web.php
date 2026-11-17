@@ -4,6 +4,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PartnerController;
+use App\Http\Controllers\ServiceController;
 use App\Models\Page;
 use Illuminate\Support\Facades\Route;
 
@@ -32,6 +33,10 @@ foreach (Page::MENU as $slug => $url) {
 }
 
 Route::get('/page/{slug}', [PageController::class, 'show']);
+
+// Услуги (страницы type = service)
+Route::get('/uslugi', [ServiceController::class, 'index'])->name('services.index');
+Route::get('/uslugi/{slug}', [ServiceController::class, 'show'])->name('services.show');
 
 // «Стать партнёром»: заявка организации; отправка — не чаще 5 раз за 10 минут с одного адреса
 Route::get('/partner', [PartnerController::class, 'create']);
