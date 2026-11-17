@@ -48,7 +48,7 @@ class ManualPricesUpload extends ManualUpload
     }
 
     /**
-     * Шаблон .xlsx: колонки потока 2 — цена по каждому типу из справочника (price_<код>, с НДС, если
+     * Шаблон .xlsx: колонки потока 2 — цена по каждому типу из справочника (price_<код>, без НДС; с НДС — если
      * включено «Цены из 1С с НДС») — и примеры строк (время — по Минску). Ненужную колонку цены можно
      * удалить: тип, которого нет в файле, не меняется.
      */
@@ -56,8 +56,8 @@ class ManualPricesUpload extends ManualUpload
     {
         $codes = PriceType::query()->ordered()->pluck('code')->all() ?: [PriceType::LEGACY_CODE];
         $now = now()->setTimezone('Europe/Minsk')->format('Y-m-d\TH:i:sP');
-        // Пример: оптовая 998.71, остальные типы — дороже на 5 % за каждый
-        $example = array_map(fn ($i) => number_format(998.71 * (1 + 0.05 * $i), 2, '.', ''), array_keys($codes));
+        // Пример: оптовая 832.26 (без НДС), остальные типы — дороже на 5 % за каждый
+        $example = array_map(fn ($i) => number_format(832.26 * (1 + 0.05 * $i), 2, '.', ''), array_keys($codes));
 
         $path = tempnam(sys_get_temp_dir(), 'tpl').'.xlsx';
         $writer = new Writer;

@@ -22,12 +22,12 @@ class ExchangeSettings
     /** Письма о заказах, ждущих передачи, — включаются после подключения выгрузки заказов (этап 5) */
     public const PENDING_ORDERS_ALERT = 'exchange_alert_pending_orders';
 
-    /** Цены в файле цен 1С — с НДС (по умолчанию да): сайт выделяет НДС по ставке товара */
+    /** Цены в файле цен 1С — с НДС (по умолчанию нет: решение заказчика — 1С передаёт цены без НДС); включена — сайт выделяет НДС по ставке товара */
     public const PRICES_WITH_VAT = 'exchange_prices_with_vat';
 
     public static function pricesWithVat(): bool
     {
-        return Setting::value(self::PRICES_WITH_VAT) !== '0';
+        return Setting::value(self::PRICES_WITH_VAT) === '1';
     }
 
     public static function int(string $key): int

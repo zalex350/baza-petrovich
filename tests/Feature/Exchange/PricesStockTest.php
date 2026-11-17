@@ -15,7 +15,6 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Services\Exchange\ExchangeJobs;
 use App\Services\StockReserve;
-use App\Support\ExchangeSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -36,8 +35,6 @@ class PricesStockTest extends TestCase
 
         Storage::fake('exchange');
         Notification::fake();
-        // Сопоставление и формат: цены в файлах — без НДС (выделение НДС и типы цен — PriceTypesExchangeTest)
-        Setting::put([ExchangeSettings::PRICES_WITH_VAT => '0']);
     }
 
     private function product(string $sku, ?string $guid = null, array $attributes = []): Product
