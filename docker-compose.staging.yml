@@ -1,4 +1,4 @@
-# Тестовый стенд (test.smesitel.by). Самостоятельный файл, не дополнение к docker-compose.yml.
+# Тестовый стенд (тестовый стенд baza-petrovich). Самостоятельный файл, не дополнение к docker-compose.yml.
 # В .env стенда: COMPOSE_FILE=docker-compose.staging.yml — тогда docker compose в папке
 # проекта работает с этим файлом. Обновление — ./deploy.sh (docs/STAGING.md).
 #
@@ -8,9 +8,9 @@
 #   - MySQL наружу не открыт; nginx — только на 127.0.0.1, HTTPS и пароль — nginx сервера;
 #   - node-контейнера нет: фронт собирается при сборке образа.
 #
-# Имя проекта smesitel_by — те же имена контейнеров и тот же том БД smesitel_by_dbdata,
+# Имя проекта baza_petrovich — те же имена контейнеров и тот же том БД baza_petrovich_dbdata,
 # что при прежнем запуске: данные сохраняются.
-name: smesitel_by
+name: baza_petrovich
 
 services:
 
@@ -19,7 +19,7 @@ services:
       context: .
       dockerfile: docker/staging/Dockerfile
       target: app
-    image: smesitel_by-app:latest
+    image: baza_petrovich-app:latest
     restart: unless-stopped
     volumes:
       - ./.env:/var/www/.env:ro
@@ -32,7 +32,7 @@ services:
   # Тот же образ, что php; deploy.sh пересоздаёт контейнер новым образом и шлёт queue:restart.
   # --max-time: воркер раз в час перезапускается сам (restart: unless-stopped) — без утечек памяти.
   queue:
-    image: smesitel_by-app:latest
+    image: baza_petrovich-app:latest
     pull_policy: never
     # От www-data, как php-fpm: лог и файлы обмена в storage — одного владельца
     user: www-data
@@ -51,7 +51,7 @@ services:
   # Планировщик Laravel (routes/console.php): обмен с 1С — очистка архива файлов (ежедневно),
   # проверка и письма о сбоях (раз в 10 минут). schedule:work сам запускает schedule:run раз в минуту.
   scheduler:
-    image: smesitel_by-app:latest
+    image: baza_petrovich-app:latest
     pull_policy: never
     user: www-data
     command: ["php", "artisan", "schedule:work"]
@@ -71,7 +71,7 @@ services:
       context: .
       dockerfile: docker/staging/Dockerfile
       target: web
-    image: smesitel_by-web:latest
+    image: baza_petrovich-web:latest
     restart: unless-stopped
     ports:
       - "127.0.0.1:${APP_PORT:-8090}:80"

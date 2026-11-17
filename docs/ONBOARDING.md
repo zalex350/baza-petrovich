@@ -26,7 +26,7 @@ cp .env.example .env
 |---|---|
 | `DB_PASSWORD` | любой пароль пользователя `smesitel` |
 | `DB_ROOT_PASSWORD` | любой пароль root MySQL |
-| `APP_PORT`, `FORWARD_DB_PORT` | при занятых портах (по умолчанию 8090 и 3307) |
+| `APP_PORT`, `FORWARD_DB_PORT` | при занятых портах (по умолчанию 8091 и 3308) |
 
 Без паролей `docker-compose` не стартует. Остальное в `.env.example` уже настроено под Docker: `DB_HOST=mysql`, Mailpit, очередь и кэш в БД.
 
@@ -53,7 +53,7 @@ docker-compose exec node npm run build
 
 Фронт собирается в контейнере `node` (в `php` нет npm) — две последние команды блока выше. `.env` скрипт не создаёт: без него не стартуют контейнеры (§2). Скрипт можно запускать повторно.
 
-Сайт: http://localhost:8090. MySQL снаружи: `localhost:3307`.
+Сайт: http://localhost:8091. MySQL снаружи: `localhost:3308`.
 
 ## 4. Демо-данные и учётки
 
@@ -113,14 +113,14 @@ docker-compose exec php php artisan test tests/Feature/Auth         # папка
 
 ```bash
 # 1. файл — в контейнер (путь Windows для docker cp)
-docker cp D:/smesitel_by/data/catalog.db smesitel_by-php-1:/tmp/catalog.db
+docker cp D:/smesitel_by/data/catalog.db baza_petrovich-php-1:/tmp/catalog.db
 
 # 2. пробный прогон: отчёт docs/catalog/import-report.md, БД не меняется
 MSYS_NO_PATHCONV=1 docker-compose exec php php artisan catalog:import-db /tmp/catalog.db --dry-run
 
 # 3. бэкап БД (правило бэкапа — CLAUDE.md), затем дамп — в контейнер
 docker-compose exec -T mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --no-tablespaces "$MYSQL_DATABASE"' > ../backup_before_catalog_import.sql
-docker cp ../backup_before_catalog_import.sql smesitel_by-php-1:/tmp/backup.sql
+docker cp ../backup_before_catalog_import.sql baza_petrovich-php-1:/tmp/backup.sql
 
 # 4. боевой прогон — только с полным дампом
 MSYS_NO_PATHCONV=1 docker-compose exec php php artisan catalog:import-db /tmp/catalog.db --backup=/tmp/backup.sql

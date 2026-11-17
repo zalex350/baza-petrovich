@@ -5,11 +5,11 @@
 
 | Что | Где |
 |---|---|
-| Код (git, ветка `master`) | `/home/deploy/smesitel_by` |
-| Настройки | `/home/deploy/smesitel_by/.env` (владелец `deploy:www-data`, права `640`) |
-| Контейнеры | `docker-compose.staging.yml`, проект `smesitel_by`: `php`, `nginx`, `mysql`, `queue` (воркер очереди: письма, обмен с 1С), `scheduler` (планировщик: архив и проверки обмена с 1С) |
-| БД MySQL 8 | том `smesitel_by_dbdata`, наружу не открыта |
-| Фото, логи, сессии | том `smesitel_by_storage` (`/var/www/storage` в контейнерах) |
+| Код (git, ветка `main`) | `/home/deploy/baza_petrovich` |
+| Настройки | `/home/deploy/baza_petrovich/.env` (владелец `deploy:www-data`, права `640`) |
+| Контейнеры | `docker-compose.staging.yml`, проект `baza_petrovich`: `php`, `nginx`, `mysql`, `queue` (воркер очереди: письма, обмен с 1С), `scheduler` (планировщик: архив и проверки обмена с 1С) |
+| БД MySQL 8 | том `baza_petrovich_dbdata`, наружу не открыта |
+| Фото, логи, сессии | том `baza_petrovich_storage` (`/var/www/storage` в контейнерах) |
 | HTTPS, пароль на сайт | nginx сервера: `/etc/nginx/sites-enabled/smesitel`, certbot, `/etc/nginx/.htpasswd` |
 | Сайт внутри сервера | `http://127.0.0.1:8090` (nginx сервера проксирует сюда) |
 | Бэкапы БД | `/home/deploy/backups`, последние 10: перед каждым деплоем и ежедневно в 03:30 (cron) |
@@ -30,14 +30,14 @@
 
 Всё в папке проекта — пользователя **deploy**: `git pull`, `./deploy.sh`, cron — от него.
 От root git откажется (`detected dubious ownership`) — запускать `sudo -u deploy …`
-(или, если очень нужно, `git config --global --add safe.directory /home/deploy/smesitel_by`
+(или, если очень нужно, `git config --global --add safe.directory /home/deploy/baza_petrovich`
 у того пользователя, от которого запускаете).
 
 `vendor/` и `node_modules/` в папке проекта при прежней схеме ставились в контейнерах
 от root. Теперь они не используются (зависимости — в образе), `deploy.sh` о них
 предупреждает. Удалить: `sudo rm -rf vendor node_modules public/build`.
 `.env` — `deploy:www-data`, `640`; `storage/` в папке проекта после перехода тоже
-не используется (данные — в томе `smesitel_by_storage`).
+не используется (данные — в томе `baza_petrovich_storage`).
 
 ### Владелец storage внутри контейнеров — www-data
 
@@ -75,7 +75,7 @@ docker compose -f docker-compose.staging.yml exec -u root php find storage boots
 ## Обновление
 
 ```bash
-cd /home/deploy/smesitel_by
+cd /home/deploy/baza_petrovich
 ./deploy.sh
 ```
 
@@ -104,8 +104,8 @@ cd /home/deploy/smesitel_by
 2. `./deploy.sh`. Скрипт сам:
    - отложит ручной `docker-compose.staging.yml` (не из git) как
      `docker-compose.staging.yml.manual-<дата>` — иначе `git pull` откажется;
-   - сделает бэкап БД (том `smesitel_by_dbdata` остаётся тем же — данные сохраняются);
-   - перенесёт загруженные фото из `./storage/app/public` в том `smesitel_by_storage`
+   - сделает бэкап БД (том `baza_petrovich_dbdata` остаётся тем же — данные сохраняются);
+   - перенесёт загруженные фото из `./storage/app/public` в том `baza_petrovich_storage`
      (один раз, повторно не копирует);
    - удалит контейнер `node` и пересоздаст `php` и `nginx` без bind-mount.
 3. Проверить сайт. После этого папки `vendor/`, `node_modules/`, `public/build/` на сервере
@@ -118,8 +118,8 @@ cd /home/deploy/smesitel_by
 2. **Код:**
    ```bash
    cd /home/deploy
-   git clone https://github.com/zalex350/smesitel_by.git
-   cd smesitel_by
+   git clone https://github.com/zalex350/baza_petrovich.git
+   cd baza_petrovich
    ```
 3. **`.env`** — из `.env.example`, ключевые значения:
    ```dotenv
@@ -208,7 +208,7 @@ API отвечает 403 всем. Basic auth стенда на `/api/1c/` не 
 | nginx сервера | `location /api/1c/` без `auth_basic`, `client_max_body_size 50m`, `X-Forwarded-For $remote_addr` (адрес клиента — для проверки IP) |
 | nginx стенда (`docker/staging/nginx.conf`) | `client_max_body_size 520M` (ZIP с фото до 500 МБ) — больше 50 МБ, менять не нужно |
 | PHP (`docker/php/php.ini` в образе) | `post_max_size = 520M`, `upload_max_filesize = 512M` (ZIP с фото; формы ограничивают размер своими правилами) — менять не нужно. Предел API — 50 МБ в приложении (`SHOP_1C_MAX_BODY_MB`), сверх — 413 |
-| Файлы обмена | том `smesitel_by_storage`: `storage/app/exchange/ГГГГ/ММ/<job_id>.csv`, удаляются через 90 дней (`exchange:prune`) |
+| Файлы обмена | том `baza_petrovich_storage`: `storage/app/exchange/ГГГГ/ММ/<job_id>.csv`, удаляются через 90 дней (`exchange:prune`) |
 | Обработка | очередь (сервис `queue`); письма о сбоях — администраторам с галочкой «Сбои обмена с 1С» |
 | Расписание | сервис `scheduler` (`php artisan schedule:work`): `exchange:prune` ежедневно 04:10, `exchange:check` раз в 10 минут. До этапа 2 планировщика на стенде не было — его добавляет `./deploy.sh` |
 
@@ -254,7 +254,7 @@ curl -i https://test.smesitel.by/api/1c/v1/ping
 ### Планировщик
 
 ```bash
-cd /home/deploy/smesitel_by
+cd /home/deploy/baza_petrovich
 docker compose ps --services --status running    # до деплоя этапа 2: php nginx mysql queue — без scheduler
 crontab -l                                         # в cron только бэкап (deploy.sh install-cron), schedule:run нет
 ./deploy.sh                                        # поднимет scheduler; шаг «Планировщик» проверит, что он запущен
@@ -330,10 +330,10 @@ gunzip -c /home/deploy/backups/<файл>.sql.gz \
 docker compose exec -u www-data php php artisan cache:clear
 ```
 
-Фото и другие загруженные файлы — в томе `smesitel_by_storage`, бэкап тома:
+Фото и другие загруженные файлы — в томе `baza_petrovich_storage`, бэкап тома:
 
 ```bash
-docker run --rm -v smesitel_by_storage:/data -v "$HOME/backups:/backup" alpine \
+docker run --rm -v baza_petrovich_storage:/data -v "$HOME/backups:/backup" alpine \
   tar czf /backup/storage-$(date +%Y%m%d).tar.gz -C /data app/public
 ```
 
@@ -386,11 +386,11 @@ sudo tail -f /var/log/nginx/access.log /var/log/nginx/error.log   # nginx сер
 в т. ч. `video_url` и `value` до 1000 символов):
 
 ```bash
-cd /home/deploy/smesitel_by
+cd /home/deploy/baza_petrovich
 docker compose exec -u www-data php php artisan migrate:status | grep -E "video_url|widen_product_attribute"   # обе — Ran
 ```
 
-Всё ниже — от deploy в `/home/deploy/smesitel_by`. Код на стенде — в образе, без bind-mount:
+Всё ниже — от deploy в `/home/deploy/baza_petrovich`. Код на стенде — в образе, без bind-mount:
 файлы попадают в контейнер `php` только через `docker compose cp`, а `/tmp` контейнера
 очищается при его пересоздании (`./deploy.sh`) — копировать перед каждым прогоном.
 
@@ -399,7 +399,7 @@ docker compose exec -u www-data php php artisan migrate:status | grep -E "video_
 
 ```bash
 ssh deploy@<сервер> mkdir -p imports
-scp D:\smesitel_by\data\catalog.db deploy@<сервер>:imports/catalog.db
+scp D:\baza_petrovich\data\catalog.db deploy@<сервер>:imports/catalog.db
 ```
 
 **2. Скопировать в контейнер** (только чтение):

@@ -4,13 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**smesitel.by** — Laravel 12 e-commerce/catalog platform for Belarusian plumbing fixtures. Full-stack: PHP 8.2 backend (Blade templates), Tailwind CSS + Alpine.js frontend, MySQL 8.0 database, Dockerized with Nginx + PHP-FPM.
+**baza-petrovich.by** — розничный интернет-магазин металлобазы «Петрович» (металлопрокат, профнастил, сетка, заборы, ворота) на Laravel 12. Сделан из кода smesitel.by (B2B-сантехника): цены видны всем, гостевая корзина и оформление без регистрации, скидки, заявки, Telegram / Битрикс24 / 1С — README, раздел «baza-petrovich.by». B2B-режим (smesitel) остался в коде под флагами `SHOP_RETAIL=false`, `SHOP_PRICES_INCLUDE_VAT=false` — его тесты закреплены трейтом `Tests\Concerns\B2bPricing`.
+Платформа: Full-stack: PHP 8.2 backend (Blade templates), Tailwind CSS + Alpine.js frontend, MySQL 8.0 database, Dockerized with Nginx + PHP-FPM.
 
 ## Commands
 
-Корень репозитория — папка с `artisan` (локально `D:\smesitel_by\src`). Все команды ниже — из неё.
+Корень репозитория — папка с `artisan` (локально, например, `C:\Users\zalex\baza-petrovich`). Все команды ниже — из неё.
 
-**Docker infrastructure is in the repo: `docker-compose.yml` and `docker/`. Run every `docker-compose` command from the repo root** (the project name is pinned to `smesitel_by`, so containers and the `smesitel_by_dbdata` volume are the same as before). DB passwords come from `.env` (`DB_PASSWORD`, `DB_ROOT_PASSWORD`) — значения только там, не в git и не в этом файле. Тестовый стенд — `docs/STAGING.md`.
+**Docker infrastructure is in the repo: `docker-compose.yml` and `docker/`. Run every `docker-compose` command from the repo root** (the project name is pinned to `baza_petrovich`: containers `baza_petrovich-*`, volume `baza_petrovich_dbdata` — separate from smesitel_by). DB passwords come from `.env` (`DB_PASSWORD`, `DB_ROOT_PASSWORD`) — значения только там, не в git и не в этом файле. Тестовый стенд — `docs/STAGING.md`.
 
 **Setup (first time):**
 ```bash
@@ -40,10 +41,10 @@ docker-compose exec php php artisan test tests/Feature/CatalogFiltersTest.php # 
 docker-compose exec php php artisan test tests/Feature/Auth                   # модуль (папка)
 docker-compose exec php php artisan test --parallel                           # полный прогон, ~20 с
 ```
-**Тесты обмена на MySQL.** SQLite не проверяет длину `VARCHAR` — «Data too long» ловит только MySQL. Перед мержем изменений в записи обмена (`exchange_*`, `orders`) прогнать набор на отдельной базе `smesitel_test` (рабочую `RefreshDatabase` очистил бы):
+**Тесты обмена на MySQL.** SQLite не проверяет длину `VARCHAR` — «Data too long» ловит только MySQL. Перед мержем изменений в записи обмена (`exchange_*`, `orders`) прогнать набор на отдельной базе `petrovich_test` (рабочую `RefreshDatabase` очистил бы):
 ```bash
-docker-compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS smesitel_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL ON smesitel_test.* TO \`$MYSQL_USER\`@\`%\`"'   # один раз
-docker-compose exec -e DB_CONNECTION=mysql -e DB_DATABASE=smesitel_test php php artisan test tests/Feature/Exchange
+docker-compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS petrovich_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL ON petrovich_test.* TO \`$MYSQL_USER\`@\`%\`"'   # один раз
+docker-compose exec -e DB_CONNECTION=mysql -e DB_DATABASE=petrovich_test php php artisan test tests/Feature/Exchange
 ```
 `ColumnLengthsTest` на MySQL сверяет `ExchangeJob::LENGTHS` и `ExchangeJobError::LENGTHS` с реальной схемой (на SQLite этот тест пропускается).
 
@@ -57,27 +58,26 @@ SQLite `:memory:`, `BCRYPT_ROUNDS=4`, скомпилированные шабл�
 
 **Xdebug** в контейнере установлен, но выключен (`xdebug.mode = "off"`) — не замедляет тесты и страницы. Включить на один запуск: `docker-compose exec -e XDEBUG_MODE=coverage php php artisan test --coverage` (или `XDEBUG_MODE=debug`).
 
-**`vendor/` — в томе Docker** (`smesitel_by_vendor`), а не на диске Windows: через bind-mount тысячи файлов зависимостей замедляли тесты в ~3 раза (вместе с шаблонами в `/tmp` и opcache для CLI полный прогон — 470 с → 58 с) и страницы тоже. `composer install/require` — только в контейнере: `docker-compose exec php composer install`. Папка `vendor/` на хосте контейнером больше не обновляется — для подсказок IDE её при необходимости обновить `composer install` на хосте. После пересоздания тома (`docker-compose down -v`) — снова `docker-compose exec php composer install`.
+**`vendor/` — в томе Docker** (`baza_petrovich_vendor`), а не на диске Windows: через bind-mount тысячи файлов зависимостей замедляли тесты в ~3 раза (вместе с шаблонами в `/tmp` и opcache для CLI полный прогон — 470 с → 58 с) и страницы тоже. `composer install/require` — только в контейнере: `docker-compose exec php composer install`. Папка `vendor/` на хосте контейнером больше не обновляется — для подсказок IDE её при необходимости обновить `composer install` на хосте. После пересоздания тома (`docker-compose down -v`) — снова `docker-compose exec php composer install`.
 
 **Code style:**
 ```bash
 docker-compose exec php ./vendor/bin/pint
 ```
 
-**Импорт каталога** (`docs/CATALOG_ANALYSIS.md`): маппинги — `database/data/catalog/*.php`.
+**Каталог «Петровича»** (`database/data/petrovich/catalog.json`, скрипты сбора — `database/data/petrovich/scraper/`):
 ```bash
-docker-compose exec php php artisan catalog:import-db /path/catalog.db --dry-run   # отчёт docs/catalog/import-report.md, база не меняется
-docker-compose exec php php artisan catalog:import-db /path/catalog.db --backup=/tmp/backup_….sql   # боевой — только после бэкапа
+docker-compose exec php php artisan petrovich:import --fresh --images   # первый раз: старый каталог удаляется, фото — с baza-petrovich.by
+docker-compose exec php php artisan petrovich:import                    # повтор: обновление по source_key, без дублей
+docker-compose exec php php artisan petrovich:content                   # контакты, реквизиты, страницы (только пустое)
 ```
-Команда работает в контейнере: `catalog.db` и дамп (он лежит вне `src/`) сначала скопировать туда — `docker cp … smesitel_by-php-1:/tmp/`.
-Из Git Bash пути контейнера передавать с `MSYS_NO_PATHCONV=1`, иначе `/tmp/…` превратится в путь Windows.
 
 **Migrations:**
 ```bash
 docker-compose exec php php artisan migrate
 ```
 
-> **Правило бэкапа:** перед любой миграцией, меняющей или переносящей данные, — дамп БД в `D:\smesitel_by\backup_before_<задача>.sql`; проверить, что дамп полный; путь и размер указать в отчёте.
+> **Правило бэкапа:** перед любой миграцией, меняющей или переносящей данные, — дамп БД в `..\backup_before_<задача>.sql` (папка над репозиторием); проверить, что дамп полный; путь и размер указать в отчёте.
 > ```bash
 > docker-compose exec -T mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --no-tablespaces "$MYSQL_DATABASE"' > ../backup_before_<задача>.sql
 > ```
@@ -86,11 +86,11 @@ docker-compose exec php php artisan migrate
 > **Правило:** после мержа любой ветки, содержащей новую миграцию, обязательно выполнить `docker-compose exec php php artisan migrate` на контейнере — до того, как считать задачу завершённой. Тесты используют SQLite in-memory и не проверяют состояние боевой MySQL; без этого шага новые колонки отсутствуют в БД и INSERT падает с `Column not found`.
 
 > **Правило «мержи»:** слово пользователя «мержи» означает весь цикл без дополнительного вопроса:
-> 1. `git merge --no-ff <ветка>` в `master`;
+> 1. `git merge --no-ff <ветка>` в `main`;
 > 2. `docker-compose exec php php artisan migrate` (см. правило выше);
 > 3. полный прогон `docker-compose exec php php artisan test --parallel`;
 > 4. сборка `docker-compose exec node npm run build`;
-> 5. `git push origin master`;
+> 5. `git push origin main`;
 > 6. удаление локальной ветки `git branch -d <ветка>`.
 >
 > Если прогон или сборка упали — остановиться, не пушить и сообщить. Без слова «мержи» ветки не мержить.
@@ -142,7 +142,7 @@ User uploads go to `storage/app/public/` (accessible via `/storage/...` URLs via
 
 **Testing:** Feature tests use `RefreshDatabase` trait; tests run against SQLite in-memory (configured in `phpunit.xml`), not MySQL. SQLite в тестах не приводит кириллицу к нижнему регистру (`LOWER`, `LIKE`) — в тестах поиска без учёта регистра используйте латиницу. Компоненты кита — `tests/Feature/Ui`. Правила, когда какие тесты запускать, — в разделе Commands → Tests.
 
-**Docker:** App runs on `http://localhost:8090`. MySQL exposed on port 3307. The `node` container handles frontend builds.
+**Docker:** App runs on `http://localhost:8091`. MySQL exposed on port 3308, Mailpit — `http://localhost:8026`. The `node` container handles frontend builds.
 
 ## Environment
 
@@ -150,11 +150,11 @@ Key `.env` values for Docker setup:
 ```
 DB_HOST=mysql  # Docker service name
 DB_PORT=3306
-DB_DATABASE=smesitel
+DB_DATABASE=petrovich
 SESSION_DRIVER=database
 QUEUE_CONNECTION=database   # воркер — контейнер queue; после правок PHP: docker-compose restart queue (и scheduler)
 CACHE_STORE=database
-MAIL_MAILER=smtp             # локально — Mailpit: MAIL_HOST=mailpit, MAIL_PORT=1025, письма — http://localhost:8025
-APP_NAME=smesitel.by         # отправитель и подпись писем (MAIL_FROM_NAME="${APP_NAME}")
+MAIL_MAILER=smtp             # локально — Mailpit: MAIL_HOST=mailpit, MAIL_PORT=1025 (внутри сети Docker), письма — http://localhost:8026
+APP_NAME=baza-petrovich.by  # отправитель и подпись писем (MAIL_FROM_NAME="${APP_NAME}")
 ```
 На стенде почта — `MAIL_MAILER=log`, переменные — `docs/STAGING.md`.
