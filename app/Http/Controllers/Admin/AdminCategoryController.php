@@ -335,6 +335,8 @@ class AdminCategoryController extends Controller
             'parent_id' => ['nullable', 'integer', Rule::exists('categories', 'id'), Rule::notIn($forbidden)],
             'slug' => ['nullable', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/'],
             'is_hidden' => ['boolean'],
+            // Скидка категории (Discounts): на товары категории и подкатегорий без своей скидки
+            'discount_percent' => ['nullable', 'numeric', 'min:0', 'max:99.99'],
             'icon' => ['nullable', 'string', 'max:100'],
             'icon_file' => ['nullable', 'file', 'max:'.intdiv(CategoryIcons::MAX_UPLOAD, 1024)],
         ], [
@@ -342,12 +344,14 @@ class AdminCategoryController extends Controller
             'parent_id.not_in' => 'Нельзя перенести категорию в саму себя или в её подкатегорию',
             'parent_id.exists' => 'Родительская категория не найдена',
             'slug.regex' => 'Адрес — латиница в нижнем регистре, цифры и дефисы',
+            'discount_percent.max' => 'Скидка — не больше 99,99%',
             'icon_file.max' => 'SVG больше '.intdiv(CategoryIcons::MAX_UPLOAD, 1024).' КБ',
         ]);
 
         $data['name'] = trim($data['name']);
         $data['parent_id'] = $data['parent_id'] ?? null;
         $data['is_hidden'] = request()->boolean('is_hidden');
+        $data['discount_percent'] = (float) ($data['discount_percent'] ?? 0) > 0 ? $data['discount_percent'] : null;
 
         // Иконку определяет iconData(): загруженный файл важнее выбранной в сетке
         unset($data['icon'], $data['icon_file']);

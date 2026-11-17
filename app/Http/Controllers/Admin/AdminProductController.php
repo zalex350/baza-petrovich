@@ -41,7 +41,7 @@ class AdminProductController extends Controller
     private const BADGE_FIELDS = ['is_hit', 'is_new', 'is_promo'];
 
     /** Данные сайта, которые применяются сразу, без черновика (SRS §11.3: категория — сайта, не 1С) */
-    private const DIRECT_SITE_FIELDS = ['slug', 'category_id', 'is_hit', 'is_new', 'is_promo', 'min_qty', 'qty_step', 'default_qty'];
+    private const DIRECT_SITE_FIELDS = ['slug', 'category_id', 'is_hit', 'is_new', 'is_promo', 'min_qty', 'qty_step', 'default_qty', 'discount_percent', 'discount_amount'];
 
     /** Тексты сайта: через черновик */
     private const DRAFT_FIELDS = ProductDrafts::FIELDS;
@@ -400,6 +400,9 @@ class AdminProductController extends Controller
             'is_hit' => 'boolean',
             'is_new' => 'boolean',
             'is_promo' => 'boolean',
+            // Скидка розницы (App\Services\Pricing\Discounts) — данные сайта; сумма важнее процента
+            'discount_percent' => 'nullable|numeric|min:0|max:99.99',
+            'discount_amount' => 'nullable|numeric|min:0|max:9999999',
             // Кратность заказа — данные сайта (из 1С не приходит): не отправлены — остаются прежние (по умолчанию 1)
             'min_qty' => 'sometimes|required|integer|min:1',
             'qty_step' => 'sometimes|required|integer|min:1',

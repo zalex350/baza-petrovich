@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\AdminClientCodeController;
 use App\Http\Controllers\Admin\AdminDeliveryAddressController;
 use App\Http\Controllers\Admin\AdminExchangeController;
 use App\Http\Controllers\Admin\AdminImageImportController;
+use App\Http\Controllers\Admin\AdminLeadController;
 use App\Http\Controllers\Admin\AdminNewFrom1cController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminOrganizationController;
@@ -387,6 +388,8 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post('/admin/settings', [AdminSettingsController::class, 'update']);
 
     // Заявки «Стать партнёром»
+    Route::get('/admin/leads', [AdminLeadController::class, 'index']);
+    Route::post('/admin/lead/{id}/status', [AdminLeadController::class, 'updateStatus']);
     Route::get('/admin/partners', [AdminPartnerRequestController::class, 'index']);
     Route::post('/admin/partner/{id}/status', [AdminPartnerRequestController::class, 'updateStatus']);
 

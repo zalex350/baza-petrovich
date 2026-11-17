@@ -98,13 +98,30 @@
             type="number"
             step="0.01"
             :min="$isNew ? '0.01' : '0'"
-            :label="'Цена без НДС, BYN — '.(\App\Models\PriceType::query()->where('is_default', true)->value('name') ?? 'по умолчанию')"
+            :label="(\App\Services\Vat\VatCalculator::pricesIncludeVat() ? 'Розничная цена с НДС, BYN — ' : 'Цена без НДС, BYN — ').(\App\Models\PriceType::query()->where('is_default', true)->value('name') ?? 'по умолчанию')"
             :value="$product->price"
             :hint="$hint1c('price', $priceOptional ? 'Цены нет — на сайте «Цена уточняется», заказать товар нельзя. Можно сохранить без цены.' : ($isNew ? 'Обязательна, больше 0.' : null))"
             :form="$form"
             :disabled="$lock('price')"
             :required="! $lock('price') && ! $priceOptional"
         />
+
+        {{-- Скидка розницы (Discounts): сумма важнее процента; пусто — действует скидка категории, если есть --}}
+        @php
+            $discountSource = $isNew ? null : app(\App\Services\Pricing\Discounts::class)->source($product);
+            $categoryPercent = $isNew ? null : app(\App\Services\Pricing\Discounts::class)->categoryPercent($product->category_id);
+        @endphp
+        <div class="grid gap-4 sm:grid-cols-2" data-discount-fields>
+            <x-input name="discount_percent" type="number" step="0.01" min="0" max="99.99" label="Скидка, %" :value="$product->discount_percent" :form="$form"
+                :hint="$categoryPercent && ! (float) $product->discount_percent && ! (float) $product->discount_amount ? 'Пусто — скидка категории '.rtrim(rtrim(number_format($categoryPercent, 2, ',', ''), '0'), ',').'%' : 'Пусто — без скидки (или скидка категории)'" />
+            <x-input name="discount_amount" type="number" step="0.01" min="0" label="Скидка, BYN" :value="$product->discount_amount" :form="$form" hint="Важнее процента" />
+        </div>
+        @if(! $isNew && $product->sale_price !== null)
+            <p class="text-sm" data-sale-price>
+                Цена на сайте со скидкой: <span class="font-semibold">{{ money($product->sale_price) }}</span>
+                <span class="text-ink-muted">({{ $discountSource === 'категория' ? 'скидка категории' : 'скидка товара' }})</span>
+            </p>
+        @endif
 
         {{-- Цены остальных типов — только из 1С (файл цен, price_<код>); здесь — просмотр --}}
         @unless($isNew)

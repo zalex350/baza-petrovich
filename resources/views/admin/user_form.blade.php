@@ -100,7 +100,7 @@
 
             <x-checkbox
                 name="notify_partner_request"
-                label="Заявка партнёра"
+                label="Заявки с сайта и партнёров"
                 hint="Письмо о новой заявке «Стать партнёром» с сайта."
                 :checked="$notify('notify_partner_request')"
             />

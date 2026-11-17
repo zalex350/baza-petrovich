@@ -59,6 +59,9 @@
         :hint="$category->exists ? 'Ссылка /catalog/'.$category->slug.'. Меняйте, только если нужно: старая ссылка перестанет работать' : 'Пусто — из названия латиницей'"
     />
 
+    <x-input name="discount_percent" type="number" step="0.01" min="0" max="99.99" label="Скидка на раздел, %" :value="$category->discount_percent" class="max-w-xs"
+        hint="Для товаров раздела и подразделов, у которых нет своей скидки. Пусто — без скидки" />
+
     <x-checkbox name="is_hidden" label="Скрыть" hint="Нет в меню и каталоге вместе с подкатегориями; товары — в поиске" :checked="$category->is_hidden" />
 
     <x-category-icon-picker :category="$category" />
