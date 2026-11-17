@@ -49,7 +49,7 @@ php artisan petrovich:content                   # контакты, реквиз
 
 ## Локальная разработка
 
-Приложение работает в Docker: `http://localhost:8090`, MySQL на порту 3307.
+Приложение работает в Docker: `http://localhost:8091`, MySQL на порту 3308.
 
 Инфраструктура лежит в репозитории: `docker-compose.yml` и `docker/` (php — Dockerfile с GD
 JPEG/WebP и php.ini, nginx — default.conf). **Все команды `docker-compose` запускаются из корня
@@ -70,12 +70,12 @@ docker-compose exec node npm install
 docker-compose exec node npm run build
 ```
 
-Имя compose-проекта зафиксировано (`name: smesitel_by`): контейнеры `smesitel_by-*` и том
-`smesitel_by_dbdata` не зависят от имени папки.
+Имя compose-проекта зафиксировано (`name: baza_petrovich`): контейнеры `baza_petrovich-*` и том
+`baza_petrovich_dbdata` не зависят от имени папки.
 
 ### Зависимости PHP
 
-**`vendor/` — в томе Docker `smesitel_by_vendor`**, а не в папке проекта на диске: через
+**`vendor/` — в томе Docker `baza_petrovich_vendor`**, а не в папке проекта на диске: через
 bind-mount Windows тысячи файлов зависимостей в разы замедляли тесты и страницы. Код
 приложения по-прежнему подключён из папки проекта — правки видны сразу.
 

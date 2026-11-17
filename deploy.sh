@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Обновление тестового стенда test.smesitel.by (docs/STAGING.md).
+# Обновление тестового стенда стенда baza-petrovich (docs/STAGING.md).
 #
 #   ./deploy.sh               — полное обновление
 #   ./deploy.sh backup        — только бэкап БД (так же — ежедневно по cron)
@@ -24,7 +24,7 @@
 #   BACKUP_DIR=$HOME/backups      папка бэкапов БД
 #   BACKUP_KEEP=10                сколько последних бэкапов хранить
 #   SKIP_PULL=1                   не обновлять код (повторная сборка того же коммита)
-#   COMPOSE_PROJECT_NAME=…        имя проекта docker compose (по умолчанию smesitel_by)
+#   COMPOSE_PROJECT_NAME=…        имя проекта docker compose (по умолчанию baza_petrovich)
 #   BACKUP_CRON="30 3 * * *"      расписание ежедневного бэкапа для install-cron
 
 set -Eeuo pipefail
@@ -34,7 +34,7 @@ cd "$(dirname "$(readlink -f "$0")")"
 BRANCH="${DEPLOY_BRANCH:-master}"
 BACKUP_DIR="${BACKUP_DIR:-$HOME/backups}"
 BACKUP_KEEP="${BACKUP_KEEP:-10}"
-PROJECT="${COMPOSE_PROJECT_NAME:-smesitel_by}"
+PROJECT="${COMPOSE_PROJECT_NAME:-baza_petrovich}"
 COMPOSE=(docker compose -p "$PROJECT" -f docker-compose.staging.yml)
 
 STEP="подготовка"
@@ -128,7 +128,7 @@ backup() {
         return
     fi
 
-    BACKUP_FILE="$BACKUP_DIR/smesitel-$(date +%Y%m%d-%H%M%S)-$(git rev-parse --short HEAD 2>/dev/null || echo nogit).sql.gz"
+    BACKUP_FILE="$BACKUP_DIR/petrovich-$(date +%Y%m%d-%H%M%S)-$(git rev-parse --short HEAD 2>/dev/null || echo nogit).sql.gz"
 
     compose exec -T mysql sh -c \
         'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --quick --routines --triggers --no-tablespaces "$MYSQL_DATABASE"' \
@@ -140,7 +140,7 @@ backup() {
     echo "Готово: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
 
     # Хранятся последние BACKUP_KEEP
-    ls -1t "$BACKUP_DIR"/smesitel-*.sql.gz 2>/dev/null | tail -n +"$((BACKUP_KEEP + 1))" | xargs -r rm -f
+    ls -1t "$BACKUP_DIR"/petrovich-*.sql.gz 2>/dev/null | tail -n +"$((BACKUP_KEEP + 1))" | xargs -r rm -f
 }
 
 # --- Код ---
