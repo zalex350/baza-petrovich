@@ -14,6 +14,6 @@ class HeaderComposer
 
     public function compose(View $view): void
     {
-        $view->with('cartSummary', $this->cart->totals(auth()->user()));
+        $view->with('cartSummary', $this->cart->totals());
     }
 }

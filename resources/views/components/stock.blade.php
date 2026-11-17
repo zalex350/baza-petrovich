@@ -16,6 +16,8 @@
     $onOrder = (bool) ($product ? $product->on_order : $onOrder);
 
     [$level, $bars, $label] = match (true) {
+        // Без учёта остатков — только «есть / нет»
+        ! stock_tracked() && $stock > 0     => ['many', 3, 'В наличии'],
         $stock >= config('shop.stock_many') => ['many', 3, 'Много'],
         $stock > config('shop.stock_few')   => ['few', 2, 'Мало'],
         $stock > 0                          => ['count', 1, $stock.' шт.'],

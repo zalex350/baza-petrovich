@@ -62,6 +62,16 @@ class OrderController extends Controller
     }
 
     /**
+     * Заказ гостя розницы по ссылке /o/{token}: статус, получение, оплата, позиции. Без входа.
+     */
+    public function guestShow(string $token)
+    {
+        $order = Order::with('items')->whereNull('user_id')->where('public_token', $token)->firstOrFail();
+
+        return view('order_guest', compact('order'));
+    }
+
+    /**
      * Клиент заказ не удаляет (BR-133) и сам не отменяет: он запрашивает отмену своего
      * заказа с причиной, пока заказ «Новый» или «Подтверждён». Решает администратор.
      */

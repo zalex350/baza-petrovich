@@ -165,7 +165,7 @@ class OrderStatusService
     /**
      * Первая запись истории: заказ оформлен.
      */
-    public function recordPlaced(Order $order, User $by): void
+    public function recordPlaced(Order $order, ?User $by): void
     {
         $this->record($order, null, $order->status, $by, null);
     }

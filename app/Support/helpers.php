@@ -63,6 +63,30 @@ if (! function_exists('unit_label')) {
     {
         $unit = trim((string) $unit);
 
-        return $unit === '' ? 'шт.' : $unit;
+        // Сокращения без точки из справочников (1С пишет «шт», «компл») — с точкой
+        return match (mb_strtolower($unit)) {
+            '', 'шт', 'шт.' => 'шт.',
+            'компл' => 'компл.',
+            default => $unit,
+        };
+    }
+}
+
+if (! function_exists('stock_tracked')) {
+    /**
+     * Ведётся ли учёт остатков (shop.track_stock). Нет — товар только «в наличии» (stock > 0) или «нет»,
+     * количество в заказе остатком не ограничивается, витрина не показывает «Мало» / «N шт.».
+     */
+    function stock_tracked(): bool
+    {
+        return (bool) config('shop.track_stock', true);
+    }
+}
+
+if (! function_exists('qty_max')) {
+    /** Предел поля количества: остаток при учёте остатков, иначе — без предела (null) */
+    function qty_max(?Product $product): ?int
+    {
+        return $product && stock_tracked() ? (int) $product->stock : null;
     }
 }

@@ -3,10 +3,12 @@
 namespace App\Listeners;
 
 use App\Events\CancelRequested;
+use App\Events\LeadCreated;
 use App\Events\OrderPlaced;
 use App\Events\PartnerRequested;
 use App\Models\User;
 use App\Notifications\CancelRequestNotification;
+use App\Notifications\LeadNotification;
 use App\Notifications\NewOrderNotification;
 use App\Notifications\PartnerRequestNotification;
 use Illuminate\Notifications\Notification;
@@ -36,6 +38,11 @@ class NotifyAdmins
     public function handlePartnerRequested(PartnerRequested $event): void
     {
         $this->send('notify_partner_request', new PartnerRequestNotification($event->partnerRequest));
+    }
+
+    public function handleLeadCreated(LeadCreated $event): void
+    {
+        $this->send('notify_partner_request', new LeadNotification($event->lead));
     }
 
     private function send(string $setting, Notification $notification): void

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PartnerController;
 use App\Models\Page;
@@ -34,4 +35,9 @@ Route::get('/page/{slug}', [PageController::class, 'show']);
 
 // «Стать партнёром»: заявка организации; отправка — не чаще 5 раз за 10 минут с одного адреса
 Route::get('/partner', [PartnerController::class, 'create']);
+
+// Заявки с сайта: «Узнать цену», «Заказать услугу», «Обратный звонок»
+Route::get('/price-request/{id}', [LeadController::class, 'price'])->whereNumber('id')->name('lead.price');
+Route::get('/request/{type}', [LeadController::class, 'create'])->name('lead.create');
+Route::post('/request', [LeadController::class, 'store'])->middleware('throttle:5,10')->name('lead.store');
 Route::post('/partner', [PartnerController::class, 'store'])->middleware('throttle:5,10');

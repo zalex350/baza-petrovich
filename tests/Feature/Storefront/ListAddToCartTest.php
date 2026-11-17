@@ -8,6 +8,7 @@ use App\Models\Organization;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\B2bPricing;
 use Tests\TestCase;
 
 /**
@@ -15,6 +16,7 @@ use Tests\TestCase;
  */
 class ListAddToCartTest extends TestCase
 {
+    use B2bPricing;
     use RefreshDatabase;
 
     private User $client;

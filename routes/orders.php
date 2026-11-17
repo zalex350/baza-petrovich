@@ -1,14 +1,18 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Models\Order;
 use App\Http\Controllers\OrderController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
 | Orders Routes
 |--------------------------------------------------------------------------
 */
+
+// Заказ гостя розницы — по секретной ссылке из оформления (orders.public_token)
+Route::get('/o/{token}', [OrderController::class, 'guestShow'])
+    ->where('token', '[A-Za-z0-9]{40}')
+    ->name('order.guest');
 
 Route::middleware('auth')->group(function () {
 

@@ -50,7 +50,7 @@ class HomeController extends Controller
             'categories' => $categories,
             'tiles' => $tiles->forTree($categories),
             'featuredProducts' => $featuredProducts,
-            'cartItems' => $cart->items(auth()->user()),
+            'cartItems' => $cart->items(),
         ]);
     }
 }

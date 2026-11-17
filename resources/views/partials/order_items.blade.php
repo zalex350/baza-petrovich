@@ -23,7 +23,7 @@
                 </th>
 
                 <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">
-                    Цена без НДС
+                    {{ \App\Services\Vat\VatCalculator::pricesIncludeVat() ? 'Цена с НДС' : 'Цена без НДС' }}
                 </th>
 
                 <th class="px-4 py-3 text-sm font-semibold text-slate-600 text-right">

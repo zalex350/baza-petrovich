@@ -5,9 +5,10 @@
     <x-product-row.buy :product="$product" :in-cart="$item" />
     <x-product-row.buy :product="$product" :in-cart="$item" layout="card" />   — крупно, на всю ширину (48px)
     <x-product-row.buy :product="$product" :in-cart="$item" layout="tile" />   — плитка (x-product-card): количество, под ним кнопка
-    Гость — «Войдите, чтобы заказать» (возврат на эту страницу); администратор — «Редактировать»
-    (товар в админке; заказывать он не может, BR-121); иной не клиент — ничего;
-    нет цены / нет остатка — неактивная кнопка; иначе — x-qty с кратностью товара и «В корзину»
+    Покупатель — клиент или гость розницы (CurrentCart::canBuy); гость B2B — «Войдите, чтобы заказать»
+    (возврат на эту страницу); администратор — «Редактировать» (товар в админке; заказывать он не может,
+    BR-121); иной не клиент — ничего; нет цены — «Узнать цену» (заявка); нет остатка —
+    неактивная «Нет в наличии»; иначе — x-qty с кратностью товара и «В корзину»
     (POST /order/add/{id}): кнопка видна всегда, товар уже в корзине — количество добавляется
     к имеющемуся. Под количеством — «В корзине: N шт. · перейти»; место под неё оставлено
     во всех строках, чтобы строки списка не отличались по высоте.
@@ -19,6 +20,8 @@
 
 @php
     $user = auth()->user();
+    // Покупатель: клиент или гость розницы (CurrentCart::canBuy)
+    $buyer = app(\App\Services\CurrentCart::class)->canBuy();
     $card = $layout === 'card';
     $tile = $layout === 'tile';
 
@@ -33,18 +36,25 @@
 @endphp
 
 <div {{ $attributes->class(['flex flex-col', $card ? 'gap-2' : 'gap-1']) }} data-cart-buy>
-    @guest
+    @if(! $user && ! $buyer)
         <x-button variant="secondary" :size="$size" :href="route('login', ['return' => request()->getRequestUri()])" class="w-full">
             Войдите, чтобы заказать
         </x-button>
-    @elseif($user->isAdmin())
+    @elseif($user?->isAdmin())
         <div @class([$grid => ! $stacked])>
             <x-button variant="secondary" :size="$size" :href="'/admin/product/'.$product->id" :class="$single" data-admin-edit>
                 Редактировать
             </x-button>
         </div>
-    @elseif($user->isClient())
-        @if($product->price === null || $product->stock < 1)
+    @elseif($buyer)
+        @if($product->price === null && config('shop.retail'))
+            {{-- Цена по запросу — заявка «Узнать цену» (LeadController) --}}
+            <div @class([$grid => ! $stacked])>
+                <x-button variant="secondary" :size="$size" :href="route('lead.price', $product->id)" :class="$single" data-price-request>
+                    Узнать цену
+                </x-button>
+            </div>
+        @elseif($product->price === null || $product->stock < 1)
             <div @class([$grid => ! $stacked])>
                 <x-button variant="secondary" :size="$size" type="button" disabled :class="$single" data-buy-disabled>
                     {{ $product->price === null ? 'Цена уточняется' : 'Нет в наличии' }}
@@ -62,7 +72,7 @@
                 @if($card || $tile)
                     <input type="hidden" name="layout" value="{{ $layout }}">
                 @endif
-                <x-qty name="qty" :id="$qtyId" :product="$product" :max="$product->stock" :size="$card ? 'lg' : 'sm'" />
+                <x-qty name="qty" :id="$qtyId" :product="$product" :max="qty_max($product)" :size="$card ? 'lg' : 'sm'" />
                 <x-button :size="$size" :class="$card ? 'grow basis-48' : 'w-full'">В корзину</x-button>
             </form>
         @endif
@@ -75,5 +85,5 @@
         </div>
 
         <div class="text-meta text-tone-danger-text empty:hidden" role="status" data-cart-message></div>
-    @endguest
+    @endif
 </div>

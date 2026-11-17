@@ -58,7 +58,7 @@ class ProductController extends Controller
             'breadcrumbs' => $self->breadcrumbs($product, app(CatalogMenu::class)),
             'keyRows' => $self->keyRows($product, app(KeyAttributes::class)->attributeIds($categoryFilters)),
             'brandUrl' => $self->brandUrl($product, $categoryFilters),
-            'inCart' => app(CartSummary::class)->items(auth()->user())->get($product->id),
+            'inCart' => app(CartSummary::class)->items()->get($product->id),
             // Документы (SRS §4.8): нет ни одного — блок «Документы» скрыт
             'documents' => $product->documents->map(fn (ProductDocument $document) => [
                 'title' => $document->title,

@@ -1,8 +1,13 @@
 <?php
 
+use App\Http\ExchangeErrorResponse;
+use App\Http\Middleware\EnsureCartAccess;
+use App\Http\Middleware\EnsureUserHasRole;
+use App\Http\Middleware\EnsureUserIsNotBlocked;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
-use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\PostTooLargeException;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -20,28 +25,29 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
 
         $middleware->alias([
-            'role' => \App\Http\Middleware\EnsureUserHasRole::class,
+            'role' => EnsureUserHasRole::class,
+            'cart.access' => EnsureCartAccess::class,
         ]);
 
         $middleware->web(append: [
-            \App\Http\Middleware\EnsureUserIsNotBlocked::class,
+            EnsureUserIsNotBlocked::class,
         ]);
 
     })
     ->withExceptions(function (Exceptions $exceptions): void {
 
         // API обмена с 1С: любая ошибка — JSON {"error": "код", "message": "текст"} (раздел 2)
-        $exceptions->render(function (\Throwable $e, \Illuminate\Http\Request $request) {
+        $exceptions->render(function (Throwable $e, Request $request) {
             if (! $request->is('api/1c/*')) {
                 return null;
             }
 
-            return \App\Http\ExchangeErrorResponse::from($e);
+            return ExchangeErrorResponse::from($e);
         });
 
         // Общий объём запроса больше post_max_size (несколько больших фото сразу). Сессия
         // ещё не запущена — flash не сохранить, поэтому простая страница с объяснением.
-        $exceptions->render(function (\Illuminate\Http\Exceptions\PostTooLargeException $e, \Illuminate\Http\Request $request) {
+        $exceptions->render(function (PostTooLargeException $e, Request $request) {
             if ($request->expectsJson()) {
                 return null;
             }

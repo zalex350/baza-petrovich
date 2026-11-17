@@ -5,6 +5,7 @@ namespace Tests\Feature\Ui;
 use App\Models\Product;
 use App\Support\Plural;
 use Illuminate\Auth\GenericUser;
+use Tests\Concerns\B2bPricing;
 use Tests\TestCase;
 
 /**
@@ -12,6 +13,7 @@ use Tests\TestCase;
  */
 class ProductKitTest extends TestCase
 {
+    use B2bPricing;
     // --- x-checkbox: количество справа, галочка в конце ---
 
     public function test_checkbox_meta_and_end_position(): void

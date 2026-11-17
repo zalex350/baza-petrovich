@@ -5,6 +5,7 @@ namespace Tests\Feature\Ui;
 use App\Enums\OrderHistoryEvent;
 use App\Enums\OrderStatus;
 use App\Models\Product;
+use Tests\Concerns\B2bPricing;
 use Tests\TestCase;
 
 /**
@@ -12,6 +13,7 @@ use Tests\TestCase;
  */
 class UiKitTest extends TestCase
 {
+    use B2bPricing;
     // --- x-button ---
 
     public function test_button_variants_and_sizes(): void

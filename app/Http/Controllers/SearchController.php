@@ -85,7 +85,7 @@ class SearchController extends Controller
             'query' => $query,
             'products' => $products,
             'sort' => $sort,
-            'cartItems' => $cart->items(auth()->user()),
+            'cartItems' => $cart->items(),
             // Ничего не нашлось — «Возможно, вы искали L4755-2» (артикул без учёта дефисов)
             'didYouMean' => $products->total() === 0 ? $articles->didYouMean($this->shown(), $query) : [],
         ]);

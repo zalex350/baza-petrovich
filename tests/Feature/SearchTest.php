@@ -6,10 +6,12 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\B2bPricing;
 use Tests\TestCase;
 
 class SearchTest extends TestCase
 {
+    use B2bPricing;
     use RefreshDatabase;
 
     private Category $category;

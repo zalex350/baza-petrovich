@@ -17,7 +17,9 @@
 @section('content')
 
 @php
-    $client = auth()->user()->isClient();
+    $retailVat = \App\Services\Vat\VatCalculator::pricesIncludeVat();
+    // Может оформить: клиент или гость розницы ($retail — розничная форма вместо адресов организации)
+    $client = $retail || (bool) auth()->user()?->isClient();
     $state = $order->state();
     $selectedCount = $items->where('selected', true)->count();
     $totals = $order->totals();
@@ -32,7 +34,7 @@
         $selectedCount === 0               => 'Отметьте позиции, которые войдут в заказ.',
         $state === \App\Enums\CartState::NeedsUpdate     => 'Цены изменились — примите новые цены.',
         $state === \App\Enums\CartState::NeedsCorrection => 'Исправьте отмеченные позиции.',
-        $addresses->isEmpty()              => 'Добавьте адрес доставки.',
+        ! $retail && $addresses->isEmpty() => 'Добавьте адрес доставки.',
         default                            => null,
     };
 
@@ -128,10 +130,10 @@
                         >
                     </span>
                     <span>Товар</span>
-                    <span class="text-right">Цена без НДС</span>
+                    <span class="text-right">{{ $retailVat ? 'Цена' : 'Цена без НДС' }}</span>
                     <span class="text-center">Количество</span>
                     <span>Наличие</span>
-                    <span class="text-right">Сумма без НДС</span>
+                    <span class="text-right">{{ $retailVat ? 'Сумма' : 'Сумма без НДС' }}</span>
                     <span class="sr-only">Удалить</span>
                 </div>
 
@@ -193,13 +195,15 @@
                 <dl class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-2 tabular-nums">
                     <dt class="text-ink-muted">Позиций / штук</dt>
                     <dd class="text-right">{{ $order->count() }} / {{ $order->quantity() }}</dd>
-                    <dt class="text-ink-muted">Сумма без НДС</dt>
-                    <dd class="text-right"><x-price :amount="$totals->net" /></dd>
-                    <dt class="text-ink-muted">{{ $vatLabel }}</dt>
+                    @unless($retailVat)
+                        <dt class="text-ink-muted">Сумма без НДС</dt>
+                        <dd class="text-right"><x-price :amount="$totals->net" /></dd>
+                    @endunless
+                    <dt class="text-ink-muted">{{ $retailVat ? 'в т.ч. '.$vatLabel : $vatLabel }}</dt>
                     <dd class="text-right"><x-price :amount="$totals->vat" /></dd>
                 </dl>
                 <div class="mt-3.5 flex items-baseline justify-between gap-3 border-t border-line-soft pt-3.5">
-                    <span class="font-semibold">Итого с НДС</span>
+                    <span class="font-semibold">{{ $retailVat ? 'Итого' : 'Итого с НДС' }}</span>
                     <x-price :amount="$totals->gross" class="text-2xl font-bold tracking-tight" data-cart-grand-total />
                 </div>
             </div>
@@ -250,6 +254,9 @@
                     @csrf
                     <input type="hidden" name="checkout_token" value="{{ $checkoutToken }}">
 
+                    @if($retail)
+                        @include('partials.checkout_retail')
+                    @else
                     {{-- Адрес доставки: выбор обязателен (BR-128), только адреса своей организации (BR-129) --}}
                     <fieldset class="flex flex-col gap-2">
                         <legend class="mb-2 font-semibold">Адрес доставки <span class="text-danger">*</span></legend>
@@ -296,6 +303,7 @@
 
                     {{-- Комментарий к заказу — необязательный (BR-130) --}}
                     <x-textarea name="comment" label="Комментарий к заказу" rows="3" maxlength="1000" placeholder="Например: позвонить за час до доставки" />
+                    @endif
 
                     <div class="flex flex-col gap-2" data-refresh="submit">
                         <x-button size="lg" class="w-full" :disabled="$blocker !== null" data-checkout-submit>Оформить заказ</x-button>
@@ -304,7 +312,11 @@
                         @endif
                     </div>
 
-                    <p class="text-meta text-ink-muted">Менеджер проверит заказ и передаст его в 1С. Статус будет виден в разделе «Мои заказы».</p>
+                    @if($retail)
+                        <p class="text-meta text-ink-muted">Менеджер позвонит, чтобы подтвердить заказ, наличие и стоимость доставки.</p>
+                    @else
+                        <p class="text-meta text-ink-muted">Менеджер проверит заказ и передаст его в 1С. Статус будет виден в разделе «Мои заказы».</p>
+                    @endif
                 </form>
 
             @endif

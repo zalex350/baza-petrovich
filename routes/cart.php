@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('auth')->group(function () {
+// Розница — гостю тоже (корзина по cookie), B2B — после входа (EnsureCartAccess)
+Route::middleware('cart.access')->group(function () {
 
     Route::get(
         '/order',

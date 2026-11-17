@@ -2,8 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Cart;
-use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\Organization;
 use App\Models\Product;
@@ -12,6 +10,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Tests\Concerns\B2bPricing;
 use Tests\TestCase;
 
 /**
@@ -20,6 +19,7 @@ use Tests\TestCase;
  */
 class ProductImageStorefrontTest extends TestCase
 {
+    use B2bPricing;
     use RefreshDatabase;
 
     private User $client;
@@ -35,13 +35,13 @@ class ProductImageStorefrontTest extends TestCase
         $category = Category::create(['name' => 'Смесители', 'slug' => 'smesiteli']);
 
         $this->product = Product::create([
-            'name'         => 'Grohe Start',
+            'name' => 'Grohe Start',
             'display_name' => 'Смеситель Grohe Start',
-            'sku'          => 'GR-001',
-            'price'        => 100,
-            'stock'        => 5,
-            'category_id'  => $category->id,
-            'is_active'    => true,
+            'sku' => 'GR-001',
+            'price' => 100,
+            'stock' => 5,
+            'category_id' => $category->id,
+            'is_active' => true,
             'is_published' => true,
         ]);
     }
@@ -52,13 +52,13 @@ class ProductImageStorefrontTest extends TestCase
     private function addImage(Product $product, string $name, bool $main = false, int $order = 1): ProductImage
     {
         return ProductImage::create([
-            'product_id'    => $product->id,
-            'path'          => "products/{$product->id}/{$name}-large.webp",
+            'product_id' => $product->id,
+            'path' => "products/{$product->id}/{$name}-large.webp",
             'original_name' => "{$name}.jpg",
-            'is_main'       => $main,
-            'sort_order'    => $order,
-            'width'         => 1600,
-            'height'        => 1200,
+            'is_main' => $main,
+            'sort_order' => $order,
+            'width' => 1600,
+            'height' => 1200,
         ]);
     }
 
@@ -77,7 +77,7 @@ class ProductImageStorefrontTest extends TestCase
         foreach (['/catalog/smesiteli', '/search?q=Grohe', '/'] as $url) {
             $this->actingAs($this->client)->get($url)
                 ->assertOk()
-                ->assertSee('src="' . $this->thumb('main') . '"', false)
+                ->assertSee('src="'.$this->thumb('main').'"', false)
                 ->assertDontSee($this->thumb('second'), false)
                 ->assertSee('alt="Смеситель Grohe Start"', false)
                 ->assertSee('width="300"', false)
@@ -98,18 +98,18 @@ class ProductImageStorefrontTest extends TestCase
 
         $this->actingAs($this->client)->get('/order')
             ->assertOk()
-            ->assertSee('src="' . $this->thumb('main') . '"', false);
+            ->assertSee('src="'.$this->thumb('main').'"', false);
 
         $this->actingAs($this->client)->post('/order/checkout', $this->checkoutData($this->client));
         $orderId = DB::table('orders')->value('id');
 
         $this->actingAs($this->client)->get("/order/{$orderId}")
             ->assertOk()
-            ->assertSee('src="' . $this->thumb('main') . '"', false);
+            ->assertSee('src="'.$this->thumb('main').'"', false);
 
         $this->actingAs(User::factory()->admin()->create())->get("/admin/order/{$orderId}")
             ->assertOk()
-            ->assertSee('src="' . $this->thumb('main') . '"', false);
+            ->assertSee('src="'.$this->thumb('main').'"', false);
     }
 
     public function test_placeholder_without_photo(): void
@@ -156,7 +156,7 @@ class ProductImageStorefrontTest extends TestCase
         $html = $this->actingAs($this->client)->get("/product/{$this->product->id}")
             ->assertOk()
             ->assertSee('data-gallery', false)
-            ->assertSee('src="/storage/products/' . $this->product->id . '/main-medium.webp"', false)
+            ->assertSee('src="/storage/products/'.$this->product->id.'/main-medium.webp"', false)
             ->assertSee('width="800"', false)
             ->assertSee('height="600"', false)
             ->assertSee('data-gallery-thumbs', false)
@@ -168,11 +168,11 @@ class ProductImageStorefrontTest extends TestCase
         // Миниатюры: основное первым, затем по порядку
         $this->assertSame(
             ['main', 'first', 'third'],
-            array_map(fn ($m) => $m, preg_match_all('#/' . $this->product->id . '/(\w+)-thumb\.webp#', $html, $m) ? $m[1] : [])
+            array_map(fn ($m) => $m, preg_match_all('#/'.$this->product->id.'/(\w+)-thumb\.webp#', $html, $m) ? $m[1] : [])
         );
 
         // Без JS миниатюра — ссылка на большую версию
-        $this->assertStringContainsString('href="/storage/products/' . $this->product->id . '/third-large.webp"', $html);
+        $this->assertStringContainsString('href="/storage/products/'.$this->product->id.'/third-large.webp"', $html);
     }
 
     public function test_main_photo_has_arrows_swipe_and_active_thumbnail(): void

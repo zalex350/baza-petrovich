@@ -27,6 +27,10 @@ return [
 
     'prices_include_vat' => (bool) env('SHOP_PRICES_INCLUDE_VAT', true),
 
+    // Учёт остатков: true — остаток из 1С/админки ограничивает заказ, витрина показывает «Много / Мало / N шт.»;
+    // false — пока остатков нет (baza-petrovich.by до обмена с 1С): товар «В наличии» (stock > 0) или «Нет в наличии»
+    'track_stock' => (bool) env('SHOP_TRACK_STOCK', true),
+
     // Время жизни кэша дерева категорий для меню, секунд
     'catalog_menu_ttl' => (int) env('SHOP_CATALOG_MENU_TTL', 3600),
 
@@ -104,6 +108,37 @@ return [
         // Цены и остатки: товар — по guid, затем точно по SKU сайта. true — ещё и по артикулу
         // (products.article), только среди товаров без GUID; неоднозначность — ошибка строки
         'match_by_article' => (bool) env('SHOP_1C_MATCH_BY_ARTICLE', false),
+    ],
+
+    /*
+    | Розничное оформление (гость): способы получения и оплаты. Ключ — код в orders.delivery_method /
+    | payment_method (уходит в 1С, Битрикс24, Telegram), label — подпись, address — адрес самовывоза,
+    | needs_address — нужен адрес доставки покупателя. enabled = false — способ скрыт (ЕРИП — до подключения).
+    */
+    'checkout' => [
+        'delivery' => [
+            'pickup_minsk' => [
+                'label' => 'Самовывоз — Минск',
+                'address' => 'МКАД (внешняя сторона), д. Большое Стиклево, ул. Молодежная, 1',
+                'enabled' => true,
+            ],
+            'pickup_brest' => [
+                'label' => 'Самовывоз — Брест',
+                'address' => 'г. Брест, ул. Коммерческая, 7 (кольцо Задворцы)',
+                'enabled' => true,
+            ],
+            'delivery' => [
+                'label' => 'Доставка',
+                'hint' => 'По звонку, оплата водителю. Заказы до 12:00 — в тот же день. Стоимость — по согласованию с менеджером.',
+                'needs_address' => true,
+                'enabled' => true,
+            ],
+        ],
+        'payment' => [
+            'on_receipt' => ['label' => 'Наличными или картой при получении', 'enabled' => true],
+            'invoice' => ['label' => 'Безналичный расчёт по счёту', 'enabled' => true],
+            'erip' => ['label' => 'ЕРИП', 'enabled' => (bool) env('SHOP_PAYMENT_ERIP', false)],
+        ],
     ],
 
     'orders' => [

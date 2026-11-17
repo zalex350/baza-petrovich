@@ -77,7 +77,12 @@ class CartValidator
 
         $stock = (int) $product->stock;
 
-        if ($stock < 1) {
+        // Без учёта остатков (shop.track_stock = false): только «есть / нет», количество не ограничено
+        if (! stock_tracked()) {
+            if ($stock < 1) {
+                $problems[] = new CartProblem(CartProblemType::OutOfStock, $name, 'нет в наличии', available: 0);
+            }
+        } elseif ($stock < 1) {
             $problems[] = new CartProblem(CartProblemType::OutOfStock, $name, 'нет в наличии', available: 0);
         } elseif ($quantity > $stock) {
             $problems[] = new CartProblem(

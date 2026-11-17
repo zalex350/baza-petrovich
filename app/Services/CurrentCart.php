@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
@@ -28,8 +29,8 @@ class CurrentCart
     /** Срок cookie, минут (60 дней) */
     public const LIFETIME = 60 * 24 * 60;
 
-    /** Токен, выданный в этом запросе (cookie уйдёт с ответом) */
-    private ?string $issued = null;
+    /** Атрибут запроса: токен, выданный в этом запросе (cookie уйдёт с ответом) */
+    private const ISSUED = 'cart_token_issued';
 
     public function user(): ?User
     {
@@ -52,21 +53,22 @@ class CurrentCart
     /** Токен гостевой корзины из cookie (или выданный в этом запросе) */
     public function token(): ?string
     {
-        $token = $this->issued ?? request()->cookie(self::COOKIE);
+        $token = request()->attributes->get(self::ISSUED) ?? request()->cookie(self::COOKIE);
 
         return is_string($token) && preg_match('/^[A-Za-z0-9]{40}$/', $token) ? $token : null;
     }
 
+    /** Корзина посетителя; пользователь (и администратор — только просмотр) — своя, гость розницы — по cookie */
     public function get(): ?Cart
     {
-        if (! $this->canBuy()) {
-            return null;
-        }
-
         $user = $this->user();
 
         if ($user) {
             return $user->cart()->first();
+        }
+
+        if (! $this->canBuy()) {
+            return null;
         }
 
         $token = $this->token();
@@ -88,14 +90,15 @@ class CurrentCart
             return $cart;
         }
 
-        $this->issued = Str::random(40);
-        Cookie::queue(self::COOKIE, $this->issued, self::LIFETIME);
+        $issued = Str::random(40);
+        request()->attributes->set(self::ISSUED, $issued);
+        Cookie::queue(self::COOKIE, $issued, self::LIFETIME);
 
-        return Cart::create(['token' => $this->issued]);
+        return Cart::create(['token' => $issued]);
     }
 
     /** Ограничить запрос (join carts) корзиной текущего посетителя; нет корзины — пусто */
-    public function constrain(QueryBuilder|\Illuminate\Database\Eloquent\Builder $query, string $carts = 'carts'): void
+    public function constrain(QueryBuilder|Builder $query, string $carts = 'carts'): void
     {
         $user = $this->user();
         $token = $this->token();

@@ -12,6 +12,7 @@ use App\Services\CartSummary;
 use App\Services\CartValidator;
 use App\Services\CheckoutService;
 use App\Services\ClientCodes;
+use App\Services\CurrentCart;
 use App\Support\OrderQuantity;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,7 @@ class CartController extends Controller
         private readonly CartValidator $validator,
         private readonly CartSummary $summary,
         private readonly ClientCodes $codes,
+        private readonly CurrentCart $current,
     ) {}
 
     /**
@@ -37,7 +39,7 @@ class CartController extends Controller
      */
     public function index()
     {
-        $cart = auth()->user()->cart()->with(['items.product.mainImage', 'items.product.clientPrice'])->first();
+        $cart = $this->current->get()?->load(['items.product.mainImage', 'items.product.clientPrice']);
         $items = $cart?->items ?? collect();
 
         // «Ваш код» в позициях — коды организации одной выборкой
@@ -66,15 +68,16 @@ class CartController extends Controller
         // Одноразовый токен формы оформления — защита от двойной отправки
         $checkoutToken = (string) Str::uuid();
 
-        // Адреса доставки организации для выбора при оформлении (BR-128)
-        $addresses = auth()->user()->organization?->deliveryAddresses ?? collect();
+        // Адреса доставки организации для выбора при оформлении (BR-128); гость — розничная форма
+        $addresses = auth()->user()?->organization?->deliveryAddresses ?? collect();
+        $retail = $this->current->isGuest();
 
         $continueUrl = CatalogController::continueUrl();
 
         // «Добавить по вашему коду» — если у организации есть коды, иначе «по артикулу»
         $byCode = $this->codes->has();
 
-        return view('order', compact('cart', 'items', 'validation', 'order', 'shortages', 'checkoutToken', 'addresses', 'continueUrl', 'byCode'));
+        return view('order', compact('cart', 'items', 'validation', 'order', 'shortages', 'checkoutToken', 'addresses', 'continueUrl', 'byCode', 'retail'));
     }
 
     /**
@@ -85,7 +88,7 @@ class CartController extends Controller
     public function add($id)
     {
         // BR-121: оформлять заказы могут только клиенты — корзина администратору не нужна
-        if (! auth()->user()->isClient()) {
+        if (! $this->current->canBuy()) {
             return $this->addResult('Оформлять заказы могут только клиенты');
         }
 
@@ -109,7 +112,7 @@ class CartController extends Controller
      */
     private function addProduct(Product $product, int $qty, ?string &$hint = null): ?string
     {
-        $cart = auth()->user()->cart()->firstOrCreate();
+        $cart = $this->current->getOrCreate();
 
         // Блокировка строки корзины сериализует параллельные добавления одного товара:
         // вторая вставка не упирается в unique(cart_id, product_id), а увеличивает количество.
@@ -170,7 +173,7 @@ class CartController extends Controller
      */
     public function quickAdd(ArticleSearch $articles)
     {
-        if (! auth()->user()->isClient()) {
+        if (! $this->current->canBuy()) {
             return $this->quickAddResult(['sku' => 'Оформлять заказы могут только клиенты']);
         }
 
@@ -234,13 +237,13 @@ class CartController extends Controller
         }
 
         $message = 'Добавлено в корзину: '.($product->title()).($hint ? ". {$hint}" : '');
-        $item = $this->summary->items(auth()->user())->get($product->id);
+        $item = $this->summary->items()->get($product->id);
 
         if (request()->expectsJson()) {
             return response()->json([
                 'ok' => true,
                 'message' => $message,
-                'cart' => $this->summary->forHeader(auth()->user()),
+                'cart' => $this->summary->forHeader(),
                 'item_id' => $item?->id,
             ], 200, [], JSON_UNESCAPED_UNICODE);
         }
@@ -278,14 +281,14 @@ class CartController extends Controller
             $data = ['ok' => $error === null, 'message' => $error ?? $added];
 
             if ($error === null) {
-                $data['cart'] = $this->summary->forHeader(auth()->user());
+                $data['cart'] = $this->summary->forHeader();
                 $data['toast'] = Blade::render('<x-alert type="success">{{ $message }}</x-alert>', ['message' => $data['message']]);
                 // Строка списка переходит в состояние «В корзине»: количество и «перейти»
                 // layout: row — строка списка, card — карточка товара, tile — плитка (поле формы, по умолчанию row)
                 $data['html'] = Blade::render('<x-product-row.buy :product="$product" :in-cart="$item" :layout="$layout" />', [
                     'layout' => in_array(request('layout'), ['card', 'tile'], true) ? request('layout') : 'row',
                     'product' => $product,
-                    'item' => $this->summary->items(auth()->user())->get($product->id),
+                    'item' => $this->summary->items()->get($product->id),
                 ]);
             }
 
@@ -343,7 +346,7 @@ class CartController extends Controller
                 // Округление сервером (без x-qty или из поля без кратности) — подсказка у строки
                 'hint' => $error === null ? $hint : null,
                 'quantity' => $item->quantity,
-                'cart' => $this->summary->forHeader(auth()->user()),
+                'cart' => $this->summary->forHeader(),
             ], $error === null ? 200 : 422, [], JSON_UNESCAPED_UNICODE);
         }
 
@@ -375,7 +378,7 @@ class CartController extends Controller
      */
     public function selectAll()
     {
-        $cart = auth()->user()->cart()->with(['items.product.clientPrice'])->first();
+        $cart = $this->current->get()?->load(['items.product.clientPrice']);
         $items = $cart?->items ?? collect();
 
         // «Ваш код» в позициях — коды организации одной выборкой
@@ -410,7 +413,7 @@ class CartController extends Controller
      */
     public function clear()
     {
-        auth()->user()->cart()->first()?->items()->delete();
+        $this->current->get()?->items()->delete();
 
         return redirect('/order')->with('success', 'Корзина очищена');
     }
@@ -440,7 +443,7 @@ class CartController extends Controller
             return response()->json([
                 'ok' => $error === null,
                 'message' => $error ?? $success,
-                'cart' => $this->summary->forHeader(auth()->user()),
+                'cart' => $this->summary->forHeader(),
             ] + $extra, $error === null ? 200 : 422, [], JSON_UNESCAPED_UNICODE);
         }
 
@@ -453,7 +456,7 @@ class CartController extends Controller
      */
     public function acceptPrices()
     {
-        $cart = auth()->user()->cart()->with(['items.product.clientPrice'])->first();
+        $cart = $this->current->get()?->load(['items.product.clientPrice']);
 
         $validation = $this->validator->validate($cart);
 
@@ -479,6 +482,10 @@ class CartController extends Controller
     {
         $token = request('checkout_token');
         $token = is_string($token) && $token !== '' && strlen($token) <= 64 ? $token : null;
+
+        if ($this->current->isGuest()) {
+            return $this->checkoutRetail($checkout, $token);
+        }
 
         $validator = Validator::make(request()->all(), [
             'delivery_address_id' => ['nullable', 'integer'],
@@ -518,13 +525,71 @@ class CartController extends Controller
     }
 
     /**
-     * Позиция корзины текущего пользователя; чужая — 403.
+     * Розничное оформление гостя: контакт, способ получения (самовывоз Минск / Брест, доставка с адресом),
+     * оплата, согласие на обработку персональных данных. Успех — страница заказа по ссылке /o/{token}.
+     */
+    private function checkoutRetail(CheckoutService $checkout, ?string $token)
+    {
+        $delivery = collect(config('shop.checkout.delivery'))->filter(fn ($m) => $m['enabled'] ?? true);
+        $payment = collect(config('shop.checkout.payment'))->filter(fn ($m) => $m['enabled'] ?? true);
+        $needsAddress = $delivery->filter(fn ($m) => $m['needs_address'] ?? false)->keys()->implode(',');
+
+        $validator = Validator::make(request()->all(), [
+            'name' => ['required', 'string', 'max:255'],
+            'phone' => ['required', 'string', 'max:50', 'regex:/^[0-9+()\-\s]{7,}$/'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'delivery_method' => ['required', 'in:'.$delivery->keys()->implode(',')],
+            'address' => ['nullable', 'string', 'max:500', 'required_if:delivery_method,'.$needsAddress],
+            'payment_method' => ['required', 'in:'.$payment->keys()->implode(',')],
+            'comment' => ['nullable', 'string', 'max:1000'],
+            'consent' => ['accepted'],
+        ], [
+            'name.required' => 'Укажите имя',
+            'phone.required' => 'Укажите телефон',
+            'phone.regex' => 'Телефон — цифры, например +375 29 123-45-67',
+            'email.email' => 'Проверьте email',
+            'delivery_method.required' => 'Выберите способ получения',
+            'delivery_method.in' => 'Выберите способ получения',
+            'address.required_if' => 'Укажите адрес доставки',
+            'payment_method.required' => 'Выберите способ оплаты',
+            'payment_method.in' => 'Выберите способ оплаты',
+            'comment.max' => 'Комментарий к заказу не длиннее 1000 символов',
+            'consent.accepted' => 'Нужно согласие на обработку персональных данных',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect('/order')->withErrors($validator)->withInput();
+        }
+
+        $cart = $this->current->get();
+
+        if (! $cart) {
+            return redirect('/order')->with('error', CheckoutException::emptyCart()->getMessage());
+        }
+
+        try {
+            $order = $checkout->placeRetail($cart, $validator->validated(), $token);
+        } catch (CheckoutException $e) {
+            $redirect = redirect('/order')->with('error', $e->getMessage())->withInput();
+
+            return $e->problems ? $redirect->withErrors($e->problems) : $redirect;
+        } catch (Throwable $e) {
+            report($e);
+
+            return redirect('/order')->with('error', CheckoutException::CREATION_FAILED)->withInput();
+        }
+
+        return redirect('/o/'.$order->public_token)->with('success', 'Заказ оформлен');
+    }
+
+    /**
+     * Позиция корзины текущего посетителя (CurrentCart); чужая — 403.
      */
     private function ownItem($id): CartItem
     {
         $item = CartItem::with(['cart', 'product'])->findOrFail($id);
 
-        if ($item->cart->user_id !== auth()->id()) {
+        if (! $this->current->owns($item)) {
             abort(403);
         }
 

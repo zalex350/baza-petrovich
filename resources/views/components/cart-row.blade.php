@@ -143,7 +143,7 @@
     <div @class(['text-meta text-tone-danger-text empty:hidden', 'col-start-2 col-end-8 -mt-2 order-last' => ! $card]) data-refresh="{{ $key }}-notes">@foreach($notes as $note)<div>{{ $note->type->isQuantityRule() ? $note->text() : $note->title() }}</div>@endforeach</div>
 
     @unless($card)
-        {{-- Цена без НДС; изменилась — было/стало (принять — в панели) --}}
+        {{-- Цена (розница — с НДС, B2B — без НДС); изменилась — было/стало (принять — в панели) --}}
         <div class="whitespace-nowrap pt-5 text-right tabular-nums" data-refresh="{{ $key }}-price">
             @if($unavailable)
                 <span class="text-ink-muted">—</span>
@@ -175,7 +175,7 @@
                     :value="$item->quantity"
                     :min="$aligned ? $min : 1"
                     :step="$aligned ? $step : 1"
-                    :max="$product->stock"
+                    :max="qty_max($product)"
                     :size="$card ? 'md' : 'sm'"
                     label="Количество"
                 />
@@ -203,13 +203,18 @@
         </div>
     @endunless
 
-    {{-- Сумма без НДС + «с НДС X» --}}
+    {{-- Розница — сумма с НДС; B2B — сумма без НДС + «с НДС X» --}}
     <div @class(['whitespace-nowrap text-right tabular-nums', 'pt-4' => ! $card]) data-refresh="{{ $key }}-sum">
         @if($unavailable)
             <span class="text-ink-muted">—</span>
         @else
-            <div class="font-bold"><x-price :amount="$line->net" /></div>
-            <div class="text-meta text-ink-muted">{{ $card ? 'без НДС' : 'с НДС '.money($line->gross, false) }}</div>
+            @if(\App\Services\Vat\VatCalculator::pricesIncludeVat())
+                {{-- Розница: сумма с НДС --}}
+                <div class="font-bold"><x-price :amount="$line->gross" /></div>
+            @else
+                <div class="font-bold"><x-price :amount="$line->net" /></div>
+                <div class="text-meta text-ink-muted">{{ $card ? 'без НДС' : 'с НДС '.money($line->gross, false) }}</div>
+            @endif
         @endif
     </div>
 

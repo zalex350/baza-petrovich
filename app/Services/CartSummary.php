@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\CartItem;
-use App\Models\User;
 use App\Services\Pricing\PriceContext;
 use App\Services\Vat\VatCalculator;
 use App\Support\Money;
@@ -16,7 +15,10 @@ use Illuminate\Support\Facades\DB;
  */
 class CartSummary
 {
-    public function __construct(private readonly VatCalculator $vat) {}
+    public function __construct(
+        private readonly VatCalculator $vat,
+        private readonly CurrentCart $current,
+    ) {}
 
     /**
      * Шапка: count — позиций в корзине, total — их сумма с НДС, vat — НДС в ней; обе цифры —
@@ -26,9 +28,9 @@ class CartSummary
      *
      * @return array{count: int, total: float, vat: float}
      */
-    public function totals(?User $user): array
+    public function totals(): array
     {
-        if (! $user) {
+        if (! $this->current->canBuy()) {
             return ['count' => 0, 'total' => 0.0, 'vat' => 0.0];
         }
 
@@ -37,7 +39,7 @@ class CartSummary
         $rows = DB::table('cart_items')
             ->join('carts', 'carts.id', '=', 'cart_items.cart_id')
             ->join('products', 'products.id', '=', 'cart_items.product_id')
-            ->where('carts.user_id', $user->id)
+            ->tap(fn ($q) => $this->current->constrain($q))
             ->whereNull('products.deleted_at')
             ->where('products.is_active', true)
             ->where('products.is_published', true)
@@ -61,9 +63,9 @@ class CartSummary
      *
      * @return array{count: int, total: float, vat: float, total_text: string, title: string, label: string}
      */
-    public function forHeader(?User $user): array
+    public function forHeader(): array
     {
-        $totals = $this->totals($user);
+        $totals = $this->totals();
 
         return $totals + [
             'total_text' => Money::format($totals['total']),
@@ -73,18 +75,18 @@ class CartSummary
     }
 
     /**
-     * Позиции корзины клиента по id товара; не клиенту — пусто.
+     * Позиции корзины посетителя (клиент или гость розницы — CurrentCart) по id товара; иначе пусто.
      *
      * @return Collection<int, CartItem>
      */
-    public function items(?User $user): Collection
+    public function items(): Collection
     {
-        if (! $user?->isClient()) {
+        if (! $this->current->canBuy()) {
             return collect();
         }
 
         return CartItem::query()
-            ->whereHas('cart', fn ($q) => $q->where('user_id', $user->id))
+            ->whereHas('cart', fn ($q) => $this->current->constrain($q))
             ->whereNotNull('product_id')
             ->get(['id', 'cart_id', 'product_id', 'quantity'])
             ->keyBy('product_id');

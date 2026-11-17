@@ -6,6 +6,8 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Observers\CatalogMenuObserver;
 use App\Services\ClientCodes;
+use App\Services\CurrentCart;
+use App\Services\Pricing\Discounts;
 use App\Services\Pricing\PriceContext;
 use App\View\Composers\CatalogMenuComposer;
 use App\View\Composers\HeaderComposer;
@@ -23,7 +25,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(ClientCodes::class);
         // Типы цен: справочник — один запрос; тип покупателя — один раз за HTTP-запрос
         $this->app->singleton(PriceContext::class);
-        $this->app->singleton(\App\Services\Pricing\Discounts::class);
+        $this->app->singleton(Discounts::class);
+        // Корзина посетителя: токен гостя, выданный в запросе, — до конца запроса
+        $this->app->scoped(CurrentCart::class);
     }
 
     public function boot(): void

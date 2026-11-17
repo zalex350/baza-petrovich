@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\Catalog\CatalogFilters;
 use App\Support\Money;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\B2bPricing;
 use Tests\TestCase;
 
 /**
@@ -21,6 +22,7 @@ use Tests\TestCase;
  */
 class ProductRowTest extends TestCase
 {
+    use B2bPricing;
     use RefreshDatabase;
 
     private User $client;

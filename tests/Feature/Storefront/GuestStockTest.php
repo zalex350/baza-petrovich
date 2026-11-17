@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\User;
 use App\Services\Catalog\CatalogFilters;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\B2bPricing;
 use Tests\TestCase;
 
 /**
@@ -18,6 +19,7 @@ use Tests\TestCase;
  */
 class GuestStockTest extends TestCase
 {
+    use B2bPricing;
     use RefreshDatabase;
 
     private const GUEST_LINE = 'Цена и наличие — после входа';

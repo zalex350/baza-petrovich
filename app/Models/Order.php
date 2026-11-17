@@ -43,6 +43,10 @@ class Order extends Model
         'delivery_address',
         'delivery_contact_name',
         'delivery_contact_phone',
+        'customer_email',
+        'delivery_method',
+        'payment_method',
+        'public_token',
         'comment',
         'placed_at',
         'checkout_token',
@@ -55,6 +59,23 @@ class Order extends Model
      * Итоги НДС — суммы позиций (снимок при оформлении). total устарел (@deprecated):
      * прежняя сумма без НДС, оставлена для совместимости; на экранах — только total_*.
      */
+    /** Розничный заказ гостя (без учётной записи): контакт — в delivery_contact_*, ссылка — /o/{public_token} */
+    public function isGuest(): bool
+    {
+        return $this->user_id === null && $this->public_token !== null;
+    }
+
+    /** Подпись способа получения / оплаты (config shop.checkout); неизвестный код — сам код */
+    public function deliveryLabel(): ?string
+    {
+        return $this->delivery_method ? (config("shop.checkout.delivery.{$this->delivery_method}.label") ?? $this->delivery_method) : null;
+    }
+
+    public function paymentLabel(): ?string
+    {
+        return $this->payment_method ? (config("shop.checkout.payment.{$this->payment_method}.label") ?? $this->payment_method) : null;
+    }
+
     protected $casts = [
         'status' => OrderStatus::class,
         'total_without_vat' => 'decimal:2',

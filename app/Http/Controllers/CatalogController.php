@@ -124,7 +124,7 @@ class CatalogController extends Controller
         return view('catalog', $data + [
             'listing' => $listing,
             'products' => $products,
-            'cartItems' => $cart->items(auth()->user()),
+            'cartItems' => $cart->items(),
             'facets' => $listing->facets(),
             'chips' => $listing->chips($baseUrl),
             'baseUrl' => $baseUrl,

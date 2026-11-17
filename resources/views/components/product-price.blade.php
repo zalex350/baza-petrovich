@@ -6,7 +6,7 @@
     Цена — для текущего покупателя (Product::price: розница со скидкой или тип цены организации).
     Скидка — прежняя цена зачёркнута (Product::old_price). Подпись — «за м.п.» по единице товара;
     розница (shop.prices_include_vat) — «с НДС», B2B — «без НДС» и строка «с НДС …».
-    Нет цены — «Цена по запросу» (кнопку «Узнать цену» выводит x-product-row.buy).
+    Нет цены — розница «Цена по запросу» (кнопку «Узнать цену» выводит x-product-row.buy), B2B «Цена уточняется».
     Цены скрыты (B2B, гость) — «Цена и наличие — после входа».
 --}}
 @props(['product', 'layout' => 'row'])
@@ -23,7 +23,7 @@
     @if(! prices_visible())
         <span class="text-sm text-ink-muted" data-guest-price>Цена и наличие — после входа</span>
     @elseif($product->price === null)
-        <span @class(['font-semibold text-ink-muted', 'text-xl' => $card]) data-price-tbd>Цена по запросу</span>
+        <span @class(['font-semibold text-ink-muted', 'text-xl' => $card]) data-price-tbd>{{ config('shop.retail') ? 'Цена по запросу' : 'Цена уточняется' }}</span>
     @else
         @if($card)
             <div class="text-meta text-ink-muted">Цена {{ $retail ? 'с НДС' : 'без НДС' }}, за {{ $unit }}</div>

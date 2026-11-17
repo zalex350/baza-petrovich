@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Services\Catalog\CatalogFilters;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\B2bPricing;
 use Tests\TestCase;
 
 /**
@@ -23,6 +24,7 @@ use Tests\TestCase;
  */
 class CatalogFiltersTest extends TestCase
 {
+    use B2bPricing;
     use RefreshDatabase;
 
     private User $client;

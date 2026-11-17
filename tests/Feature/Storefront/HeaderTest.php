@@ -9,13 +9,16 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Organization;
 use App\Models\Product;
+use App\Models\Setting;
 use App\Models\User;
 use App\Support\Money;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\B2bPricing;
 use Tests\TestCase;
 
 class HeaderTest extends TestCase
 {
+    use B2bPricing;
     use RefreshDatabase;
 
     private function client(): User
@@ -84,7 +87,7 @@ class HeaderTest extends TestCase
     public function test_header_has_contacts_and_info_links(): void
     {
         // Контакты — «Настройки» в админке
-        \App\Models\Setting::put([
+        Setting::put([
             'contact_phones' => json_encode([['label' => 'Отдел продаж', 'number' => '+375 (17) 123-45-67']]),
             'contact_email' => 'sales@smesitel.by',
             'contact_hours' => 'Пн–Сб 10:00–19:00',

@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\Catalog\CategoryOrder;
 use App\Services\CatalogMenu;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\B2bPricing;
 use Tests\TestCase;
 
 /**
@@ -19,6 +20,7 @@ use Tests\TestCase;
  */
 class CatalogSortingTest extends TestCase
 {
+    use B2bPricing;
     use RefreshDatabase;
 
     private User $client;
