@@ -11,12 +11,12 @@ use Illuminate\Http\UploadedFile;
 /**
  * Фото разделов каталога (плитки главной и /catalog) из database/data/petrovich/category-photos:
  * файл {source_key раздела}.jpg → «Картинка» категории (categories.image, webp). Фото — CC0
- * (StockSnap, rawpixel), авторы и лицензии — credits.json, страница /photo-credits.
+ * (Pexels — выбор заказчика), авторы и лицензии — credits.json, страница /photo-credits.
  * Заменяет только пустые картинки; --force — все из папки.
  */
 class PetrovichCategoryPhotos extends Command
 {
-    protected $signature = 'petrovich:category-photos {dir? : папка с фото (по умолчанию database/data/petrovich/category-photos)} {--force : заменить уже заданные картинки}';
+    protected $signature = 'petrovich:category-photos {dir? : папка с фото (по умолчанию database/data/petrovich/category-photos)} {--force : заменить уже заданные картинки} {--reset : снять картинки со всех разделов (плитки — снова фото товаров)}';
 
     protected $description = 'Фото разделов каталога металлобазы (свободные лицензии)';
 
@@ -25,6 +25,21 @@ class PetrovichCategoryPhotos extends Command
 
     public function handle(WebpImage $images): int
     {
+        if ($this->option('reset')) {
+            $count = 0;
+
+            foreach (Category::query()->whereNotNull('image')->get() as $category) {
+                $images->delete($category->image);
+                $category->update(['image' => null]);
+                $count++;
+            }
+
+            app(CatalogMenu::class)->flush();
+            $this->info("Картинок снято: {$count}");
+
+            return self::SUCCESS;
+        }
+
         $dir = $this->argument('dir') ?: database_path('data/petrovich/category-photos');
         $count = 0;
 

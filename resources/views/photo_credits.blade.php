@@ -9,7 +9,7 @@
 
 <article class="mt-3 max-w-3xl rounded-card border border-line bg-surface p-card" data-photo-credits>
     <h1 class="mb-4 text-3xl font-bold tracking-tight">Авторы фото</h1>
-    <p class="mb-4 text-ink-muted">Фото разделов каталога — со StockSnap и rawpixel, в общественном достоянии (CC0): использовать можно свободно, ссылки на авторов — из уважения к их работе.</p>
+    <p class="mb-4 text-ink-muted">Фото разделов каталога — с Pexels (лицензия Pexels: бесплатно, в том числе для коммерческого использования); ссылки на авторов — из уважения к их работе.</p>
     <ul class="space-y-2 text-sm">
         @foreach($credits as $credit)
             <li>

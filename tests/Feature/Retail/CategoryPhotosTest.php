@@ -60,6 +60,19 @@ class CategoryPhotosTest extends TestCase
         $this->get('/catalog')->assertOk()->assertSee('object-cover', false)->assertSee($path, false);
     }
 
+    public function test_reset_removes_all_category_images(): void
+    {
+        $setka = Category::create(['name' => 'Сетка', 'slug' => 'setka']);
+        $setka->forceFill(['source_key' => 'setka'])->save();
+        $this->artisan('petrovich:category-photos', ['dir' => $this->dir])->assertSuccessful();
+        $path = $setka->fresh()->image;
+
+        $this->artisan('petrovich:category-photos', ['--reset' => true])->expectsOutputToContain('Картинок снято: 1')->assertSuccessful();
+
+        $this->assertNull($setka->fresh()->image);
+        Storage::disk('public')->assertMissing($path);
+    }
+
     public function test_credits_page(): void
     {
         $this->get('/photo-credits')->assertOk()->assertSee('Авторы фото');
