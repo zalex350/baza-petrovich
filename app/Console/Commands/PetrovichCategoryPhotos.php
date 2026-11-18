@@ -10,8 +10,8 @@ use Illuminate\Http\UploadedFile;
 
 /**
  * Фото разделов каталога (плитки главной и /catalog) из database/data/petrovich/category-photos:
- * файл {source_key раздела}.jpg → «Картинка» категории (categories.image, webp). Фото — со свободной
- * лицензией (Wikimedia Commons), авторы и лицензии — credits.json, страница /photo-credits.
+ * файл {source_key раздела}.jpg → «Картинка» категории (categories.image, webp). Фото — CC0
+ * (StockSnap, rawpixel), авторы и лицензии — credits.json, страница /photo-credits.
  * Заменяет только пустые картинки; --force — все из папки.
  */
 class PetrovichCategoryPhotos extends Command

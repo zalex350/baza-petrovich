@@ -88,6 +88,8 @@ class ImportPetrovich extends Command
 
         $discounts->recalculate();
         $icons = PetrovichIcons::apply();
+        // Фото разделов (свободные лицензии) — только пустым
+        $this->call('petrovich:category-photos');
         app(CatalogMenu::class)->flush();
 
         $this->info(sprintf(

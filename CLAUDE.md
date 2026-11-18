@@ -70,6 +70,7 @@ docker-compose exec php ./vendor/bin/pint
 docker-compose exec php php artisan petrovich:import --fresh --images   # первый раз: старый каталог удаляется, фото — с baza-petrovich.by
 docker-compose exec php php artisan petrovich:import                    # повтор: обновление по source_key, без дублей
 docker-compose exec php php artisan petrovich:content                   # фото на плитках, контакты, реквизиты, страницы (только пустое)
+docker-compose exec php php artisan petrovich:category-photos [--force] # фото разделов: database/data/petrovich/category-photos (CC0, авторы — credits.json, /photo-credits)
 docker-compose exec php php artisan petrovich:icons [--force]           # иконки разделов: набор resources/icons/metal, правила — database/data/petrovich/category_icons.php
 ```
 
