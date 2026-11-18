@@ -29,7 +29,8 @@ php artisan migrate
 php artisan petrovich:import --fresh --images   # 208 разделов, 644 товара, 13 услуг, фото с baza-petrovich.by
 php artisan petrovich:content                   # фото на плитках разделов, контакты, реквизиты, страницы
 php artisan petrovich:icons                     # иконки разделов (набор metal); импорт назначает их сам
-php artisan petrovich:category-photos [--force] # фото разделов (CC0, database/data/petrovich/category-photos); импорт — сам
+php artisan petrovich:category-photos [--force] # фото разделов (database/data/petrovich/category-photos); импорт — сам
+python scripts/category-photos.py               # обработка фото разделов в едином стиле: src/ + photos.json → {раздел}.jpg
 ```
 
 Повторный `petrovich:import` (без `--fresh`) обновляет товары по ключу `source_key`, не дублируя.

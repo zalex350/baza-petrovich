@@ -42,5 +42,49 @@
   "license": "owner",
   "license_label": "фото заказчика",
   "license_url": ""
+ },
+ {
+  "section": "Металлочерепица",
+  "file": "metallocherepica.jpg",
+  "title": "Металлочерепица",
+  "creator": "",
+  "source": "предоставлено «Петровичем»",
+  "landing": "",
+  "license": "owner",
+  "license_label": "фото заказчика",
+  "license_url": ""
+ },
+ {
+  "section": "Жалюзи",
+  "file": "zhalyuzi.jpg",
+  "title": "Забор-жалюзи",
+  "creator": "",
+  "source": "предоставлено «Петровичем»",
+  "landing": "",
+  "license": "owner",
+  "license_label": "фото заказчика",
+  "license_url": ""
+ },
+ {
+  "section": "Металлоштакетник",
+  "file": "metalloshtaketnik.jpg",
+  "title": "Металлоштакетник",
+  "creator": "",
+  "source": "предоставлено «Петровичем»",
+  "landing": "",
+  "license": "owner",
+  "license_label": "фото заказчика",
+  "license_url": ""
+ },
+ {
+  "section": "Металлопрокат",
+  "file": "metalloprokat.jpg",
+  "title": "Профильная труба и пруток",
+  "creator": "",
+  "source": "предоставлено «Петровичем»",
+  "landing": "",
+  "license": "owner",
+  "license_label": "фото заказчика",
+  "license_url": ""
  }
 ]
