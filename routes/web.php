@@ -34,6 +34,13 @@ foreach (Page::MENU as $slug => $url) {
 
 Route::get('/page/{slug}', [PageController::class, 'show']);
 
+// Авторы фото разделов (лицензии CC)
+Route::get('/photo-credits', function () {
+    $credits = json_decode((string) @file_get_contents(database_path('data/petrovich/category-photos/credits.json')), true) ?: [];
+
+    return view('photo_credits', ['credits' => $credits]);
+});
+
 // Услуги (страницы type = service)
 Route::get('/uslugi', [ServiceController::class, 'index'])->name('services.index');
 Route::get('/uslugi/{slug}', [ServiceController::class, 'show'])->name('services.show');

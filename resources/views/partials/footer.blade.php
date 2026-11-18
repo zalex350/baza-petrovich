@@ -65,7 +65,7 @@
                 </div>
             @endforeach
         </dl>
-        <p class="max-w-page mx-auto px-4 pb-4 text-meta text-ink-muted lg:px-6">© {{ \App\Support\LocalTime::now()->year }} {{ config('shop.name') }}</p>
+        <p class="max-w-page mx-auto px-4 pb-4 text-meta text-ink-muted lg:px-6">© {{ \App\Support\LocalTime::now()->year }} {{ config('shop.name') }}@if(is_file(database_path('data/petrovich/category-photos/credits.json'))) · <a href="/photo-credits" class="hover:text-link">Авторы фото</a>@endif</p>
     </div>
 
 </footer>

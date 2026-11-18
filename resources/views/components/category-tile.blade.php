@@ -18,8 +18,10 @@
             'bg-ic-tile' => ! $tile,
         ])>
             @if($tile)
-                {{-- Файл не загрузился — вместо «битой» картинки иконка раздела --}}
-                <img src="{{ $tile }}" alt="" loading="lazy" class="h-full w-full object-contain p-3 transition group-hover:scale-105" data-tile-photo
+                {{-- Своя картинка раздела (фото, categories/…) — на всю плитку; фото товара — целиком с отступом.
+                     Файл не загрузился — вместо «битой» картинки иконка раздела --}}
+                @php($cover = str_contains($tile, '/categories/'))
+                <img src="{{ $tile }}" alt="" loading="lazy" @class(['h-full w-full transition group-hover:scale-105', 'object-cover' => $cover, 'object-contain p-3' => ! $cover]) data-tile-photo
                      onerror="this.hidden=true;this.nextElementSibling.hidden=false">
                 <span hidden><x-category-icon :icon="$node['icon'] ?? null" :svg="$node['icon_svg'] ?? null" class="h-[120px] w-[120px] max-h-[75%] max-w-[75%]" /></span>
             @else
