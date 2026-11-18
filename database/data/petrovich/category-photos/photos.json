@@ -1,11 +1,88 @@
 {
     "_": "Обработка фото разделов: scripts/category-photos.py. crop — [x1, y1, x2, y2] в пикселях исходника (src/), формат 4:3; fit = pad — товар на белом фоне: вписать в рамку на фоне сайта.",
-    "proizvodstvo": {"src": "proizvodstvo.jpg", "crop": [30, 0, 653, 467]},
-    "profnastil": {"src": "profnastil.jpg", "crop": [150, 0, 573, 317]},
-    "setka": {"src": "setka.webp", "crop": [0, 40, 1018, 803]},
-    "zabory": {"src": "zabory.webp", "crop": [0, 0, 1600, 1200]},
-    "metallocherepica": {"src": "metallocherepica.webp", "crop": [300, 338, 600, 563]},
-    "zhalyuzi": {"src": "zhalyuzi.jpg", "crop": [0, 0, 649, 487]},
-    "metalloshtaketnik": {"src": "metalloshtaketnik.jpg", "fit": "pad"},
-    "metalloprokat": {"src": "metalloprokat.jpg", "crop": [40, 0, 360, 240]}
+    "proizvodstvo": {
+        "src": "proizvodstvo.jpg",
+        "crop": [
+            30,
+            0,
+            653,
+            467
+        ]
+    },
+    "profnastil": {
+        "src": "profnastil.jpg",
+        "crop": [
+            150,
+            0,
+            573,
+            317
+        ]
+    },
+    "setka": {
+        "src": "setka.webp",
+        "crop": [
+            0,
+            40,
+            1018,
+            803
+        ]
+    },
+    "zabory": {
+        "src": "zabory.webp",
+        "crop": [
+            0,
+            0,
+            1600,
+            1200
+        ]
+    },
+    "metallocherepica": {
+        "src": "metallocherepica.webp",
+        "crop": [
+            50,
+            0,
+            850,
+            600
+        ]
+    },
+    "zhalyuzi": {
+        "src": "zhalyuzi.jpg",
+        "crop": [
+            0,
+            0,
+            649,
+            487
+        ]
+    },
+    "metalloshtaketnik": {
+        "src": "metalloshtaketnik.jpg",
+        "fit": "pad"
+    },
+    "metalloprokat": {
+        "src": "metalloprokat.jpg",
+        "crop": [
+            40,
+            0,
+            360,
+            240
+        ]
+    },
+    "elementy-krovli": {
+        "src": "elementy-krovli.webp",
+        "crop": [
+            60,
+            0,
+            993,
+            700
+        ]
+    },
+    "soputstvuyushhie-tovary": {
+        "src": "soputstvuyushhie-tovary.jpg",
+        "crop": [
+            0,
+            108,
+            869,
+            760
+        ]
+    }
 }

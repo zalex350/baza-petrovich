@@ -86,5 +86,27 @@
   "license": "owner",
   "license_label": "фото заказчика",
   "license_url": ""
+ },
+ {
+  "section": "Элементы кровли",
+  "file": "elementy-krovli.jpg",
+  "title": "Водосточная система",
+  "creator": "",
+  "source": "предоставлено «Петровичем»",
+  "landing": "",
+  "license": "owner",
+  "license_label": "фото заказчика",
+  "license_url": ""
+ },
+ {
+  "section": "Сопутствующие товары",
+  "file": "soputstvuyushhie-tovary.jpg",
+  "title": "Ручка-скоба для калитки",
+  "creator": "",
+  "source": "предоставлено «Петровичем»",
+  "landing": "",
+  "license": "owner",
+  "license_label": "фото заказчика",
+  "license_url": ""
  }
 ]
