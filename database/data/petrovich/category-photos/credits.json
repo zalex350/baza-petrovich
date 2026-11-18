@@ -9,5 +9,27 @@
   "license": "owner",
   "license_label": "фото заказчика",
   "license_url": ""
+ },
+ {
+  "section": "Профнастил",
+  "file": "profnastil.jpg",
+  "title": "Цветной профнастил",
+  "creator": "",
+  "source": "предоставлено «Петровичем»",
+  "landing": "",
+  "license": "owner",
+  "license_label": "фото заказчика",
+  "license_url": ""
+ },
+ {
+  "section": "Сетка",
+  "file": "setka.jpg",
+  "title": "Сетка-рабица с ПВХ покрытием",
+  "creator": "",
+  "source": "предоставлено «Петровичем»",
+  "landing": "",
+  "license": "owner",
+  "license_label": "фото заказчика",
+  "license_url": ""
  }
 ]
