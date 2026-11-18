@@ -86,12 +86,16 @@ class CategoryIconsTest extends TestCase
 
     // --- Набор ---
 
-    public function test_library_is_the_plumbing_set_only(): void
+    public function test_library_is_metal_then_plumbing_set(): void
     {
+        $metal = json_decode(file_get_contents(resource_path('icons/metal.json')), true);
         $words = json_decode(file_get_contents(resource_path('icons/plumb.json')), true);
         $library = $this->icons->library();
 
-        $this->assertSame(array_map(fn ($n) => "plumb:{$n}", array_keys($words)), array_keys($library));
+        $this->assertSame([
+            ...array_map(fn ($n) => "metal:{$n}", array_keys($metal)),
+            ...array_map(fn ($n) => "plumb:{$n}", array_keys($words)),
+        ], array_keys($library));
         $this->assertGreaterThanOrEqual(90, count($library));
 
         // Товары из задания — есть
@@ -137,7 +141,7 @@ class CategoryIconsTest extends TestCase
     {
         $css = file_get_contents(resource_path('css/app.css'));
 
-        foreach (['--ic-stroke: #1A1F2B', '--ic-fill: #FFF1C7', '--ic-water: #5B6472', '--ic-accent: #FFC93C'] as $var) {
+        foreach (['--ic-stroke: #1A1F2B', '--ic-fill: #E6EAF0', '--ic-water: #9AA5B4', '--ic-accent: #FFC93C'] as $var) {
             $this->assertStringContainsString($var, $css);
         }
     }
@@ -522,7 +526,7 @@ SVG;
     {
         $html = (string) $this->blade('<x-category-icon-picker :category="$c" />', ['c' => new Category(['name' => 'Тест'])]);
 
-        $this->assertSame(1, substr_count($html, 'x-show="any($el)" data-icon-group'));
+        $this->assertSame(count(CategoryIcons::SETS), substr_count($html, 'x-show="any($el)" data-icon-group'));
         $this->assertStringContainsString('data-icon-nothing', $html);
     }
 }

@@ -8,6 +8,8 @@ use Illuminate\Support\HtmlString;
 
 /**
  * Иконки категорий. Значение categories.icon:
+ *  - «metal:имя» — набор металлобазы resources/icons/metal/ (генератор scripts/metal-icons.py, правила для разделов —
+ *    database/data/petrovich/category_icons.php, команда petrovich:icons);
  *  - «plumb:имя» — набор сантехники resources/icons/plumb/ (viewBox 48, двухцветный: контур, заливка
  *    деталей, вода, рукоятки — CSS-переменные --ic-stroke, --ic-fill, --ic-water, --ic-accent со значениями
  *    по умолчанию в самой иконке; тема меняет их в resources/css/app.css). Слова для поиска — plumb.json,
@@ -22,7 +24,7 @@ class CategoryIcons
     public const UPLOAD = 'upload';
 
     /** Наборы иконок: папка resources/icons/{set}, слова для поиска — {set}.json */
-    public const SETS = ['plumb'];
+    public const SETS = ['metal', 'plumb'];
 
     /** Своя SVG: не больше, байт */
     public const MAX_UPLOAD = 50 * 1024;

@@ -4,10 +4,11 @@ namespace App\Console\Commands;
 
 use App\Models\Page;
 use App\Models\Setting;
+use App\Services\CategoryTiles;
 use Illuminate\Console\Command;
 
 /**
- * Контакты, реквизиты и тексты страниц «О компании», «Доставка и оплата», «Контакты» — из текущего
+ * Фото на плитках разделов (автоматически), контакты, реквизиты и тексты страниц «О компании», «Доставка и оплата», «Контакты» — из текущего
  * baza-petrovich.by. Заполняет только пустое и заглушки [ЗАПОЛНИТЬ]; --force — перезаписать.
  * Дальше всё правится в админке («Настройки», «Страницы»).
  */
@@ -54,6 +55,11 @@ class PetrovichContent extends Command
             if ($force || $this->isEmpty($values[$key] ?? null)) {
                 $put[$key] = $value;
             }
+        }
+
+        // Фото на плитках разделов каталога — автоматически (товар раздела с фото), без фото — иконка
+        if ($force || ! isset(CategoryTiles::MODES[$values[CategoryTiles::SETTING] ?? ''])) {
+            $put[CategoryTiles::SETTING] = CategoryTiles::AUTO;
         }
 
         if ($force || ! Setting::phones()) {

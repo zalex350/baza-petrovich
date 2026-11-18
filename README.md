@@ -27,7 +27,8 @@
 ```bash
 php artisan migrate
 php artisan petrovich:import --fresh --images   # 208 разделов, 644 товара, 13 услуг, фото с baza-petrovich.by
-php artisan petrovich:content                   # контакты, реквизиты, «О компании», «Доставка и оплата», «Контакты»
+php artisan petrovich:content                   # фото на плитках разделов, контакты, реквизиты, страницы
+php artisan petrovich:icons                     # иконки разделов (набор metal); импорт назначает их сам
 ```
 
 Повторный `petrovich:import` (без `--fresh`) обновляет товары по ключу `source_key`, не дублируя.
