@@ -84,5 +84,13 @@
             869,
             760
         ]
+    },
+    "komplektuyushhie-dlya-vorot": {
+        "src": "komplektuyushhie-dlya-vorot.png",
+        "fit": "pad"
+    },
+    "armatura-kompozit": {
+        "src": "armatura-kompozit.png",
+        "fit": "pad"
     }
 }

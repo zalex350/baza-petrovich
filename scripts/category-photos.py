@@ -15,8 +15,11 @@ W, H = 1200, 900
 BG = (230, 234, 240)
 
 
-def grade(im):
-    im = ImageOps.autocontrast(im, cutoff=1)
+def grade(im, product=False):
+    im = ImageOps.autocontrast(im, cutoff=1, preserve_tone=True)
+    # Товар на белом фоне — цвет товара не трогаем (арматура жёлтая, штакетник под дерево)
+    if product:
+        return ImageEnhance.Contrast(im).enhance(1.04).filter(ImageFilter.UnsharpMask(radius=1.2, percent=60, threshold=2))
     im = ImageEnhance.Color(im).enhance(0.88)
     im = ImageEnhance.Contrast(im).enhance(1.06)
     # Нейтральный, чуть холодный тон «стали»: лёгкое смешение с серо-голубым
@@ -43,9 +46,15 @@ def main():
     for key, c in conf.items():
         if key.startswith('_'):
             continue
-        im = Image.open(os.path.join(DIR, 'src', c['src'])).convert('RGB')
+        im = Image.open(os.path.join(DIR, 'src', c['src']))
+        # Прозрачный фон (PNG) — на белый, дальше как товар на белом фоне
+        if im.mode in ('RGBA', 'LA', 'P'):
+            im = im.convert('RGBA')
+            white = Image.new('RGBA', im.size, (255, 255, 255, 255))
+            im = Image.alpha_composite(white, im)
+        im = im.convert('RGB')
         if c.get('fit') == 'pad':
-            out = pad(grade(im))
+            out = pad(grade(im, product=True))
         else:
             out = grade(im.crop(tuple(c['crop'])).resize((W, H), Image.LANCZOS))
         out.save(os.path.join(DIR, key + '.jpg'), 'JPEG', quality=84, optimize=True, progressive=True)

@@ -963,7 +963,7 @@
   },
   {
    "path": "provoloka/dlya-natizheniya-setki",
-   "parent": "provoloka",
+   "parent": "metalloprokat",
    "name": "Проволока для натяжения сетки",
    "slug_part": "dlya-natizheniya-setki",
    "description": "",

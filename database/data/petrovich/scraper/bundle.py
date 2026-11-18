@@ -82,7 +82,7 @@ for s,svc in zip(S,services):
 for c in cats.values():
     seg=c['path'][len(c['parent'])+1:] if c['parent'] else c['path']; c['slug_part']=tr(seg.replace('/','-'))
 # Решения заказчика по структуре: раздел → новый родитель
-MOVE={'provoloka/vyazalnya':'metalloprokat'}
+MOVE={'provoloka/vyazalnya':'metalloprokat','provoloka/dlya-natizheniya-setki':'metalloprokat'}
 for c in cats.values():
     if c['path'] in MOVE: c['parent']=MOVE[c['path']]
 json.dump({'source':'https://baza-petrovich.by','categories':sorted(cats.values(),key=lambda c:c['path']),'products':prods,'services':services},
