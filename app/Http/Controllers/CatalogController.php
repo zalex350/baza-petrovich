@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Product;
 use App\Services\CartSummary;
 use App\Services\Catalog\CatalogFilters;
 use App\Services\Catalog\CatalogListing;
@@ -10,6 +11,8 @@ use App\Services\Catalog\KeyAttributes;
 use App\Services\CatalogMenu;
 use App\Services\CategoryTiles;
 use App\Services\ClientCodes;
+use App\Support\Seo;
+use App\Support\SeoTemplates;
 
 class CatalogController extends Controller
 {
@@ -75,9 +78,12 @@ class CatalogController extends Controller
         // плитки с картинкой — если картинка есть хотя бы у одной, иначе чипы
         $subcategories = $menu->node($category->id)['children'] ?? [];
 
+        $breadcrumbs = $this->breadcrumbs($category, $menu);
+        $this->seo($category, $menu->descendantIds($category), $breadcrumbs);
+
         return $this->listingView($listing, '/catalog/'.$category->slug, $keyAttributes, $cart, [
             'category' => $category,
-            'breadcrumbs' => $this->breadcrumbs($category, $menu),
+            'breadcrumbs' => $breadcrumbs,
             'subcategories' => $subcategories,
             'subcategoryTiles' => collect($subcategories)->contains(fn ($sub) => ! empty($sub['image'])),
         ], $keyAttributes->attributeIds($listing->filters));
@@ -96,12 +102,39 @@ class CatalogController extends Controller
 
         $listing = new CatalogListing($category, null, $filters, request()->query(), prices_visible(), $flag);
 
+        seo()->title($title.' — металлобаза '.Seo::siteName())
+            ->description($title.' на металлобазе «'.Seo::siteName().'»: профнастил, сетка, заборы, металлопрокат по выгодным ценам. Доставка по Беларуси, самовывоз в Минске и Бресте.');
+
         return $this->listingView($listing, '/'.$key, $keyAttributes, $cart, [
             'category' => $category,
             'breadcrumbs' => [['label' => 'Главная', 'url' => '/'], ['label' => $title]],
             'subcategories' => [],
             'subcategoryTiles' => false,
         ]);
+    }
+
+    /**
+     * SEO раздела: заголовок и описание (свои или по шаблону «Настроек») с ценой «от» и числом товаров
+     * всего раздела, фото раздела для мессенджеров, крошки и FAQ (schema.org).
+     */
+    private function seo(Category $category, array $categoryIds, array $breadcrumbs): void
+    {
+        $stats = Product::query()
+            ->whereIn('category_id', $categoryIds)
+            ->where('is_active', true)
+            ->where('is_published', true)
+            ->selectRaw('COUNT(*) as total, MIN(COALESCE(sale_price, price)) as min_price')
+            ->first();
+
+        // Цена «от» — только розничная, видимая всем (в B2B у покупателей разные типы цен)
+        $minPrice = config('shop.retail') && $stats?->min_price > 0 ? (float) $stats->min_price : null;
+        $count = (int) ($stats?->total ?? 0);
+
+        seo()->title(SeoTemplates::categoryTitle($category, $minPrice, $count))
+            ->description(SeoTemplates::categoryDescription($category, $minPrice, $count))
+            ->image($category->imageUrl())
+            ->breadcrumbs($breadcrumbs)
+            ->faq($category->faq ?? []);
     }
 
     /**

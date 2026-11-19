@@ -3,11 +3,17 @@
 
 @section('title', ($page->seo_title ?: $page->title).' — '.config('shop.name'))
 
-@if($page->seo_description)
-    @section('meta')
-        <meta name="description" content="{{ $page->seo_description }}">
-    @endsection
-@endif
+@php
+    seo()->description($page->seo_description ?: $page->safeBody())
+        ->breadcrumbs([['label' => 'Главная', 'url' => '/'], ['label' => 'Услуги', 'url' => '/uslugi'], ['label' => $page->title]])
+        ->schema([
+            '@type' => 'Service',
+            'name' => $page->title,
+            'description' => seo()->description,
+            'areaServed' => ['@type' => 'Country', 'name' => 'Беларусь'],
+            'provider' => ['@type' => 'Organization', 'name' => \App\Support\Seo::siteName(), 'url' => \App\Support\Seo::absolute('/')],
+        ]);
+@endphp
 
 @section('content')
 

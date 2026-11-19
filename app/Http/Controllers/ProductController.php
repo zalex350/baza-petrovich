@@ -11,7 +11,11 @@ use App\Services\Catalog\CatalogFilters;
 use App\Services\Catalog\KeyAttributes;
 use App\Services\CatalogMenu;
 use App\Services\ClientCodes;
+use App\Support\Seo;
+use App\Support\SeoSchema;
+use App\Support\SeoTemplates;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 /**
  * Карточка товара (макет docs/design/Product).
@@ -40,7 +44,30 @@ class ProductController extends Controller
         // «Ваш код» рядом с артикулом
         app(ClientCodes::class)->load([$product]);
 
-        return view('product', self::cardData($product));
+        $data = self::cardData($product);
+        $this->seo($product, $data['breadcrumbs']);
+
+        return view('product', $data);
+    }
+
+    /**
+     * Заголовок и описание по шаблону (или свои у товара), фото для мессенджеров,
+     * разметка Product (цена, наличие) и хлебные крошки — для поиска и Google Merchant.
+     */
+    private function seo(Product $product, array $breadcrumbs): void
+    {
+        $product->category?->loadMissing('parent');
+        $images = $product->gallery()->take(5)->map(fn ($image) => Seo::absolute($image->url('large')))->values()->all();
+        $description = SeoTemplates::productDescription($product);
+        $text = trim(preg_replace('/\s+/u', ' ', strip_tags((string) $product->description)));
+
+        seo()->title(SeoTemplates::productTitle($product))
+            ->description($description)
+            ->image($images[0] ?? null)
+            ->type('product')
+            ->canonical('/product/'.$product->id)
+            ->breadcrumbs($breadcrumbs)
+            ->schema(SeoSchema::product($product, Str::limit($text !== '' ? $text : $description, 1000, '…'), $images));
     }
 
     /**

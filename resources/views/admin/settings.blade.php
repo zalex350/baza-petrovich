@@ -72,6 +72,50 @@
         <x-textarea name="footer_delivery" :label="$f['footer_delivery']" :value="$v('footer_delivery')" rows="3" hint="Кратко; подробно — страница «Доставка и оплата»." />
     </fieldset>
 
+    <fieldset class="space-y-4" data-settings-seo>
+        <legend class="mb-1 text-lg font-semibold text-ink">SEO</legend>
+        <p class="text-sm text-ink-muted">
+            Заголовок и описание страницы в Google и Яндексе. Пустое поле — текст по умолчанию.
+            У раздела и товара можно задать свои на их странице в админке — они важнее шаблона.
+            В шаблонах: <code>{name}</code> — название, <code>{price}</code> — цена («от …» у раздела),
+            <code>{category}</code> — раздел товара, <code>{city}</code> — город, <code>{site}</code> — название магазина,
+            <code>{count}</code> — число товаров раздела.
+        </p>
+        @php($defaults = \App\Support\SeoTemplates::DEFAULTS)
+        <x-input name="seo_home_title" :label="$f['seo_home_title']" :value="$v('seo_home_title')" :placeholder="app(\App\Support\Seo::class)->homeTitle()" maxlength="200" />
+        <x-textarea name="seo_home_description" :label="$f['seo_home_description']" :value="$v('seo_home_description')" rows="2" :placeholder="config('seo.description')" hint="150–160 символов: что продаёте, где, чем лучше." />
+        <x-input name="seo_category_title" :label="$f['seo_category_title']" :value="$v('seo_category_title')" :placeholder="$defaults['seo_category_title']" />
+        <x-textarea name="seo_category_description" :label="$f['seo_category_description']" :value="$v('seo_category_description')" rows="2" :placeholder="$defaults['seo_category_description']" />
+        <x-input name="seo_product_title" :label="$f['seo_product_title']" :value="$v('seo_product_title')" :placeholder="$defaults['seo_product_title']" />
+        <x-textarea name="seo_product_description" :label="$f['seo_product_description']" :value="$v('seo_product_description')" rows="2" :placeholder="$defaults['seo_product_description']" />
+        <x-input name="seo_og_image" :label="$f['seo_og_image']" :value="$v('seo_og_image')" :placeholder="config('seo.og_image')" hint="1200×630, JPG. Показывается, когда ссылку на главную или страницу без фото отправляют в Viber, Telegram, соцсети." />
+        <x-input name="google_site_verification" :label="$f['google_site_verification']" :value="$v('google_site_verification')" hint="Search Console → Добавить ресурс → «Тег HTML»: можно вставить весь тег, сохранится код." />
+        <x-input name="yandex_verification" :label="$f['yandex_verification']" :value="$v('yandex_verification')" hint="Яндекс Вебмастер → Подтверждение прав → «Мета-тег»." />
+        <p class="text-sm text-ink-muted">
+            Карта сайта — <a href="/sitemap.xml" class="text-primary hover:underline" target="_blank">/sitemap.xml</a>,
+            правила для роботов — <a href="/robots.txt" class="text-primary hover:underline" target="_blank">/robots.txt</a>
+            (обновляются сами). Карту сайта добавьте в Search Console и Вебмастер.
+        </p>
+    </fieldset>
+
+    <fieldset class="space-y-4" data-settings-analytics>
+        <legend class="mb-1 text-lg font-semibold text-ink">Аналитика и реклама</legend>
+        <p class="text-sm text-ink-muted">
+            Заполненный ID — счётчик подключается на все страницы сайта (кроме админки и визитов администраторов),
+            события магазина отправляются сами: просмотр товара и раздела, корзина, оформление, покупка, заявки, квизы,
+            клики по телефону и мессенджерам. Если подключён Tag Manager, Google Analytics и Google Ads настраиваются в нём
+            (события — в dataLayer), поля GA4 и Ads тогда можно не заполнять.
+        </p>
+        <x-input name="analytics_gtm_id" :label="$f['analytics_gtm_id']" :value="$v('analytics_gtm_id')" placeholder="GTM-XXXXXXX" class="max-w-xs" />
+        <x-input name="analytics_ga4_id" :label="$f['analytics_ga4_id']" :value="$v('analytics_ga4_id')" placeholder="G-XXXXXXXXXX" class="max-w-xs" hint="GA4 → Администратор → Потоки данных. Отчёты «Страницы входа», «Время вовлечения», «Пути» — там же." />
+        <x-input name="analytics_ads_id" :label="$f['analytics_ads_id']" :value="$v('analytics_ads_id')" placeholder="AW-123456789" class="max-w-xs" />
+        <x-input name="analytics_ads_purchase_label" :label="$f['analytics_ads_purchase_label']" :value="$v('analytics_ads_purchase_label')" hint="Google Ads → Цели → Конверсии → «Покупка» → Тег: часть после «/» в send_to." />
+        <x-input name="analytics_ads_lead_label" :label="$f['analytics_ads_lead_label']" :value="$v('analytics_ads_lead_label')" hint="Конверсия «Заявка»: формы «Узнать цену», «Заказать услугу», «Обратный звонок», квизы." />
+        <x-input name="analytics_ym_id" :label="$f['analytics_ym_id']" :value="$v('analytics_ym_id')" placeholder="12345678" class="max-w-xs" hint="С Вебвизором: запись визитов — куда кликали, где ушли." />
+        <x-input name="analytics_clarity_id" :label="$f['analytics_clarity_id']" :value="$v('analytics_clarity_id')" placeholder="abcdef1234" class="max-w-xs" hint="Бесплатные записи сессий и тепловые карты." />
+        <x-select name="analytics_consent" :label="$f['analytics_consent']" :options="\App\Models\Setting::CONSENT_MODES" :value="$v('analytics_consent') ?: 'notice'" />
+    </fieldset>
+
     <x-button>Сохранить</x-button>
 </form>
 

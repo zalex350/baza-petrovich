@@ -111,6 +111,10 @@ async function add(form) {
 
         updateHeader(data.cart);
         toast(data.toast);
+        // Добавление в корзину — событие add_to_cart (resources/js/analytics.js; товар — CartController::addResult)
+        if (data.track) {
+            window.track?.('add_to_cart', data.track);
+        }
 
         // Строка переходит в состояние «В корзине»; Alpine сам подхватит новый x-qty
         const buy = form.closest('[data-cart-buy]');

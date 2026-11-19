@@ -14,6 +14,7 @@ use App\Models\Product;
 use App\Models\ProductClientCode;
 use App\Models\User;
 use App\Services\Vat\VatCalculator;
+use App\Support\Attribution;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -145,6 +146,8 @@ class CheckoutService
                 'delivery_method' => $customer['delivery_method'],
                 'payment_method' => $customer['payment_method'],
                 'public_token' => Str::random(40),
+                // Откуда пришёл покупатель (UTM, gclid) — App\Support\Attribution
+                'attribution' => Attribution::current(),
                 'comment' => ($comment = trim((string) ($customer['comment'] ?? ''))) !== '' ? $comment : null,
             ]);
         });

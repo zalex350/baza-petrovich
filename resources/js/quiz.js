@@ -80,6 +80,8 @@ export default (config) => ({
                 return;
             }
             this.done = data;
+            // Заявка из квиза — конверсия «Заявка» (resources/js/analytics.js)
+            window.track?.('generate_lead', { lead_type: 'quiz', quiz_id: config.id ?? null });
         } catch (e) {
             this.error = 'Нет связи — попробуйте ещё раз';
         } finally {

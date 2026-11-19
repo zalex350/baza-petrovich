@@ -44,6 +44,13 @@
 
 <div @class(['pb-36 lg:pb-0' => $items->isNotEmpty() && $client]) data-cart-page>
 
+@if($items->isNotEmpty() && \App\Support\Analytics::config())
+    {{-- Аналитика: просмотр корзины; begin_checkout — при первом касании формы заказа (resources/js/analytics.js) --}}
+    @php($trackCart = \App\Support\Analytics::cart($items))
+    <x-track event="view_cart" :params="$trackCart" />
+    <script type="application/json" data-checkout-items>{!! json_encode($trackCart, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) !!}</script>
+@endif
+
     {{-- Последняя открытая категория или поиск (из сессии), иначе — каталог --}}
     <a href="{{ $continueUrl }}" class="text-sm text-link hover:underline" data-continue-shopping>
         ← Продолжить покупки

@@ -10,6 +10,11 @@
 
 <div class="max-w-4xl" data-guest-order>
 
+{{-- Покупка — сразу после оформления (CartController::checkout), один раз на заказ --}}
+@if(session('order_placed') && \App\Support\Analytics::config())
+    <x-track event="purchase" :params="\App\Support\Analytics::purchase($order)" :once="$order->number" />
+@endif
+
     <h1 class="text-3xl font-bold mb-2">
         Заказ {{ $order->number }}
     </h1>

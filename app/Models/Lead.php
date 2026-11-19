@@ -18,11 +18,12 @@ class Lead extends Model
         'quiz' => 'Квиз',
     ];
 
-    protected $fillable = ['type', 'product_id', 'quiz_id', 'payload', 'subject', 'name', 'phone', 'email', 'comment', 'status', 'crm_id', 'consent_at', 'ip'];
+    protected $fillable = ['type', 'product_id', 'quiz_id', 'payload', 'subject', 'name', 'phone', 'email', 'comment', 'status', 'crm_id', 'consent_at', 'ip', 'attribution'];
 
     protected $casts = [
         'consent_at' => 'datetime',
         'payload' => 'array',
+        'attribution' => 'array',
     ];
 
     public function product()

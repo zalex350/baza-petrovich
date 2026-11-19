@@ -261,6 +261,15 @@
             <x-textarea name="description" label="Описание" rows="5" :value="$site('description')" :form="$form" />
         </div>
 
+        <fieldset class="space-y-4 rounded-card border border-line p-4" data-product-seo>
+            <legend class="px-1 text-sm font-semibold text-ink">Для поисковиков (SEO)</legend>
+            @if($product->exists)
+                <p class="text-sm text-ink-muted">Сейчас: <span class="text-ink">{{ \App\Support\SeoTemplates::productTitle($product) }}</span></p>
+            @endif
+            <x-input name="seo_title" label="Заголовок окна (title)" :value="$product->seo_title" maxlength="255" :form="$form" hint="Пусто — по шаблону из «Настроек» → SEO (название, цена, город). Сохраняется сразу, без черновика." />
+            <x-textarea name="seo_description" label="Описание (description)" :value="$product->seo_description" rows="2" maxlength="500" :form="$form" hint="150–160 символов. Пусто — по шаблону." />
+        </fieldset>
+
         <x-textarea name="specifications" label="Дополнительная информация" hint="Свободный текст под таблицей характеристик." rows="5" :value="$site('specifications')" :form="$form" />
 
         <div>

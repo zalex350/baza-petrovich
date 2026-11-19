@@ -1,4 +1,5 @@
-{{-- Получение (снимок из заказа): способ, адрес, контакт; розница — email и оплата; комментарий клиента. Данные: $order --}}
+{{-- Получение (снимок из заказа): способ, адрес, контакт; розница — email и оплата; комментарий клиента.
+     Данные: $order; $admin — админка: ещё источник визита (UTM, gclid — App\Support\Attribution) --}}
 <div class="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
 
     <h2 class="text-xl font-semibold mb-4">
@@ -46,6 +47,16 @@
         @if($order->paymentLabel())
             <dt class="text-slate-500">Оплата</dt>
             <dd data-payment-method>{{ $order->paymentLabel() }}</dd>
+        @endif
+
+        @if(($admin ?? false) && ($source = \App\Support\Attribution::label($order->attribution)))
+            <dt class="text-slate-500">Источник</dt>
+            <dd data-order-source>
+                {{ $source }}
+                @if(! empty($order->attribution['landing']))
+                    <span class="block text-sm text-slate-500">Вход: {{ $order->attribution['landing'] }}@if(! empty($order->attribution['referrer'])) · с {{ parse_url($order->attribution['referrer'], PHP_URL_HOST) }}@endif</span>
+                @endif
+            </dd>
         @endif
 
         <dt class="text-slate-500">Комментарий к заказу</dt>

@@ -6,6 +6,15 @@
 
 <x-breadcrumbs :items="$breadcrumbs" />
 
+{{-- Аналитика: товары страницы списка (параметры считаются, только если счётчики подключены) --}}
+@if(\App\Support\Analytics::config())
+<x-track event="view_item_list" :params="[
+    'item_list_id' => $category->slug,
+    'item_list_name' => $category->name,
+    'items' => $products->getCollection()->take(20)->values()->map(fn ($p, $i) => \App\Support\Analytics::item($p, 1, $i + ($products->currentPage() - 1) * $products->perPage()))->all(),
+]" />
+@endif
+
 <div class="mt-3 mb-5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
     <h1 class="text-3xl font-bold tracking-tight">{{ $category->name }}</h1>
     {{-- Обновляется вместе со списком (catalog-filters.js) --}}
@@ -93,6 +102,11 @@
     <section class="prose-page mt-10 max-w-4xl rounded-card border border-line bg-surface p-card text-ink" data-category-description>
         {!! \App\Support\Html::clean($category->description) !!}
     </section>
+@endif
+
+{{-- Частые вопросы раздела (админка «Категории»; разметка FAQPage — CatalogController::seo) --}}
+@if(! empty($category->faq) && $products->currentPage() === 1)
+    <x-faq :items="$category->faq" :title="'Вопросы о разделе «'.$category->name.'»'" class="mt-6 max-w-4xl" />
 @endif
 
 @endsection

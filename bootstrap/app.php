@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\ExchangeErrorResponse;
+use App\Http\Middleware\CaptureAttribution;
 use App\Http\Middleware\EnsureCartAccess;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\EnsureUserIsNotBlocked;
+use App\Support\Analytics;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Http\Exceptions\PostTooLargeException;
@@ -31,7 +33,12 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(append: [
             EnsureUserIsNotBlocked::class,
+            // Источник визита (UTM, gclid) — в заказ и заявку (App\Support\Attribution)
+            CaptureAttribution::class,
         ]);
+
+        // Выбор посетителя в баннере cookie ставит и читает JS — без шифрования
+        $middleware->encryptCookies(except: [Analytics::CONSENT_COOKIE]);
 
     })
     ->withExceptions(function (Exceptions $exceptions): void {

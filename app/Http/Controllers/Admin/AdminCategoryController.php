@@ -339,6 +339,10 @@ class AdminCategoryController extends Controller
             'discount_percent' => ['nullable', 'numeric', 'min:0', 'max:99.99'],
             'icon' => ['nullable', 'string', 'max:100'],
             'icon_file' => ['nullable', 'file', 'max:'.intdiv(CategoryIcons::MAX_UPLOAD, 1024)],
+            'description' => ['nullable', 'string', 'max:20000'],
+            'faq' => ['nullable', 'string', 'max:20000'],
+            'seo_title' => ['nullable', 'string', 'max:255'],
+            'seo_description' => ['nullable', 'string', 'max:500'],
         ], [
             'name.required' => 'Укажите название',
             'parent_id.not_in' => 'Нельзя перенести категорию в саму себя или в её подкатегорию',
@@ -352,6 +356,17 @@ class AdminCategoryController extends Controller
         $data['parent_id'] = $data['parent_id'] ?? null;
         $data['is_hidden'] = request()->boolean('is_hidden');
         $data['discount_percent'] = (float) ($data['discount_percent'] ?? 0) > 0 ? $data['discount_percent'] : null;
+        // Тексты и SEO — только если поля были в форме (старые формы и тесты их не шлют)
+        foreach (['description', 'seo_title', 'seo_description'] as $field) {
+            if (request()->has($field)) {
+                $data[$field] = trim((string) ($data[$field] ?? '')) ?: null;
+            }
+        }
+        if (request()->has('faq')) {
+            $data['faq'] = Category::faqFromText($data['faq'] ?? null);
+        } else {
+            unset($data['faq']);
+        }
 
         // Иконку определяет iconData(): загруженный файл важнее выбранной в сетке
         unset($data['icon'], $data['icon_file']);

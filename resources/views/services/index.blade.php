@@ -3,6 +3,8 @@
 
 @section('title', 'Услуги — '.config('shop.name'))
 
+@php(seo()->description('Монтаж заборов и ворот, резка металла, подготовка заказа и доставка — услуги металлобазы «'.\App\Support\Seo::siteName().'» в Минске, Бресте и по Беларуси. Замер и расчёт бесплатно.'))
+
 @section('content')
 
 <x-breadcrumbs :items="[['label' => 'Главная', 'url' => '/'], ['label' => 'Услуги']]" />

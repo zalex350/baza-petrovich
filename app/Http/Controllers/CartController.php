@@ -13,6 +13,7 @@ use App\Services\CartValidator;
 use App\Services\CheckoutService;
 use App\Services\ClientCodes;
 use App\Services\CurrentCart;
+use App\Support\Analytics;
 use App\Support\OrderQuantity;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
@@ -102,7 +103,7 @@ class CartController extends Controller
         $hint = null;
         $error = $this->addProduct($product, $qty, $hint);
 
-        return $this->addResult($error, $product, $hint);
+        return $this->addResult($error, $product, $hint, $qty);
     }
 
     /**
@@ -273,7 +274,7 @@ class CartController extends Controller
     /**
      * Ответ на добавление в корзину: $error = null — успех.
      */
-    private function addResult(?string $error, ?Product $product = null, ?string $hint = null)
+    private function addResult(?string $error, ?Product $product = null, ?string $hint = null, int $qty = 1)
     {
         $added = 'Товар добавлен в корзину'.($hint ? ". {$hint}" : '');
 
@@ -282,6 +283,9 @@ class CartController extends Controller
 
             if ($error === null) {
                 $data['cart'] = $this->summary->forHeader();
+                // Событие add_to_cart для аналитики (resources/js/cart-actions.js → window.track)
+                $item = Analytics::item($product, $qty);
+                $data['track'] = ['value' => Analytics::value([$item]), 'items' => [$item]];
                 $data['toast'] = Blade::render('<x-alert type="success">{{ $message }}</x-alert>', ['message' => $data['message']]);
                 // Строка списка переходит в состояние «В корзине»: количество и «перейти»
                 // layout: row — строка списка, card — карточка товара, tile — плитка (поле формы, по умолчанию row)
@@ -579,7 +583,7 @@ class CartController extends Controller
             return redirect('/order')->with('error', CheckoutException::CREATION_FAILED)->withInput();
         }
 
-        return redirect('/o/'.$order->public_token)->with('success', 'Заказ оформлен');
+        return redirect('/o/'.$order->public_token)->with(['success' => 'Заказ оформлен', 'order_placed' => true]);
     }
 
     /**

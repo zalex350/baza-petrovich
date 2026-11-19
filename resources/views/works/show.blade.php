@@ -3,11 +3,12 @@
 
 @section('title', ($work->seo_title ?: $work->title).' — Наши работы — '.config('shop.name'))
 
-@if($work->seo_description)
-    @section('meta')
-        <meta name="description" content="{{ $work->seo_description }}">
-    @endsection
-@endif
+@php
+    seo()->description($work->seo_description ?: $work->safeDescription() ?: $work->title.' — выполненный объект металлобазы «'.\App\Support\Seo::siteName().'».')
+        ->image($work->images->first()?->url())
+        ->type('article')
+        ->breadcrumbs([['label' => 'Главная', 'url' => '/'], ['label' => 'Наши работы', 'url' => '/nashi-raboty'], ['label' => $work->title]]);
+@endphp
 
 @section('content')
 
