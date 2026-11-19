@@ -22,6 +22,8 @@
 - **квизы** (свой конструктор: шаги, варианты, привязка к разделам, услугам, страницам; ответы → заявки) и
   **«Коды и виджеты»** (MoClients, Marquiz, JivoSite, Метрика, GTM — в <head> или перед </body> на выбранных страницах);
 - **«Наши работы»** и **«Отзывы»** (/nashi-raboty, /otzyvy, блоки на главной);
+- **адреса**: товары — `/product/{slug}`; адреса старого baza-petrovich.by и сменённые адреса — 301 на новые
+  (`App\Support\LegacyUrls`, админка «Редиректы»);
 - **SEO**: `/sitemap.xml`, `/robots.txt`, title/description по шаблонам «Настроек», canonical, noindex фильтров,
   Open Graph, schema.org (Organization, Product, BreadcrumbList, FAQPage), тексты и вопросы разделов;
 - **аналитика для Google Ads**: GTM / GA4 / Google Ads / Метрика / Clarity по ID из «Настроек», события магазина
@@ -40,7 +42,9 @@ php artisan petrovich:icons                     # иконки разделов 
 php artisan petrovich:category-photos [--force] # фото разделов (database/data/petrovich/category-photos); импорт — сам
 php artisan petrovich:works --images            # «Наши работы» (38 объектов) и отзывы (24 скана) со старого сайта
 php artisan petrovich:quizzes                   # стартовые квизы: калькуляторы забора и ворот
-php artisan petrovich:seo [--products]          # тексты и «Частые вопросы» разделов; --products — описания товаров (на одобрение)
+php artisan petrovich:seo [--products]          # тексты и «Частые вопросы» разделов; --products — описания 431 товара (product_descriptions.json)
+php artisan petrovich:articles --images         # 138 статей и советов со старого сайта в раздел «Статьи» (/stati)
+php artisan petrovich:legal                     # черновики: политика ПД, договор-оферта, обмен и возврат (/page/privacy, oferta, vozvrat)
 python scripts/category-photos.py               # обработка фото разделов в едином стиле: src/ + photos.json → {раздел}.jpg
 ```
 

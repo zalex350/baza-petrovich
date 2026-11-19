@@ -1,11 +1,14 @@
 """Описания товаров без текста в catalog.json — с нашего второго сайта zabor-petrovich.by.
 
     python3 descriptions.py fetch      # sitemap + страницы в кэш (≤2 запроса/с), разбор → CACHE/zabor_pages.json
-    python3 descriptions.py baza       # перепроверка старых страниц baza-petrovich.by (source_url) товаров без описания
-    python3 descriptions.py build      # тексты zabor-petrovich.by по карте MATCH → ../product_descriptions.json
+    python3 descriptions.py baza       # старые страницы baza-petrovich.by (source_url) товаров без описания → CACHE/baza_recheck.json
+    python3 descriptions.py build      # тексты zabor-petrovich.by по descriptions_match.json → ../product_descriptions.json
 
+Первый разбор baza-petrovich.by (desc.py) пропустил текст под ценой/контактами у ~400 товаров;
+`baza` достаёт его заново — это сырьё (факты, характеристики), а не готовый текст: он перемешан
+с рекламой и обрывками, поэтому описания с source «baza-petrovich.by» переписаны вручную по этим фактам.
 `build` переписывает только записи с source «zabor-petrovich.by»; записи «generated» и
-«baza-petrovich.by» (написаны вручную как данные) сохраняются как есть.
+«baza-petrovich.by» (написаны как данные) сохраняются как есть.
 Кэш HTML — вне репозитория (CACHE), повторный запуск сеть не трогает.
 """
 import html as H
@@ -143,9 +146,10 @@ def to_html(paras):
 
 
 # ---- соответствие страниц zabor-petrovich.by нашим товарам ------------------------------
-# url → {'paths': [пути товаров catalog.json], 'paras': тексты (после правки), 'tail': абзац про вариант}
-# Тексты zabor-petrovich.by — наш собственный контент; правка — убрать цены, телефоны, призывы,
-# дописать параметры конкретного варианта (высота, толщина), чтобы тексты вариантов не совпадали.
+# descriptions_match.json: [{"url": страница zabor-petrovich.by, "paths": {путь товара catalog.json: html}}].
+# Тексты сопоставлены вручную по смыслу (профиль, толщина, покрытие, размер) и отредактированы:
+# убраны цены, телефоны, призывы, добавлены параметры конкретного варианта (высота, сечение,
+# покрытие), чтобы тексты вариантов не совпадали. Для черновика правки — clean(pages[url]['paras']).
 MATCH_FILE = os.path.join(HERE, 'descriptions_match.json')
 
 
@@ -158,13 +162,13 @@ def build():
     out = {k: v for k, v in out.items() if v.get('source') != 'zabor-petrovich.by' and k in empty}
     for item in match:
         url = item['url']
-        base = item.get('paras') or clean(pages[url]['paras'], item.get('drop', ()))
-        for path, tail in item['paths'].items():
+        if url not in pages:
+            print('not in sitemap any more:', url)
+        for path, html in item['paths'].items():
             if path not in empty:
                 print('skip (has description or unknown):', path)
                 continue
-            paras = list(base) + ([tail] if tail else [])
-            out[path] = {'html': to_html(paras), 'source': 'zabor-petrovich.by', 'source_url': url}
+            out[path] = {'html': html, 'source': 'zabor-petrovich.by', 'source_url': url}
     out = dict(sorted(out.items()))
     with open(OUT, 'w', encoding='utf-8') as f:
         json.dump(out, f, ensure_ascii=False, indent=1)

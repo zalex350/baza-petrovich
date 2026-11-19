@@ -90,7 +90,8 @@ class PetrovichSeo extends Command
         $prepared = is_file($file) ? (json_decode((string) file_get_contents($file), true) ?: []) : [];
 
         Product::query()
-            ->where(fn ($q) => $q->whereNull('description')->orWhere('description', ''))
+            // Без описания или с неодобренным сгенерированным (шаблон прошлого запуска) — его заменит текст из файла
+            ->where(fn ($q) => $q->whereNull('description')->orWhere('description', '')->orWhere('description_generated', true))
             ->with(['attributeValues.attribute'])
             ->chunkById(200, function ($products) use (&$count, $categories, $root, $content, $approve, $prepared) {
                 foreach ($products as $product) {

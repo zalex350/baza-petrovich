@@ -203,6 +203,9 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         [AdminProductController::class, 'update']
     );
 
+    // Все сгенерированные описания — показать на сайте
+    Route::post('/admin/products/approve-descriptions', [AdminProductController::class, 'approveAllDescriptions']);
+
     // Сгенерированное описание (импорт каталога) — показать на сайте
     Route::post(
         '/admin/product/{id}/approve-description',

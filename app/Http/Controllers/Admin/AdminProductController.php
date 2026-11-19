@@ -146,6 +146,16 @@ class AdminProductController extends Controller
     }
 
     /**
+     * Все сгенерированные описания проверены — показывать на сайте (фильтр «Описание не одобрено»).
+     */
+    public function approveAllDescriptions()
+    {
+        $count = Product::where('description_generated', true)->update(['description_generated' => false]);
+
+        return redirect('/admin/products')->with('success', 'Описаний одобрено: '.$count);
+    }
+
+    /**
      * Сгенерированное описание проверено — показывать на сайте.
      */
     public function approveDescription($id)

@@ -103,7 +103,8 @@ class PetrovichImportTest extends TestCase
             ->assertOk()
             ->assertSee('Резка в размер заказчика')
             ->assertSee(route('lead.create', ['type' => 'service', 'subject' => 'Резка металла']), false);
-        $this->get('/uslugi/nope')->assertNotFound();
+        // Нет такой услуги (старая ссылка) — в список услуг (LegacyUrls)
+        $this->get('/uslugi/nope')->assertRedirect('/uslugi');
 
         $this->get(route('lead.create', ['type' => 'service', 'subject' => 'Резка металла']))->assertOk()->assertSee('Резка металла');
         $this->get('/request/unknown')->assertNotFound();
