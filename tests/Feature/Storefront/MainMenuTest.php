@@ -15,7 +15,7 @@ class MainMenuTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const ITEMS = ['Главная', 'Каталог', 'Услуги', 'Акции', 'Доставка и оплата', 'О компании', 'Контакты'];
+    private const ITEMS = ['Главная', 'Каталог', 'Услуги', 'Наши работы', 'Отзывы', 'Акции', 'Доставка и оплата', 'О компании', 'Контакты'];
 
     public function test_menu_has_all_items_in_order(): void
     {
@@ -40,7 +40,7 @@ class MainMenuTest extends TestCase
     {
         $html = $this->get('/promo')->getContent();
 
-        $this->assertSame(6, substr_count($html, 'data-mobile-menu-item'));
+        $this->assertSame(8, substr_count($html, 'data-mobile-menu-item'));
         $this->assertMatchesRegularExpression('#aria-current="page"\s+data-mobile-menu-item\s*>Акции</a>#u', $html);
     }
 

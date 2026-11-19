@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Banner;
 use App\Models\Product;
+use App\Models\Review;
+use App\Models\Work;
 use App\Services\CartSummary;
 use App\Services\Catalog\KeyAttributes;
 use App\Services\CatalogMenu;
@@ -51,6 +53,8 @@ class HomeController extends Controller
             'tiles' => $tiles->forTree($categories),
             'featuredProducts' => $featuredProducts,
             'cartItems' => $cart->items(),
+            'works' => Work::published()->ordered()->with('cover')->withCount('images')->limit(6)->get(),
+            'reviews' => Review::published()->ordered()->with('work')->limit(4)->get(),
         ]);
     }
 }

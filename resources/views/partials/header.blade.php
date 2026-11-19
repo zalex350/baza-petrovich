@@ -20,6 +20,8 @@
         ['label' => 'Главная', 'url' => '/', 'active' => request()->is('/')],
         ['label' => 'Каталог', 'url' => route('catalog.index', [], false), 'active' => $isCatalog],
         ['label' => 'Услуги', 'url' => '/uslugi', 'active' => request()->is('uslugi*')],
+        ['label' => 'Наши работы', 'url' => '/nashi-raboty', 'active' => request()->is('nashi-raboty*')],
+        ['label' => 'Отзывы', 'url' => '/otzyvy', 'active' => request()->is('otzyvy')],
         ['label' => 'Акции', 'url' => '/promo', 'active' => request()->is('promo')],
         ['label' => 'Доставка и оплата', 'url' => '/delivery', 'active' => request()->is('delivery')],
         ['label' => 'О компании', 'url' => '/about', 'active' => request()->is('about')],

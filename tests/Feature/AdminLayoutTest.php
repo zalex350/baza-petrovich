@@ -46,7 +46,7 @@ class AdminLayoutTest extends TestCase
                 ->assertOk()
                 ->assertSee('data-layout="admin"', false)
                 ->assertSee('Админ-панель')
-                ->assertSeeInOrder(['Товары', 'Заказы', 'Клиенты', 'Пользователи'])
+                ->assertSeeInOrder(['Продажи', 'Заказы', 'Каталог', 'Товары', 'Покупатели', 'Пользователи', 'Организации (опт)'])
                 // «Открыть сайт» — в верхней панели, в новой вкладке; внизу сайдбара ссылки больше нет
                 ->assertSee('<a href="/" target="_blank" rel="noopener"', false)
                 ->assertSee('Открыть сайт')

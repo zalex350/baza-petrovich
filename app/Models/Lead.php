@@ -15,12 +15,14 @@ class Lead extends Model
         'price' => 'Узнать цену',
         'service' => 'Заказать услугу',
         'callback' => 'Обратный звонок',
+        'quiz' => 'Квиз',
     ];
 
-    protected $fillable = ['type', 'product_id', 'subject', 'name', 'phone', 'email', 'comment', 'status', 'crm_id', 'consent_at', 'ip'];
+    protected $fillable = ['type', 'product_id', 'quiz_id', 'payload', 'subject', 'name', 'phone', 'email', 'comment', 'status', 'crm_id', 'consent_at', 'ip'];
 
     protected $casts = [
         'consent_at' => 'datetime',
+        'payload' => 'array',
     ];
 
     public function product()

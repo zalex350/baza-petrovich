@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use OpenSpout\Reader\XLSX\Reader as XlsxReader;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Concerns\B2bPricing;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -19,6 +20,7 @@ use ZipArchive;
  */
 class ClientCodesAdminTest extends TestCase
 {
+    use B2bPricing;
     use RefreshDatabase;
 
     private User $admin;
