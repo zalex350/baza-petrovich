@@ -15,7 +15,7 @@ class MainMenuTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const ITEMS = ['Главная', 'Каталог', 'Услуги', 'Акции', 'Доставка и оплата', 'О компании', 'Контакты'];
+    private const ITEMS = ['Главная', 'Каталог', 'Услуги', 'Наши работы', 'Отзывы', 'Акции', 'Доставка и оплата', 'О компании', 'Контакты'];
 
     public function test_menu_has_all_items_in_order(): void
     {

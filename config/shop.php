@@ -13,6 +13,9 @@ return [
     // Подпись под логотипом
     'tagline' => env('SHOP_TAGLINE', 'металлобаза'),
 
+    // Отзывы о компании на картах (кнопка на /otzyvy); пусто — без кнопки
+    'reviews_url' => env('SHOP_REVIEWS_URL', 'https://yandex.by/maps/org/std_petrovich/1726129679/'),
+
     // Префикс номера заказа: BP-2026-000001
     'order_prefix' => env('SHOP_ORDER_PREFIX', 'BP'),
 

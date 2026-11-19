@@ -1,6 +1,6 @@
 {{--
     Главная: баннеры (админка «Баннеры») или первый экран металлобазы; разделы каталога; карусели
-    «Акции», «Новинки», «Хиты»; популярные товары; преимущества и услуги.
+    «Акции», «Новинки», «Хиты»; популярные товары; наши работы; отзывы; услуги.
 --}}
 @extends('layouts.app')
 
@@ -79,6 +79,36 @@
             <div class="divide-y divide-line-soft overflow-hidden rounded-card border border-line bg-surface" data-product-list>
                 @foreach($featuredProducts as $product)
                     <x-product-row :product="$product" :in-cart="$cartItems[$product->id] ?? null" />
+                @endforeach
+            </div>
+        </section>
+    @endif
+
+    {{-- Наши работы --}}
+    @if($works->isNotEmpty())
+        <section class="mb-10" data-home-works>
+            <div class="mb-4 flex items-end justify-between gap-4">
+                <h2 class="text-2xl font-bold tracking-tight">Наши работы</h2>
+                <a href="/nashi-raboty" class="text-sm font-medium text-link hover:underline">Все работы →</a>
+            </div>
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                @foreach($works as $work)
+                    <x-work-card :work="$work" />
+                @endforeach
+            </div>
+        </section>
+    @endif
+
+    {{-- Отзывы --}}
+    @if($reviews->isNotEmpty())
+        <section class="mb-10" data-home-reviews>
+            <div class="mb-4 flex items-end justify-between gap-4">
+                <h2 class="text-2xl font-bold tracking-tight">Отзывы клиентов</h2>
+                <a href="/otzyvy" class="text-sm font-medium text-link hover:underline">Все отзывы →</a>
+            </div>
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                @foreach($reviews as $review)
+                    <x-review-card :review="$review" />
                 @endforeach
             </div>
         </section>

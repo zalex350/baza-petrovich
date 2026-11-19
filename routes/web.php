@@ -5,6 +5,7 @@ use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PartnerController;
 use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\WorkController;
 use App\Models\Page;
 use Illuminate\Support\Facades\Route;
 
@@ -40,6 +41,11 @@ Route::get('/photo-credits', function () {
 
     return view('photo_credits', ['credits' => $credits]);
 });
+
+// Наши работы и отзывы
+Route::get('/nashi-raboty', [WorkController::class, 'index'])->name('works.index');
+Route::get('/nashi-raboty/{slug}', [WorkController::class, 'show'])->name('works.show');
+Route::get('/otzyvy', [WorkController::class, 'reviews'])->name('reviews.index');
 
 // Услуги (страницы type = service)
 Route::get('/uslugi', [ServiceController::class, 'index'])->name('services.index');
