@@ -87,11 +87,14 @@ class ImportPetrovich extends Command
         $services = $this->importServices($data['services'] ?? []);
 
         $discounts->recalculate();
+        $icons = PetrovichIcons::apply();
+        // Фото разделов (свободные лицензии) — только пустым
+        $this->call('petrovich:category-photos');
         app(CatalogMenu::class)->flush();
 
         $this->info(sprintf(
-            'Разделов: %d. Товаров: создано %d, обновлено %d. Фото: %d. Услуг: %d.',
-            count($this->categoryIds), $created, $updated, $photos, $services
+            'Разделов: %d. Товаров: создано %d, обновлено %d. Фото: %d. Услуг: %d. Иконок: %d.',
+            count($this->categoryIds), $created, $updated, $photos, $services, $icons
         ));
 
         return self::SUCCESS;

@@ -13,7 +13,7 @@
     $value = old('icon', $category->icon);
     $uploaded = $category->icon === \App\Services\CategoryIcons::UPLOAD ? $icons->render('upload', $category->icon_svg, 'h-10 w-10') : null;
     $groups = collect($icons->library())->groupBy('set');
-    $titles = ['plumb' => 'Сантехника'];
+    $titles = ['metal' => 'Металлобаза', 'plumb' => 'Сантехника'];
 @endphp
 
 <fieldset

@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Page;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -14,6 +15,14 @@ use Tests\TestCase;
 class PetrovichImportTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Импорт назначает фото разделов (petrovich:category-photos) — на фейковый диск
+        Storage::fake('public');
+    }
 
     private function import(array $options = [])
     {
