@@ -42,8 +42,13 @@ class PetrovichWorks extends Command
         }
 
         $photos = 0;
+        $bar = $this->output->createProgressBar(count($data['works'] ?? []) + count($data['reviews'] ?? []));
+        $bar->setFormat(' %current%/%max% [%bar%] %percent:3s%% — %message%');
+        $bar->setMessage('работы');
 
         foreach ($data['works'] ?? [] as $i => $row) {
+            $bar->setMessage(mb_substr($row['title'], 0, 50));
+            $bar->advance();
             $work = Work::firstOrNew(['source_key' => $row['source_key']]);
             $work->forceFill(['source_key' => $row['source_key']]);
             $work->fill([
@@ -73,6 +78,8 @@ class PetrovichWorks extends Command
         }
 
         foreach ($data['reviews'] ?? [] as $i => $row) {
+            $bar->setMessage('отзыв '.($i + 1));
+            $bar->advance();
             $review = Review::firstOrNew(['source_key' => $row['source_key']]);
             $review->forceFill(['source_key' => $row['source_key']]);
             $review->fill(['group' => $row['group'], 'sort_order' => $i, 'is_published' => true]);
@@ -89,6 +96,9 @@ class PetrovichWorks extends Command
 
             $review->save();
         }
+
+        $bar->finish();
+        $this->newLine();
 
         $this->info(sprintf('Работ: %d, отзывов: %d, фото: %d', count($data['works'] ?? []), count($data['reviews'] ?? []), $photos));
 
