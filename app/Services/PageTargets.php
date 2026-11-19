@@ -80,7 +80,8 @@ class PageTargets
         if ($name === 'product.show') {
             $targets[] = 'catalog';
             $targets[] = 'products';
-            $product = Product::find($route->parameter('id'));
+            $key = (string) $route->parameter('key');
+            $product = Product::where('slug', $key)->first() ?? (ctype_digit($key) ? Product::find((int) $key) : null);
             $targets = [...$targets, ...$this->categoryTargets($product?->category_id)];
         }
 

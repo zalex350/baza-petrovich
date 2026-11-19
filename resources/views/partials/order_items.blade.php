@@ -81,7 +81,7 @@
                         @elseif(! $admin && $item->product && $item->product->is_active && $item->product->is_published)
 
                             <a
-                                href="{{ route('product.show', $item->product->id) }}"
+                                href="{{ $item->product->url() }}"
                                 class="font-medium text-slate-800 hover:text-blue-600 transition"
                             >
                                 {{ $item->product_name }}

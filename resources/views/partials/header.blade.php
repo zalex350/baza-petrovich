@@ -22,6 +22,7 @@
         ['label' => 'Услуги', 'url' => '/uslugi', 'active' => request()->is('uslugi*')],
         ['label' => 'Наши работы', 'url' => '/nashi-raboty', 'active' => request()->is('nashi-raboty*')],
         ['label' => 'Отзывы', 'url' => '/otzyvy', 'active' => request()->is('otzyvy')],
+        ['label' => 'Статьи', 'url' => '/stati', 'active' => request()->is('stati*')],
         ['label' => 'Акции', 'url' => '/promo', 'active' => request()->is('promo')],
         ['label' => 'Доставка и оплата', 'url' => '/delivery', 'active' => request()->is('delivery')],
         ['label' => 'О компании', 'url' => '/about', 'active' => request()->is('about')],

@@ -15,14 +15,24 @@ use Illuminate\Validation\Rule;
  */
 class AdminPageController extends Controller
 {
+    /** Вкладки: страницы, услуги, статьи (?type=service|article) */
     public function index()
     {
-        return view('admin.pages', ['pages' => Page::orderBy('title')->get()]);
+        $type = array_key_exists((string) request('type'), Page::TYPES) ? (string) request('type') : '';
+
+        $query = Page::query()->when($type === '', fn ($q) => $q->whereNull('type')->orWhere('type', ''), fn ($q) => $q->where('type', $type));
+        $type === Page::ARTICLE ? $query->orderByDesc('published_at')->orderByDesc('id') : $query->orderBy('title');
+
+        $counts = Page::query()->selectRaw("COALESCE(type, '') as t, COUNT(*) as n")->groupBy('t')->pluck('n', 't');
+
+        return view('admin.pages', ['pages' => $query->paginate(50)->withQueryString(), 'type' => $type, 'counts' => $counts]);
     }
 
     public function create()
     {
-        return view('admin.page_form', ['page' => new Page(['is_published' => false])]);
+        $type = array_key_exists((string) request('type'), Page::TYPES) ? (string) request('type') : '';
+
+        return view('admin.page_form', ['page' => new Page(['is_published' => false, 'type' => $type ?: null, 'published_at' => $type === Page::ARTICLE ? now() : null])]);
     }
 
     public function store(): RedirectResponse
@@ -75,15 +85,29 @@ class AdminPageController extends Controller
             'seo_title' => ['nullable', 'string', 'max:255'],
             'seo_description' => ['nullable', 'string', 'max:500'],
             'is_published' => ['boolean'],
+            'type' => $menu ? ['prohibited'] : ['nullable', 'in:'.implode(',', array_filter(array_keys(Page::TYPES)))],
+            'published_at' => ['nullable', 'date'],
+            'excerpt' => ['nullable', 'string', 'max:500'],
+            'image' => ['nullable', 'string', 'max:500', 'regex:#^(https://|/)#'],
         ], [
             'title.required' => 'Укажите заголовок',
             'slug.required' => 'Укажите адрес страницы',
             'slug.regex' => 'Адрес — латиница, цифры и дефис',
             'slug.unique' => 'Страница с таким адресом уже есть',
             'seo_description.max' => 'Описание для поисковиков — не длиннее 500 символов',
+            'image.regex' => 'Обложка — адрес, начинающийся с https:// или /',
         ]);
 
         $data['is_published'] = request()->boolean('is_published');
+
+        if (! $menu && request()->has('type')) {
+            $data['type'] = ($data['type'] ?? null) ?: null;
+        }
+
+        // Статья: дата публикации — по умолчанию сейчас
+        if (($data['type'] ?? $page?->type) === Page::ARTICLE && blank($data['published_at'] ?? null) && $data['is_published']) {
+            $data['published_at'] = $page?->published_at ?? now();
+        }
 
         return $data;
     }

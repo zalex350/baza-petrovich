@@ -3,8 +3,11 @@
 namespace App\Providers;
 
 use App\Models\Category;
+use App\Models\Page;
 use App\Models\Product;
+use App\Models\Work;
 use App\Observers\CatalogMenuObserver;
+use App\Observers\UrlChangeObserver;
 use App\Services\ClientCodes;
 use App\Services\CurrentCart;
 use App\Services\Pricing\Discounts;
@@ -40,6 +43,11 @@ class AppServiceProvider extends ServiceProvider
 
         Category::observe(CatalogMenuObserver::class);
         Product::observe(CatalogMenuObserver::class);
+
+        // Смена адреса (slug) — редирект со старого (App\Models\Redirect)
+        foreach ([Product::class, Category::class, Page::class, Work::class] as $model) {
+            $model::observe(UrlChangeObserver::class);
+        }
 
         // API обмена с 1С: запросов в минуту на токен (без токена — на IP); сверх — 429 с Retry-After
         RateLimiter::for('exchange-1c', fn (Request $request) => Limit::perMinute((int) config('shop.exchange_1c.rate_limit_per_minute', 60))

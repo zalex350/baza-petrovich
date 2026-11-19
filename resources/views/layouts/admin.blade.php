@@ -50,11 +50,12 @@
             ['url' => '/admin/price-types',   'label' => 'Типы цен',        'icon' => 'heroicon-o-banknotes',               'active' => ['admin/price-types', 'admin/price-type/*'], 'b2b' => true],
         ],
         'Сайт' => [
-            ['url' => '/admin/pages',         'label' => 'Страницы и услуги', 'icon' => 'heroicon-o-document-text',         'active' => ['admin/pages', 'admin/page/*']],
+            ['url' => '/admin/pages',         'label' => 'Страницы, услуги, статьи', 'icon' => 'heroicon-o-document-text',  'active' => ['admin/pages', 'admin/page/*']],
             ['url' => '/admin/works',         'label' => 'Наши работы',     'icon' => 'heroicon-o-photo',                   'active' => ['admin/works', 'admin/work/*']],
             ['url' => '/admin/reviews',       'label' => 'Отзывы',          'icon' => 'heroicon-o-chat-bubble-left-right',  'active' => ['admin/reviews', 'admin/review/*']],
             ['url' => '/admin/banners',       'label' => 'Баннеры',         'icon' => 'heroicon-o-rectangle-stack',         'active' => ['admin/banners', 'admin/banner/*']],
             ['url' => '/admin/site-scripts',  'label' => 'Коды и виджеты',  'icon' => 'heroicon-o-code-bracket',            'active' => ['admin/site-scripts', 'admin/site-script/*']],
+            ['url' => '/admin/redirects',     'label' => 'Редиректы',       'icon' => 'heroicon-o-arrow-uturn-right',       'active' => ['admin/redirects', 'admin/redirect/*']],
         ],
         'Покупатели' => [
             ['url' => '/admin/users',         'label' => 'Пользователи',    'icon' => 'heroicon-o-users',                   'active' => ['admin/users', 'admin/user/*']],

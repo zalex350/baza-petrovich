@@ -120,6 +120,10 @@ class AdminProductController extends Controller
         $set = request()->has('attributes_sent') ? $this->attributes->fromRows((array) request('attributes', [])) : [];
 
         // Новый товар на сайте не виден до публикации — тексты пишутся сразу в товар
+        if (blank($data['slug'] ?? null)) {
+            $data['slug'] = Product::uniqueSlug((string) (($data['display_name'] ?? null) ?: ($data['name'] ?? $data['sku'] ?? '')));
+        }
+
         $product = Product::create($data);
 
         $this->attributes->sync($product, $set);
@@ -225,6 +229,11 @@ class AdminProductController extends Controller
             if (request()->has($field)) {
                 $direct[$field] = $data[$field] ?? null;
             }
+        }
+
+        // Адрес карточки не бывает пустым: стёрли — снова из названия (старый адрес — редирект, UrlChangeObserver)
+        if (request()->has('slug') && blank($direct['slug'] ?? null)) {
+            $direct['slug'] = Product::uniqueSlug($product->title(), $product->id);
         }
 
         $product->update($this->lockNewBadge($product, $direct));

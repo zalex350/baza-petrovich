@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PageController;
@@ -51,6 +52,10 @@ Route::post('/quiz/{id}', [QuizController::class, 'submit'])->whereNumber('id')-
 Route::get('/nashi-raboty', [WorkController::class, 'index'])->name('works.index');
 Route::get('/nashi-raboty/{slug}', [WorkController::class, 'show'])->name('works.show');
 Route::get('/otzyvy', [WorkController::class, 'reviews'])->name('reviews.index');
+
+// Статьи (страницы type = article)
+Route::get('/stati', [ArticleController::class, 'index'])->name('articles.index');
+Route::get('/stati/{slug}', [ArticleController::class, 'show'])->name('articles.show');
 
 // Услуги (страницы type = service)
 Route::get('/uslugi', [ServiceController::class, 'index'])->name('services.index');

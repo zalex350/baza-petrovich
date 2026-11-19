@@ -39,7 +39,17 @@
             <p class="text-ink" data-page-slug>{{ $page->url() }} <span class="text-sm text-ink-muted">— страница главного меню, адрес не меняется</span></p>
         </x-field>
     @else
-        <x-input name="slug" label="Адрес" :value="$page->slug" maxlength="100" placeholder="garantiya" hint="Латиница, цифры и дефис; страница откроется по /page/адрес. Пусто — из заголовка." />
+        <x-input name="slug" label="Адрес" :value="$page->slug" maxlength="100" placeholder="garantiya" hint="Латиница, цифры и дефис: страница — /page/адрес, услуга — /uslugi/адрес, статья — /stati/адрес. Пусто — из заголовка. Сменили — старый адрес ведёт на новый." />
+        <x-select name="type" label="Тип" :options="\App\Models\Page::TYPES" :value="(string) $page->type" class="max-w-xs" hint="Услуга — в разделе «Услуги» с кнопкой «Заказать услугу»; статья — в разделе «Статьи»." />
+    @endif
+
+    @if(! $menu)
+        <fieldset class="space-y-4 rounded-card border border-line p-4" data-article-fields>
+            <legend class="px-1 text-sm font-semibold text-ink">Для статьи</legend>
+            <x-input name="published_at" type="date" label="Дата" :value="$page->published_at?->toDateString()" class="max-w-xs" />
+            <x-textarea name="excerpt" label="Анонс" :value="$page->excerpt" rows="2" maxlength="500" hint="Под заголовком в списке статей. Пусто — начало текста." />
+            <x-input name="image" label="Обложка (адрес картинки)" :value="$page->image" hint="Адрес на сайте (/storage/…) или https://…; пусто — без обложки." />
+        </fieldset>
     @endif
 
     {{-- Текст: Trix пишет HTML в скрытое поле body; на сайте HTML очищается (App\Support\Html) --}}

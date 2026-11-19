@@ -27,7 +27,7 @@ class LeadController extends Controller
             'title' => 'Узнать цену',
             'subject' => $product->title(),
             'product' => $product,
-            'back' => route('product.show', $product->id),
+            'back' => $product->url(),
         ]);
     }
 

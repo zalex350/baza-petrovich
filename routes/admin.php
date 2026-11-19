@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminProductDocumentController;
 use App\Http\Controllers\Admin\AdminProductImageController;
 use App\Http\Controllers\Admin\AdminQuizController;
+use App\Http\Controllers\Admin\AdminRedirectController;
 use App\Http\Controllers\Admin\AdminReviewController;
 use App\Http\Controllers\Admin\AdminSearchSynonymController;
 use App\Http\Controllers\Admin\AdminSettingsController;
@@ -381,6 +382,12 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post('/admin/banner/{id}/delete', [AdminBannerController::class, 'destroy']);
 
     // Информационные страницы
+    // Редиректы: старые адреса → новые (App\Support\LegacyUrls)
+    Route::get('/admin/redirects', [AdminRedirectController::class, 'index']);
+    Route::post('/admin/redirects', [AdminRedirectController::class, 'store']);
+    Route::post('/admin/redirect/{id}/delete', [AdminRedirectController::class, 'destroy']);
+    Route::get('/admin/redirects/check', [AdminRedirectController::class, 'check']);
+
     Route::get('/admin/pages', [AdminPageController::class, 'index']);
     Route::get('/admin/page/create', [AdminPageController::class, 'create']);
     Route::post('/admin/page', [AdminPageController::class, 'store']);
