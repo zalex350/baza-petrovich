@@ -40,7 +40,7 @@ class MainMenuTest extends TestCase
     {
         $html = $this->get('/promo')->getContent();
 
-        $this->assertSame(6, substr_count($html, 'data-mobile-menu-item'));
+        $this->assertSame(8, substr_count($html, 'data-mobile-menu-item'));
         $this->assertMatchesRegularExpression('#aria-current="page"\s+data-mobile-menu-item\s*>Акции</a>#u', $html);
     }
 

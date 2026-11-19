@@ -313,7 +313,10 @@
 @unless($isNew)
     @include('partials.admin_product_images', ['product' => $product, 'form' => $form])
     @include('partials.admin_product_documents', ['product' => $product])
-    @include('partials.admin_product_client_codes', ['product' => $product, 'clientCodes' => $clientCodes, 'codeOrganizations' => $codeOrganizations])
+    {{-- Коды товара у организаций — B2B; в рознице скрыты --}}
+    @unless(config('shop.retail'))
+        @include('partials.admin_product_client_codes', ['product' => $product, 'clientCodes' => $clientCodes, 'codeOrganizations' => $codeOrganizations])
+    @endunless
 @endunless
 
 {{-- Сохранение и публикация --}}

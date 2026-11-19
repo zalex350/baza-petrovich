@@ -19,6 +19,9 @@
 - **гостевая корзина** (cookie) и **оформление без регистрации**: самовывоз Минск / Брест или доставка,
   оплата при получении или по счёту (ЕРИП — `SHOP_PAYMENT_ERIP`, подключается позже); заказ гостя — `/o/{token}`;
 - **цены в Excel** — админка «Цены»: выгрузка всех товаров и загрузка цен, скидок, наличия по SKU;
+- **квизы** (свой конструктор: шаги, варианты, привязка к разделам, услугам, страницам; ответы → заявки) и
+  **«Коды и виджеты»** (MoClients, Marquiz, JivoSite, Метрика, GTM — в <head> или перед </body> на выбранных страницах);
+- **«Наши работы»** и **«Отзывы»** (/nashi-raboty, /otzyvy, блоки на главной);
 - **интеграции**: Telegram и Битрикс24 (лид с товарами) — `.env`, через очередь; 1С забирает подтверждённые
   заказы `GET /api/1c/v1/orders/new` и подтверждает `POST /orders/{номер}/confirm|reject`.
 
@@ -30,6 +33,8 @@ php artisan petrovich:import --fresh --images   # 208 разделов, 644 то
 php artisan petrovich:content                   # фото на плитках разделов, контакты, реквизиты, страницы
 php artisan petrovich:icons                     # иконки разделов (набор metal); импорт назначает их сам
 php artisan petrovich:category-photos [--force] # фото разделов (database/data/petrovich/category-photos); импорт — сам
+php artisan petrovich:works --images            # «Наши работы» (38 объектов) и отзывы (24 скана) со старого сайта
+php artisan petrovich:quizzes                   # стартовые квизы: калькуляторы забора и ворот
 python scripts/category-photos.py               # обработка фото разделов в едином стиле: src/ + photos.json → {раздел}.jpg
 ```
 

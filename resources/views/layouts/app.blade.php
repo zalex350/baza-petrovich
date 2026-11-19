@@ -24,6 +24,10 @@
         'resources/js/app.js'
     ])
 
+    {{-- Коды сторонних сервисов в <head> (админка «Коды и виджеты») --}}
+    @foreach(\App\Models\SiteScript::for('head') as $script)
+        {!! $script->code !!}
+    @endforeach
 </head>
 
 <body class="bg-canvas text-ink">
@@ -36,9 +40,13 @@
 
         @yield('content')
 
+        @include('partials.page_extras', ['position' => 'inline'])
+
     </main>
 
     @include('partials.footer')
 
+    @include('partials.page_extras', ['position' => 'popup'])
+    @include('partials.page_extras', ['position' => 'body'])
 </body>
 </html>

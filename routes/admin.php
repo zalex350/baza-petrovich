@@ -19,9 +19,11 @@ use App\Http\Controllers\Admin\AdminPriceTypeController;
 use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminProductDocumentController;
 use App\Http\Controllers\Admin\AdminProductImageController;
+use App\Http\Controllers\Admin\AdminQuizController;
 use App\Http\Controllers\Admin\AdminReviewController;
 use App\Http\Controllers\Admin\AdminSearchSynonymController;
 use App\Http\Controllers\Admin\AdminSettingsController;
+use App\Http\Controllers\Admin\AdminSiteScriptController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AdminWorkController;
 use Illuminate\Support\Facades\Route;
@@ -391,6 +393,20 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post('/admin/settings', [AdminSettingsController::class, 'update']);
 
     // Заявки «Стать партнёром»
+    // Квизы и коды сторонних сервисов
+    Route::get('/admin/quizzes', [AdminQuizController::class, 'index']);
+    Route::get('/admin/quiz/create', [AdminQuizController::class, 'create']);
+    Route::post('/admin/quiz', [AdminQuizController::class, 'store']);
+    Route::get('/admin/quiz/{id}', [AdminQuizController::class, 'edit'])->whereNumber('id');
+    Route::post('/admin/quiz/{id}', [AdminQuizController::class, 'update'])->whereNumber('id');
+    Route::post('/admin/quiz/{id}/delete', [AdminQuizController::class, 'destroy']);
+    Route::get('/admin/site-scripts', [AdminSiteScriptController::class, 'index']);
+    Route::get('/admin/site-script/create', [AdminSiteScriptController::class, 'create']);
+    Route::post('/admin/site-script', [AdminSiteScriptController::class, 'store']);
+    Route::get('/admin/site-script/{id}', [AdminSiteScriptController::class, 'edit'])->whereNumber('id');
+    Route::post('/admin/site-script/{id}', [AdminSiteScriptController::class, 'update'])->whereNumber('id');
+    Route::post('/admin/site-script/{id}/delete', [AdminSiteScriptController::class, 'destroy']);
+
     // Наши работы и отзывы
     Route::get('/admin/works', [AdminWorkController::class, 'index']);
     Route::get('/admin/work/create', [AdminWorkController::class, 'create']);

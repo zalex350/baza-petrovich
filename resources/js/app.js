@@ -18,6 +18,8 @@ import copyText from './copy-text';
 import bannerSlider from './banner-slider';
 import productCarousel from './product-carousel';
 import sortableList from './sortable-list';
+import quiz from './quiz';
+import quizEditor from './quiz-editor';
 
 window.Alpine = Alpine;
 
@@ -37,5 +39,7 @@ Alpine.data('copyText', copyText);
 Alpine.data('bannerSlider', bannerSlider);
 Alpine.data('productCarousel', productCarousel);
 Alpine.data('sortableList', sortableList);
+Alpine.data('quiz', quiz);
+Alpine.data('quizEditor', quizEditor);
 
 Alpine.start();

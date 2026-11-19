@@ -11,10 +11,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\MessageBag;
 use Illuminate\Support\ViewErrorBag;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Concerns\B2bPricing;
 use Tests\TestCase;
 
 class AdminOrganizationTest extends TestCase
 {
+    use B2bPricing;
     use RefreshDatabase;
 
     private User $admin;
@@ -295,11 +297,11 @@ class AdminOrganizationTest extends TestCase
     public static function invalidUnpProvider(): array
     {
         return [
-            '8 цифр'            => ['12345678'],
-            '10 цифр'           => ['1234567890'],
-            'буквы'             => ['12345678A'],
+            '8 цифр' => ['12345678'],
+            '10 цифр' => ['1234567890'],
+            'буквы' => ['12345678A'],
             '8 цифр с пробелом' => ['123 45678'],
-            'с дефисом'         => ['1234-5678'],
+            'с дефисом' => ['1234-5678'],
         ];
     }
 

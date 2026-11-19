@@ -31,25 +31,47 @@
 
 @php
     // Пункты бокового меню админки; активный раздел выделяется (BR-008)
-    $adminMenu = [
-        // 'active' — точные шаблоны: 'admin/order*' совпал бы и с admin/organizations
-        ['url' => '/admin/products',      'label' => 'Товары',       'icon' => 'heroicon-o-cube',                    'active' => ['admin/products', 'admin/products/*', 'admin/product/*']],
-        ['url' => '/admin/catalog-filters', 'label' => 'Фильтры каталога', 'icon' => 'heroicon-o-funnel', 'active' => ['admin/catalog-filters', 'admin/catalog-filters/*']],
-        ['url' => '/admin/attributes',    'label' => 'Характеристики', 'icon' => 'heroicon-o-adjustments-horizontal',  'active' => ['admin/attributes', 'admin/attribute/*']],
-        ['url' => '/admin/search-synonyms', 'label' => 'Синонимы поиска', 'icon' => 'heroicon-o-language', 'active' => ['admin/search-synonyms', 'admin/search-synonym/*']],
-        ['url' => '/admin/orders',        'label' => 'Заказы',       'icon' => 'heroicon-o-clipboard-document-list', 'active' => ['admin/orders', 'admin/order/*']],
-        ['url' => '/admin/organizations', 'label' => 'Клиенты',      'icon' => 'heroicon-o-building-office-2',       'active' => ['admin/organizations', 'admin/organization/*']],
-        ['url' => '/admin/price-types',   'label' => 'Типы цен',     'icon' => 'heroicon-o-banknotes',               'active' => ['admin/price-types', 'admin/price-type/*']],
-        ['url' => '/admin/users',         'label' => 'Пользователи', 'icon' => 'heroicon-o-users',                   'active' => ['admin/users', 'admin/user/*']],
-        ['url' => '/admin/prices',        'label' => 'Цены',         'icon' => 'heroicon-o-currency-dollar',        'active' => ['admin/prices', 'admin/prices/*']],
-        ['url' => '/admin/leads',         'label' => 'Заявки с сайта', 'icon' => 'heroicon-o-inbox',                'active' => ['admin/leads', 'admin/lead/*']],
-        ['url' => '/admin/partners',      'label' => 'Партнёры',       'icon' => 'heroicon-o-briefcase',               'active' => ['admin/partners', 'admin/partner/*']],
-        ['url' => '/admin/categories',    'label' => 'Категории',    'icon' => 'heroicon-o-folder',                  'active' => ['admin/categories', 'admin/category/*']],
-        ['url' => '/admin/banners',       'label' => 'Баннеры',      'icon' => 'heroicon-o-photo',                   'active' => ['admin/banners', 'admin/banner/*']],
-        ['url' => '/admin/pages',         'label' => 'Страницы',     'icon' => 'heroicon-o-document-text',           'active' => ['admin/pages', 'admin/page/*']],
-        ['url' => '/admin/exchange',      'label' => 'Обмен с 1С',   'icon' => 'heroicon-o-arrows-right-left',       'active' => ['admin/exchange', 'admin/exchange/*']],
-        ['url' => '/admin/settings',      'label' => 'Настройки',    'icon' => 'heroicon-o-cog-6-tooth',             'active' => ['admin/settings']],
+    // Пункты бокового меню админки по группам; активный раздел выделяется (BR-008).
+    // b2b — только для B2B-режима (shop.retail = false): в рознице скрыты.
+    // 'active' — точные шаблоны: 'admin/order*' совпал бы и с admin/organizations
+    $adminGroups = [
+        'Продажи' => [
+            ['url' => '/admin/orders',        'label' => 'Заказы',          'icon' => 'heroicon-o-clipboard-document-list', 'active' => ['admin/orders', 'admin/order/*']],
+            ['url' => '/admin/leads',         'label' => 'Заявки с сайта',  'icon' => 'heroicon-o-inbox',                   'active' => ['admin/leads', 'admin/lead/*']],
+            ['url' => '/admin/quizzes',       'label' => 'Квизы',           'icon' => 'heroicon-o-calculator',              'active' => ['admin/quizzes', 'admin/quiz/*']],
+        ],
+        'Каталог' => [
+            ['url' => '/admin/products',      'label' => 'Товары',          'icon' => 'heroicon-o-cube',                    'active' => ['admin/products', 'admin/products/*', 'admin/product/*']],
+            ['url' => '/admin/categories',    'label' => 'Категории',       'icon' => 'heroicon-o-folder',                  'active' => ['admin/categories', 'admin/category/*']],
+            ['url' => '/admin/prices',        'label' => 'Цены и скидки',   'icon' => 'heroicon-o-currency-dollar',         'active' => ['admin/prices', 'admin/prices/*']],
+            ['url' => '/admin/catalog-filters', 'label' => 'Фильтры каталога', 'icon' => 'heroicon-o-funnel',               'active' => ['admin/catalog-filters', 'admin/catalog-filters/*']],
+            ['url' => '/admin/attributes',    'label' => 'Характеристики',  'icon' => 'heroicon-o-adjustments-horizontal',  'active' => ['admin/attributes', 'admin/attribute/*']],
+            ['url' => '/admin/search-synonyms', 'label' => 'Синонимы поиска', 'icon' => 'heroicon-o-language',              'active' => ['admin/search-synonyms', 'admin/search-synonym/*']],
+            ['url' => '/admin/price-types',   'label' => 'Типы цен',        'icon' => 'heroicon-o-banknotes',               'active' => ['admin/price-types', 'admin/price-type/*'], 'b2b' => true],
+        ],
+        'Сайт' => [
+            ['url' => '/admin/pages',         'label' => 'Страницы и услуги', 'icon' => 'heroicon-o-document-text',         'active' => ['admin/pages', 'admin/page/*']],
+            ['url' => '/admin/works',         'label' => 'Наши работы',     'icon' => 'heroicon-o-photo',                   'active' => ['admin/works', 'admin/work/*']],
+            ['url' => '/admin/reviews',       'label' => 'Отзывы',          'icon' => 'heroicon-o-chat-bubble-left-right',  'active' => ['admin/reviews', 'admin/review/*']],
+            ['url' => '/admin/banners',       'label' => 'Баннеры',         'icon' => 'heroicon-o-rectangle-stack',         'active' => ['admin/banners', 'admin/banner/*']],
+            ['url' => '/admin/site-scripts',  'label' => 'Коды и виджеты',  'icon' => 'heroicon-o-code-bracket',            'active' => ['admin/site-scripts', 'admin/site-script/*']],
+        ],
+        'Покупатели' => [
+            ['url' => '/admin/users',         'label' => 'Пользователи',    'icon' => 'heroicon-o-users',                   'active' => ['admin/users', 'admin/user/*']],
+            ['url' => '/admin/organizations', 'label' => config('shop.retail') ? 'Организации (опт)' : 'Клиенты', 'icon' => 'heroicon-o-building-office-2', 'active' => ['admin/organizations', 'admin/organization/*']],
+            ['url' => '/admin/partners',      'label' => config('shop.retail') ? 'Оптовые заявки' : 'Партнёры', 'icon' => 'heroicon-o-briefcase', 'active' => ['admin/partners', 'admin/partner/*']],
+        ],
+        'Система' => [
+            ['url' => '/admin/exchange',      'label' => 'Обмен с 1С',      'icon' => 'heroicon-o-arrows-right-left',       'active' => ['admin/exchange', 'admin/exchange/*']],
+            ['url' => '/admin/settings',      'label' => 'Настройки',       'icon' => 'heroicon-o-cog-6-tooth',             'active' => ['admin/settings']],
+        ],
     ];
+
+    $adminGroups = array_filter(array_map(
+        fn ($items) => array_values(array_filter($items, fn ($item) => ! (($item['b2b'] ?? false) && config('shop.retail')))),
+        $adminGroups
+    ));
+
 @endphp
 
 <div class="min-h-screen lg:flex" x-data="{ sidebar: false }">
@@ -76,7 +98,9 @@
 
         <nav class="p-3 space-y-1" aria-label="Меню админ-панели">
 
-            @foreach($adminMenu as $item)
+            @foreach($adminGroups as $group => $items)
+            <div class="px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500" data-admin-group>{{ $group }}</div>
+            @foreach($items as $item)
 
                 @php($isActive = request()->is(...$item['active']))
 
@@ -93,6 +117,7 @@
                     {{ $item['label'] }}
                 </a>
 
+            @endforeach
             @endforeach
 
         </nav>

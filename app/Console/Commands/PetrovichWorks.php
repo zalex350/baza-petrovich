@@ -26,9 +26,9 @@ class PetrovichWorks extends Command
     /** Метка объекта по названию — для фильтра на /nashi-raboty */
     private const TAGS = [
         '/кровл|перекрыти/u' => 'Кровля',
+        '/^(забор|огражден|комбинир|переделк|установк|монтаж)|забор|огражден/u' => 'Заборы',
         '/ворот/u' => 'Ворота',
         '/калитк/u' => 'Калитки',
-        '/забор|огражден/u' => 'Заборы',
     ];
 
     public function handle(WebpImage $images): int
@@ -48,8 +48,10 @@ class PetrovichWorks extends Command
             $work->forceFill(['source_key' => $row['source_key']]);
             $work->fill([
                 'title' => $row['title'],
+
                 'description' => trim(Html::clean($row['description'] ?? '')) ?: null,
-                'tag' => $this->tag($row['title']),
+                // Метка — только если не задана вручную в админке
+                'tag' => $work->tag ?: $this->tag($row['title']),
                 'sort_order' => $i,
                 'is_published' => true,
             ]);
