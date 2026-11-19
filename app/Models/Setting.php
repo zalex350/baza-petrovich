@@ -30,6 +30,50 @@ class Setting extends Model
         'seller_director' => 'Руководитель',
         'footer_about' => 'Подвал: о компании (кратко)',
         'footer_delivery' => 'Подвал: доставка и оплата (кратко)',
+        // SEO (App\Support\Seo, App\Support\SeoTemplates): пусто — шаблон по умолчанию из config/seo.php
+        'seo_home_title' => 'Заголовок главной (title)',
+        'seo_home_description' => 'Описание главной (description)',
+        'seo_category_title' => 'Шаблон заголовка раздела',
+        'seo_category_description' => 'Шаблон описания раздела',
+        'seo_product_title' => 'Шаблон заголовка товара',
+        'seo_product_description' => 'Шаблон описания товара',
+        'seo_og_image' => 'Картинка для соцсетей и мессенджеров (адрес)',
+        // Аналитика (partials/analytics): заполненный ID — счётчик подключается сам
+        'analytics_gtm_id' => 'Google Tag Manager — ID контейнера',
+        'analytics_ga4_id' => 'Google Analytics 4 — ID потока',
+        'analytics_ads_id' => 'Google Ads — ID тега',
+        'analytics_ads_purchase_label' => 'Google Ads — метка конверсии «Покупка»',
+        'analytics_ads_lead_label' => 'Google Ads — метка конверсии «Заявка»',
+        'analytics_ym_id' => 'Яндекс Метрика — номер счётчика',
+        'analytics_clarity_id' => 'Microsoft Clarity — ID проекта',
+        'analytics_consent' => 'Согласие на cookie',
+        'google_site_verification' => 'Google Search Console — код подтверждения',
+        'yandex_verification' => 'Яндекс Вебмастер — код подтверждения',
+    ];
+
+    /** Форматы ID счётчиков: ключ → regex (проверка в AdminSettingsController) */
+    public const ANALYTICS_FORMATS = [
+        'analytics_gtm_id' => ['/^GTM-[A-Z0-9]{4,12}$/', 'GTM-XXXXXXX'],
+        'analytics_ga4_id' => ['/^G-[A-Z0-9]{4,15}$/', 'G-XXXXXXXXXX'],
+        'analytics_ads_id' => ['/^AW-\d{6,15}$/', 'AW-123456789'],
+        'analytics_ads_purchase_label' => ['/^[A-Za-z0-9_\-]{4,64}$/', 'AbC-D_efG-h12_34-567'],
+        'analytics_ads_lead_label' => ['/^[A-Za-z0-9_\-]{4,64}$/', 'AbC-D_efG-h12_34-567'],
+        'analytics_ym_id' => ['/^\d{5,12}$/', '12345678'],
+        'analytics_clarity_id' => ['/^[a-z0-9]{6,20}$/', 'abcdef1234'],
+        'google_site_verification' => ['/^[A-Za-z0-9_\-]{10,100}$/', 'код из meta-тега'],
+        'yandex_verification' => ['/^[A-Za-z0-9_\-]{6,100}$/', 'код из meta-тега'],
+    ];
+
+    /**
+     * Согласие на cookie (Consent Mode v2):
+     * notice — баннер-уведомление, счётчики работают сразу (по умолчанию);
+     * required — до «Принять» Google работает без cookie (cookieless-пинги), Метрика и Clarity не загружаются;
+     * off — без баннера.
+     */
+    public const CONSENT_MODES = [
+        'notice' => 'Уведомление — счётчики работают сразу, баннер с кнопкой «Понятно»',
+        'required' => 'Согласие — до «Принять» без cookie аналитики и рекламы',
+        'off' => 'Без баннера',
     ];
 
     /** Телефоны: [{label, number}, …] */

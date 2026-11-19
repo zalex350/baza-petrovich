@@ -67,6 +67,11 @@
 
 <div class="flex flex-col gap-6">
 
+    @if(! isset($preview) && \App\Support\Analytics::config())
+        @php($trackItem = \App\Support\Analytics::item($product))
+        <x-track event="view_item" :params="['value' => $trackItem['price'] ?? 0, 'items' => [$trackItem]]" />
+    @endif
+
     <x-breadcrumbs :items="$breadcrumbs" data-back-to-list />
 
     <div class="grid gap-8 lg:grid-cols-2 lg:items-start">

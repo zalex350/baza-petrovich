@@ -6,6 +6,10 @@
 
 <div class="max-w-3xl">
 
+@if(\App\Support\Analytics::config())
+    <x-track event="purchase" :params="\App\Support\Analytics::purchase($order)" :once="$order->number" />
+@endif
+
     <h1 class="text-3xl font-bold mb-2">
         Заказ {{ $order->number }} оформлен
     </h1>

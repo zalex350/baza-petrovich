@@ -13,6 +13,10 @@
 
 @section('flash-validation', 'summary')
 
+@push('head')
+    @vite('resources/js/editor.js')
+@endpush
+
 @section('content')
 
 <a href="/admin/categories" class="text-sm text-ink-muted hover:text-link">← Все категории</a>
@@ -65,6 +69,24 @@
     <x-checkbox name="is_hidden" label="Скрыть" hint="Нет в меню и каталоге вместе с подкатегориями; товары — в поиске" :checked="$category->is_hidden" />
 
     <x-category-icon-picker :category="$category" />
+
+    {{-- Текст раздела — под списком товаров (первая страница); HTML очищается (App\Support\Html) --}}
+    <x-field id="f-description" label="Текст раздела" error="description" hint="Под списком товаров: чем отличаются виды, как выбрать, доставка. 1–3 абзаца с подзаголовками — для покупателей и поиска.">
+        <input id="f-description" type="hidden" name="description" value="{{ old('description', $category->description) }}">
+        <trix-editor input="f-description" class="prose-page min-h-40 rounded-control border border-line-strong bg-surface px-control-x py-control-y" aria-label="Текст раздела"></trix-editor>
+    </x-field>
+
+    <x-textarea name="faq" label="Частые вопросы" :value="\App\Models\Category::faqToText($category->faq)" rows="8"
+        hint="Под текстом раздела и в выдаче Google. Вопрос — первая строка, ответ — следующие; между вопросами — пустая строка." />
+
+    <fieldset class="space-y-4 rounded-card border border-line p-4">
+        <legend class="px-1 text-sm font-semibold text-ink">Для поисковиков (SEO)</legend>
+        @if($category->exists)
+            <p class="text-sm text-ink-muted">Сейчас: <span class="text-ink">{{ \App\Support\SeoTemplates::categoryTitle($category) }}</span></p>
+        @endif
+        <x-input name="seo_title" label="Заголовок окна (title)" :value="$category->seo_title" maxlength="255" hint="Пусто — по шаблону из «Настроек» → SEO (с ценой «от» и числом товаров)." />
+        <x-textarea name="seo_description" label="Описание (description)" :value="$category->seo_description" rows="2" maxlength="500" hint="150–160 символов. Пусто — по шаблону." />
+    </fieldset>
 
     {{-- Плитка раздела — только у верхнего уровня (главная, «Каталог») --}}
     @if($tile)

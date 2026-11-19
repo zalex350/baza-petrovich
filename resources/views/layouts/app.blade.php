@@ -9,11 +9,12 @@
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>
-        @yield('title', config('shop.name'))
-    </title>
+    @include('partials.seo', ['fallbackTitle' => trim($__env->yieldContent('title'))])
 
     @yield('meta')
+
+    {{-- Счётчики и Consent Mode (админка «Настройки» → Аналитика) --}}
+    @include('partials.analytics', ['position' => 'head'])
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,6 +32,8 @@
 </head>
 
 <body class="bg-canvas text-ink">
+
+    @include('partials.analytics', ['position' => 'body'])
 
     @include('partials.header')
 

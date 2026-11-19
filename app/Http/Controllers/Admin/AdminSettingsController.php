@@ -43,8 +43,23 @@ class AdminSettingsController extends Controller
             request()->merge(['seller_unp' => Unp::normalize(request('seller_unp'))]);
         }
 
+        // ID счётчиков: пробелы по краям и регистр — как в кабинетах сервисов
+        foreach (Setting::ANALYTICS_FORMATS as $key => $format) {
+            if (filled(request($key))) {
+                $value = trim((string) request($key));
+                // Код подтверждения часто копируют целым meta-тегом — берём content
+                if (preg_match('/content=["\']([^"\']+)["\']/i', $value, $m)) {
+                    $value = $m[1];
+                }
+                request()->merge([$key => in_array($key, ['analytics_gtm_id', 'analytics_ga4_id', 'analytics_ads_id'], true) ? strtoupper($value) : $value]);
+            }
+        }
+
         $data = request()->validate([
             ...$text,
+            ...collect(Setting::ANALYTICS_FORMATS)->map(fn ($format) => ['nullable', 'string', 'regex:'.$format[0]])->all(),
+            'analytics_consent' => ['nullable', 'in:'.implode(',', array_keys(Setting::CONSENT_MODES))],
+            'seo_og_image' => ['nullable', 'string', 'max:500', 'regex:#^(https?://|/)#'],
             'contact_email' => ['nullable', 'email', 'max:255'],
             'seller_unp' => ['nullable', 'string', new Unp],
             'seller_iban' => ['nullable', 'string', new Iban],
@@ -54,6 +69,8 @@ class AdminSettingsController extends Controller
             'phones.*.number' => ['nullable', 'required_with:phones.*.label', 'string', 'max:30', 'regex:/^\+?[\d\s()\-]{5,30}$/'],
         ], [
             ...collect(Setting::FIELDS)->mapWithKeys(fn ($label, $key) => ["{$key}.max" => "«{$label}» — не длиннее :max символов"])->all(),
+            ...collect(Setting::ANALYTICS_FORMATS)->mapWithKeys(fn ($format, $key) => ["{$key}.regex" => '«'.Setting::FIELDS[$key].'» — в формате '.$format[1].'.'])->all(),
+            'seo_og_image.regex' => 'Картинка — адрес, начинающийся с https:// или /.',
             'contact_email.email' => 'Email — в формате name@example.by.',
             'phones.max' => 'Телефонов — не больше :max.',
             'phones.*.number.required_with' => 'Укажите номер — подпись без номера не сохраняется.',

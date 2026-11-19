@@ -6,6 +6,7 @@ use App\Models\Lead;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Services\Vat\VatCalculator;
+use App\Support\Attribution;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -44,6 +45,7 @@ class Bitrix24
             'Получение: '.collect([$order->deliveryLabel() ?? $order->delivery_title, $order->delivery_address])->filter()->implode(' — '),
             $order->paymentLabel() ? 'Оплата: '.$order->paymentLabel() : null,
             $order->comment ? 'Комментарий: '.$order->comment : null,
+            ($source = Attribution::label($order->attribution)) ? 'Источник: '.$source : null,
             url('/admin/order/'.$order->id),
         ])->filter()->map(fn ($l) => e($l))->implode('<br>');
 
@@ -58,7 +60,7 @@ class Bitrix24
             'ADDRESS' => $order->delivery_address,
             'COMPANY_TITLE' => $order->organization?->name,
             'COMMENTS' => $comments,
-        ], 'params' => ['REGISTER_SONET_EVENT' => 'Y']]);
+        ] + $this->utmFields($order->attribution), 'params' => ['REGISTER_SONET_EVENT' => 'Y']]);
 
         $this->call('crm.lead.productrows.set', [
             'id' => $id,
@@ -84,8 +86,18 @@ class Bitrix24
             phone: $lead->phone,
             email: $lead->email,
         ) + [
-            'COMMENTS' => e((string) $lead->comment),
-        ], 'params' => ['REGISTER_SONET_EVENT' => 'Y']]);
+            'COMMENTS' => e((string) $lead->comment)
+                .(($source = Attribution::label($lead->attribution)) ? '<br>'.e('Источник: '.$source) : ''),
+        ] + $this->utmFields($lead->attribution), 'params' => ['REGISTER_SONET_EVENT' => 'Y']]);
+    }
+
+    /** Метки рекламы — в стандартные поля лида UTM_* (отчёты Битрикс24 по источникам) */
+    private function utmFields(?array $attribution): array
+    {
+        return collect(['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'])
+            ->mapWithKeys(fn ($key) => [strtoupper($key) => $attribution[$key] ?? null])
+            ->filter()
+            ->all();
     }
 
     private function contactFields(string $title, ?string $name, ?string $phone, ?string $email): array

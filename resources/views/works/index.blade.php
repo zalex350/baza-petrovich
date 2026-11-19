@@ -3,6 +3,8 @@
 
 @section('title', 'Наши работы — '.config('shop.name'))
 
+@php(seo()->description('Фото выполненных объектов: заборы, ворота, кровля и навесы из материалов металлобазы «'.\App\Support\Seo::siteName().'». Посмотрите примеры и закажите так же.'))
+
 @section('content')
 
 <x-breadcrumbs :items="[['label' => 'Главная', 'url' => '/'], ['label' => 'Наши работы']]" />

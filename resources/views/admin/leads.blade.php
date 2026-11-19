@@ -52,6 +52,9 @@
                     @elseif($lead->subject)
                         <span class="block text-meta text-ink-muted">{{ $lead->subject }}</span>
                     @endif
+                    @if($source = \App\Support\Attribution::label($lead->attribution))
+                        <span class="block text-meta text-ink-muted" title="{{ $lead->attribution['landing'] ?? '' }}" data-lead-source>Источник: {{ $source }}</span>
+                    @endif
                 </x-table.td>
                 <x-table.td label="Контакт">
                     <span class="block">{{ $lead->name }}</span>

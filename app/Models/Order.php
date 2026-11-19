@@ -47,6 +47,7 @@ class Order extends Model
         'delivery_method',
         'payment_method',
         'public_token',
+        'attribution',
         'comment',
         'placed_at',
         'checkout_token',
@@ -77,6 +78,7 @@ class Order extends Model
     }
 
     protected $casts = [
+        'attribution' => 'array',
         'status' => OrderStatus::class,
         'total_without_vat' => 'decimal:2',
         'total_vat' => 'decimal:2',

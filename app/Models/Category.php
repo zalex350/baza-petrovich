@@ -28,6 +28,9 @@ class Category extends Model
         'is_hidden',
         'discount_percent',
         'description',
+        'seo_title',
+        'seo_description',
+        'faq',
         'image',
         'icon',
         'icon_svg',
@@ -38,6 +41,7 @@ class Category extends Model
         'is_hidden' => 'boolean',
         'is_pinned' => 'boolean',
         'sort_order' => 'integer',
+        'faq' => 'array',
     ];
 
     /** Порядок среди соседей (админка «Категории»), при равном — по названию */
@@ -90,6 +94,32 @@ class Category extends Model
     /**
      * Картинка категории (webp, плитки подкатегорий) или null.
      */
+    /**
+     * Вопросы из текста формы: блоки через пустую строку, первая строка — вопрос, остальные — ответ.
+     *
+     * @return list<array{q: string, a: string}>|null
+     */
+    public static function faqFromText(?string $text): ?array
+    {
+        $items = collect(preg_split('/\R\s*\R/u', trim((string) $text)))
+            ->map(function ($block) {
+                $lines = preg_split('/\R/u', trim($block));
+                $q = trim((string) array_shift($lines));
+
+                return ['q' => $q, 'a' => trim(implode("\n", array_map('trim', $lines)))];
+            })
+            ->filter(fn ($item) => $item['q'] !== '' && $item['a'] !== '')
+            ->values()->all();
+
+        return $items ?: null;
+    }
+
+    /** @param  list<array{q: string, a: string}>|null  $faq */
+    public static function faqToText(?array $faq): string
+    {
+        return collect($faq ?? [])->map(fn ($item) => ($item['q'] ?? '')."\n".($item['a'] ?? ''))->implode("\n\n");
+    }
+
     public function imageUrl(): ?string
     {
         return $this->image ? Storage::disk(ProductImage::disk())->url($this->image) : null;

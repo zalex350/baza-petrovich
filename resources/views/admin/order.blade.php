@@ -52,7 +52,7 @@
 
 </div>
 
-@include('partials.order_delivery', ['order' => $order])
+@include('partials.order_delivery', ['order' => $order, 'admin' => true])
 
 {{-- 1С отклонила заказ: решает менеджер — отменить (резерв снимается) или отправить повторно --}}
 @if($order->exchange_state === \App\Enums\OrderExchangeState::Rejected && $order->status !== \App\Enums\OrderStatus::Cancelled)

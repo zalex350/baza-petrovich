@@ -11,6 +11,7 @@ use App\Services\Catalog\KeyAttributes;
 use App\Services\CatalogMenu;
 use App\Services\CategoryTiles;
 use App\Services\ClientCodes;
+use App\Support\SeoSchema;
 
 /**
  * Главная: слайдер баннеров (без баннеров — прежний первый экран), карусели «Акции»,
@@ -45,6 +46,9 @@ class HomeController extends Controller
 
         // «Ваш код» в каруселях и строках — коды организации клиента одной выборкой
         app(ClientCodes::class)->load(collect($carousels)->pluck('products')->flatten(1)->concat($featuredProducts));
+
+        // Организация с филиалами и поиск по сайту — в разметку главной (schema.org)
+        seo()->schema(SeoSchema::organization())->schema(SeoSchema::website());
 
         return view('home', [
             'banners' => Banner::shown()->get(),

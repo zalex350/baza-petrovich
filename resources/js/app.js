@@ -1,4 +1,5 @@
 import './bootstrap';
+import './analytics';
 import './search-suggest';
 import './cart-actions';
 import './cart-page';

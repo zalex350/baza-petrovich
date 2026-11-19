@@ -49,6 +49,8 @@ class Product extends Model
         'default_qty',
         'description',
         'description_generated',
+        'seo_title',
+        'seo_description',
         'category_id',
         'specifications',
         'brand',

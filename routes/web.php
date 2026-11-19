@@ -5,6 +5,7 @@ use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PartnerController;
 use App\Http\Controllers\QuizController;
+use App\Http\Controllers\SeoController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\WorkController;
 use App\Models\Page;
@@ -63,3 +64,7 @@ Route::get('/price-request/{id}', [LeadController::class, 'price'])->whereNumber
 Route::get('/request/{type}', [LeadController::class, 'create'])->name('lead.create');
 Route::post('/request', [LeadController::class, 'store'])->middleware('throttle:5,10')->name('lead.store');
 Route::post('/partner', [PartnerController::class, 'store'])->middleware('throttle:5,10');
+
+// SEO: карта сайта и правила для роботов (SeoController; файла public/robots.txt нет — его отдал бы nginx)
+Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('sitemap');
+Route::get('/robots.txt', [SeoController::class, 'robots'])->name('robots');

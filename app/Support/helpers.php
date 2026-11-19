@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Services\ClientCodes;
 use App\Support\LocalTime;
 use App\Support\Money;
+use App\Support\Seo;
 use Carbon\CarbonInterface;
 
 if (! function_exists('money')) {
@@ -88,5 +89,13 @@ if (! function_exists('qty_max')) {
     function qty_max(?Product $product): ?int
     {
         return $product && stock_tracked() ? (int) $product->stock : null;
+    }
+}
+
+if (! function_exists('seo')) {
+    /** SEO текущей страницы (App\Support\Seo): seo()->title(…)->description(…) */
+    function seo(): Seo
+    {
+        return app(Seo::class);
     }
 }

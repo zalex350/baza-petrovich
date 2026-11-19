@@ -7,11 +7,7 @@
 
 @section('title', ($page->seo_title ?: $page->title).' — '.config('shop.name'))
 
-@if($page->seo_description)
-    @section('meta')
-        <meta name="description" content="{{ $page->seo_description }}">
-    @endsection
-@endif
+@php(seo()->description($page->seo_description ?: $page->safeBody()))
 
 @section('content')
 

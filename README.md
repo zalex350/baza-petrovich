@@ -22,6 +22,11 @@
 - **квизы** (свой конструктор: шаги, варианты, привязка к разделам, услугам, страницам; ответы → заявки) и
   **«Коды и виджеты»** (MoClients, Marquiz, JivoSite, Метрика, GTM — в <head> или перед </body> на выбранных страницах);
 - **«Наши работы»** и **«Отзывы»** (/nashi-raboty, /otzyvy, блоки на главной);
+- **SEO**: `/sitemap.xml`, `/robots.txt`, title/description по шаблонам «Настроек», canonical, noindex фильтров,
+  Open Graph, schema.org (Organization, Product, BreadcrumbList, FAQPage), тексты и вопросы разделов;
+- **аналитика для Google Ads**: GTM / GA4 / Google Ads / Метрика / Clarity по ID из «Настроек», события магазина
+  (просмотр, корзина, оформление, покупка, заявки, звонки), Consent Mode v2, источник визита (UTM, gclid) в заказе
+  и заявке — [docs/SEO_ANALYTICS.md](docs/SEO_ANALYTICS.md);
 - **интеграции**: Telegram и Битрикс24 (лид с товарами) — `.env`, через очередь; 1С забирает подтверждённые
   заказы `GET /api/1c/v1/orders/new` и подтверждает `POST /orders/{номер}/confirm|reject`.
 
@@ -35,6 +40,7 @@ php artisan petrovich:icons                     # иконки разделов 
 php artisan petrovich:category-photos [--force] # фото разделов (database/data/petrovich/category-photos); импорт — сам
 php artisan petrovich:works --images            # «Наши работы» (38 объектов) и отзывы (24 скана) со старого сайта
 php artisan petrovich:quizzes                   # стартовые квизы: калькуляторы забора и ворот
+php artisan petrovich:seo [--products]          # тексты и «Частые вопросы» разделов; --products — описания товаров (на одобрение)
 python scripts/category-photos.py               # обработка фото разделов в едином стиле: src/ + photos.json → {раздел}.jpg
 ```
 
@@ -54,6 +60,7 @@ python scripts/category-photos.py               # обработка фото р
 | [docs/STAGING.md](docs/STAGING.md) | Тестовый стенд и деплой |
 | [docs/TEST_GUIDE.md](docs/TEST_GUIDE.md) | Как проверять стенд |
 | [docs/BACKLOG.md](docs/BACKLOG.md) | Отложенные задачи |
+| [docs/SEO_ANALYTICS.md](docs/SEO_ANALYTICS.md) | SEO, события аналитики, настройка Search Console, GA4, Google Ads, Метрики |
 
 ## Локальная разработка
 

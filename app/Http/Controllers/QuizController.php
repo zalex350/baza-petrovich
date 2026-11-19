@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\LeadCreated;
 use App\Models\Lead;
 use App\Models\Quiz;
+use App\Support\Attribution;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -76,6 +77,7 @@ class QuizController extends Controller
                 'payload' => ['answers' => $answers, 'page' => $data['page'] ?? null],
                 'consent_at' => now(),
                 'ip' => request()->ip(),
+                'attribution' => Attribution::current(),
             ]);
 
             LeadCreated::dispatch($lead);

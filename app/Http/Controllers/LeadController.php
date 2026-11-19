@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\LeadCreated;
 use App\Models\Lead;
 use App\Models\Product;
+use App\Support\Attribution;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -83,6 +84,7 @@ class LeadController extends Controller
                 'comment' => trim((string) ($data['comment'] ?? '')) ?: null,
                 'consent_at' => now(),
                 'ip' => request()->ip(),
+                'attribution' => Attribution::current(),
             ]);
 
             LeadCreated::dispatch($lead);

@@ -17,6 +17,8 @@
     <h1 class="mb-2 text-3xl font-bold tracking-tight">{{ $title }}</h1>
 
     @if(session('lead_sent'))
+        {{-- Заявка — конверсия «Заявка» (resources/js/analytics.js) --}}
+        <x-track event="generate_lead" :params="['lead_type' => $type, 'value' => 1]" />
         <x-empty-state title="Заявка отправлена" icon="check-circle" data-lead-sent>
             Спасибо! Менеджер перезвонит вам в рабочее время.
             <x-slot:action>

@@ -3,6 +3,8 @@
 
 @section('title', 'Отзывы — '.config('shop.name'))
 
+@php(seo()->description('Отзывы покупателей металлобазы «'.\App\Support\Seo::siteName().'»: благодарственные письма и отзывы о материалах, доставке и монтаже.'))
+
 @section('content')
 
 <x-breadcrumbs :items="[['label' => 'Главная', 'url' => '/'], ['label' => 'Отзывы']]" />

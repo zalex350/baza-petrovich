@@ -9,6 +9,7 @@ use App\Services\ClientCodes;
 use App\Services\CurrentCart;
 use App\Services\Pricing\Discounts;
 use App\Services\Pricing\PriceContext;
+use App\Support\Seo;
 use App\View\Composers\CatalogMenuComposer;
 use App\View\Composers\HeaderComposer;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -28,6 +29,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(Discounts::class);
         // Корзина посетителя: токен гостя, выданный в запросе, — до конца запроса
         $this->app->scoped(CurrentCart::class);
+        // SEO страницы: заголовок, описание, canonical, schema.org — до конца запроса
+        $this->app->scoped(Seo::class);
     }
 
     public function boot(): void
