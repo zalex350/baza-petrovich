@@ -100,11 +100,18 @@ def baza():
         if (p.get('description') or '').strip() or not p.get('source_url'):
             continue
         h = get(p['source_url'])
-        m = re.search(r'<div class="col-md-9">(.*?)(Советы петровича|Популярные товары|<footer)', h, re.S)
-        seg = m.group(1) if m else ''
-        seg = re.sub(r'<(script|style|table|form)\b.*?</\1>', '', seg, flags=re.S)
-        t = text(seg)
-        t = t.split('Обращаем Ваше внимание')[0]
+        i = h.find('content_page')
+        if i < 0:
+            continue
+        seg = h[i:]
+        seg = re.sub(r'<(script|style|svg|form|button)\b.*?</\1>', '', seg, flags=re.S)
+        t = text(re.sub(r'<(p|div|br|li|tr|h\d)\b', r'\n<\1', seg))
+        for stop in ('С этим товаром покупают', 'Популярные товары', 'Советы петровича', 'Обращаем Ваше внимание'):
+            t = t.split(stop)[0]
+        # блок цены и контактов: от «Цена:» до последнего мессенджера
+        t = re.sub(r'^.*?(Заказать звонок по кредиту|руб\.)', '', t, count=1, flags=re.S)
+        t = re.sub(r'(Отправить заявку|Уточнить стоимость).*(Viber|Telegram|WhatsApp)', ' ', t, flags=re.S)
+        t = re.sub(r'\s+', ' ', t).strip()
         if len(t) > 150:
             found[p['path']] = t
     json.dump(found, open(os.path.join(CACHE, 'baza_recheck.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
