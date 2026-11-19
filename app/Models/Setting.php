@@ -30,6 +30,10 @@ class Setting extends Model
         'seller_director' => 'Руководитель',
         'footer_about' => 'Подвал: о компании (кратко)',
         'footer_delivery' => 'Подвал: доставка и оплата (кратко)',
+        // Юридические страницы (метки [[legal_…]] в тексте страниц — Page::safeBody)
+        'legal_hosting' => 'Хостинг сайта (наименование, страна)',
+        'legal_privacy_officer' => 'Ответственный за обработку персональных данных',
+        'legal_consumer_authority' => 'Исполком: кто рассматривает обращения покупателей (ФИО, телефон)',
         // SEO (App\Support\Seo, App\Support\SeoTemplates): пусто — шаблон по умолчанию из config/seo.php
         'seo_home_title' => 'Заголовок главной (title)',
         'seo_home_description' => 'Описание главной (description)',
@@ -66,13 +70,14 @@ class Setting extends Model
 
     /**
      * Согласие на cookie (Consent Mode v2):
-     * notice — баннер-уведомление, счётчики работают сразу (по умолчанию);
-     * required — до «Принять» Google работает без cookie (cookieless-пинги), Метрика и Clarity не загружаются;
+     * required — до «Принять» Google работает без cookie (cookieless-пинги), Метрика и Clarity не загружаются
+     *   (по умолчанию: согласие на cookie аналитики требует Закон РБ № 99-З);
+     * notice — баннер-уведомление, счётчики работают сразу;
      * off — без баннера.
      */
     public const CONSENT_MODES = [
+        'required' => 'Согласие — до «Принять» без cookie аналитики и рекламы (рекомендуется)',
         'notice' => 'Уведомление — счётчики работают сразу, баннер с кнопкой «Понятно»',
-        'required' => 'Согласие — до «Принять» без cookie аналитики и рекламы',
         'off' => 'Без баннера',
     ];
 

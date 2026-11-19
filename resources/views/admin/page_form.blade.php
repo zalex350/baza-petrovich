@@ -40,7 +40,7 @@
         </x-field>
     @else
         <x-input name="slug" label="Адрес" :value="$page->slug" maxlength="100" placeholder="garantiya" hint="Латиница, цифры и дефис: страница — /page/адрес, услуга — /uslugi/адрес, статья — /stati/адрес. Пусто — из заголовка. Сменили — старый адрес ведёт на новый." />
-        <x-select name="type" label="Тип" :options="\App\Models\Page::TYPES" :value="(string) $page->type" class="max-w-xs" hint="Услуга — в разделе «Услуги» с кнопкой «Заказать услугу»; статья — в разделе «Статьи»." />
+        <x-select name="type" label="Тип" :options="\App\Models\Page::TYPES" :value="$page->type ?: 'page'" class="max-w-xs" hint="Услуга — в разделе «Услуги» с кнопкой «Заказать услугу»; статья — в разделе «Статьи»." />
     @endif
 
     @if(! $menu)

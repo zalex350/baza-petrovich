@@ -28,8 +28,11 @@ class Page extends Model
     /** Статья (раздел «Статьи», /stati/{slug}): дата, обложка, анонс */
     public const ARTICLE = 'article';
 
-    /** Тип страницы в админке: null — обычная */
-    public const TYPES = ['' => 'Страница', self::SERVICE => 'Услуга', self::ARTICLE => 'Статья'];
+    /** Обычная страница (/page/{slug} или адрес из MENU) */
+    public const PAGE = 'page';
+
+    /** Тип страницы в админке */
+    public const TYPES = [self::PAGE => 'Страница', self::SERVICE => 'Услуга', self::ARTICLE => 'Статья'];
 
     protected $casts = [
         'is_published' => 'boolean',
@@ -65,9 +68,43 @@ class Page extends Model
         return self::MENU[$this->slug] ?? '/page/'.$this->slug;
     }
 
+    /** Юридические документы: slug → заголовок (petrovich:legal, ссылки в подвале и формах) */
+    public const LEGAL = [
+        'privacy' => 'Политика обработки персональных данных',
+        'oferta' => 'Договор купли-продажи (публичная оферта)',
+        'vozvrat' => 'Обмен и возврат товара',
+    ];
+
     public function safeBody(): string
     {
-        return Html::clean((string) $this->body);
+        return Html::clean(self::fillTokens((string) $this->body, $this));
+    }
+
+    /**
+     * Метки [[ключ]] в тексте — значения из «Настроек» (реквизиты, контакты, юр. данные): документы
+     * всегда с актуальными реквизитами. Не заполнено — [ЗАПОЛНИТЬ]. Особые: [[phone]] — первый телефон,
+     * [[site_url]] — адрес сайта, [[legal_date]] — дата последнего изменения страницы, [[hosting]],
+     * [[privacy_officer]], [[consumer_authority]] — поля legal_*.
+     */
+    public static function fillTokens(string $html, ?self $page = null): string
+    {
+        if (! str_contains($html, '[[')) {
+            return $html;
+        }
+
+        return preg_replace_callback('/\[\[([a-z_]+)\]\]/', function ($m) use ($page) {
+            $key = $m[1];
+
+            $value = match ($key) {
+                'phone' => Setting::phones()[0]['number'] ?? null,
+                'site_url' => rtrim((string) (config('seo.url') ?: config('app.url')), '/'),
+                'legal_date' => $page?->updated_at ? date_ru($page->updated_at) : date_ru(now()),
+                'hosting', 'privacy_officer', 'consumer_authority' => Setting::value('legal_'.$key),
+                default => array_key_exists($key, Setting::FIELDS) ? Setting::value($key) : null,
+            };
+
+            return e($value ?? Setting::PLACEHOLDER);
+        }, $html);
     }
 
     /** Обложка статьи (путь на диске фото или полный адрес) или null */

@@ -6,7 +6,7 @@
 
 <div class="flex flex-wrap items-center justify-between gap-3 mb-2">
     <h1 class="text-3xl font-bold">Страницы</h1>
-    <x-button :href="'/admin/page/create'.($type ? '?type='.$type : '')">{{ ['' => 'Добавить страницу', 'service' => 'Добавить услугу', 'article' => 'Добавить статью'][$type] }}</x-button>
+    <x-button :href="'/admin/page/create?type='.$type">{{ ['page' => 'Добавить страницу', 'service' => 'Добавить услугу', 'article' => 'Добавить статью'][$type] }}</x-button>
 </div>
 
 <p class="text-sm text-ink-muted mb-6 max-w-3xl">
@@ -15,8 +15,8 @@
 </p>
 
 <x-tabs label="Тип страниц" :active="$type" :tabs="collect(\App\Models\Page::TYPES)->mapWithKeys(fn ($label, $key) => [$key => [
-    'label' => ['' => 'Страницы', 'service' => 'Услуги', 'article' => 'Статьи'][$key],
-    'url' => '/admin/pages'.($key ? '?type='.$key : ''),
+    'label' => ['page' => 'Страницы', 'service' => 'Услуги', 'article' => 'Статьи'][$key],
+    'url' => '/admin/pages'.($key !== 'page' ? '?type='.$key : ''),
     'count' => $counts[$key] ?? 0,
 ]])->all()" />
 

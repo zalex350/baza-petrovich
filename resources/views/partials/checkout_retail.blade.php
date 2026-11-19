@@ -60,4 +60,5 @@
     <x-textarea name="comment" label="Комментарий к заказу" rows="3" maxlength="1000" placeholder="Например: нужна резка в размер, позвонить за час до доставки" />
 
     <x-checkbox name="consent" value="1" :unchecked="false" required label="Согласен на обработку персональных данных для оформления и доставки заказа" />
+    <x-legal-note :oferta="true" />
 </div>

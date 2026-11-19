@@ -72,6 +72,17 @@
         <x-textarea name="footer_delivery" :label="$f['footer_delivery']" :value="$v('footer_delivery')" rows="3" hint="Кратко; подробно — страница «Доставка и оплата»." />
     </fieldset>
 
+    <fieldset class="space-y-4" data-settings-legal>
+        <legend class="mb-1 text-lg font-semibold text-ink">Юридические страницы</legend>
+        <p class="text-sm text-ink-muted">
+            Политика обработки персональных данных, договор-оферта и условия возврата (админка «Страницы»)
+            берут реквизиты и контакты из этих настроек — меняйте здесь, в документах обновится само.
+        </p>
+        <x-input name="legal_hosting" :label="$f['legal_hosting']" :value="$v('legal_hosting')" placeholder="ООО «…», Республика Беларусь" />
+        <x-input name="legal_privacy_officer" :label="$f['legal_privacy_officer']" :value="$v('legal_privacy_officer')" placeholder="Иванов Иван Иванович, заместитель директора" />
+        <x-textarea name="legal_consumer_authority" :label="$f['legal_consumer_authority']" :value="$v('legal_consumer_authority')" rows="2" placeholder="Минский районный исполнительный комитет: Иванова Мария Петровна, +375 17 000-00-00" hint="Обязательная информация для покупателей; узнайте в исполкоме по месту регистрации." />
+    </fieldset>
+
     <fieldset class="space-y-4" data-settings-seo>
         <legend class="mb-1 text-lg font-semibold text-ink">SEO</legend>
         <p class="text-sm text-ink-muted">
@@ -113,7 +124,7 @@
         <x-input name="analytics_ads_lead_label" :label="$f['analytics_ads_lead_label']" :value="$v('analytics_ads_lead_label')" hint="Конверсия «Заявка»: формы «Узнать цену», «Заказать услугу», «Обратный звонок», квизы." />
         <x-input name="analytics_ym_id" :label="$f['analytics_ym_id']" :value="$v('analytics_ym_id')" placeholder="12345678" class="max-w-xs" hint="С Вебвизором: запись визитов — куда кликали, где ушли." />
         <x-input name="analytics_clarity_id" :label="$f['analytics_clarity_id']" :value="$v('analytics_clarity_id')" placeholder="abcdef1234" class="max-w-xs" hint="Бесплатные записи сессий и тепловые карты." />
-        <x-select name="analytics_consent" :label="$f['analytics_consent']" :options="\App\Models\Setting::CONSENT_MODES" :value="$v('analytics_consent') ?: 'notice'" />
+        <x-select name="analytics_consent" :label="$f['analytics_consent']" :options="\App\Models\Setting::CONSENT_MODES" :value="$v('analytics_consent') ?: 'required'" />
     </fieldset>
 
     <x-button>Сохранить</x-button>
