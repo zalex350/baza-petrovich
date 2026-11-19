@@ -169,6 +169,11 @@ class UrlsRedirectsTest extends TestCase
         Artisan::call('petrovich:articles');
         $this->assertSame($count, Page::articles()->count());
 
+        // Повтор заголовка в начале текста убирается
+        $this->assertSame('<p>Текст</p>', PetrovichArticles::withoutRepeatedTitle('<p><strong>Забор!</strong></p> <p>Текст</p>', 'Забор'));
+        $this->assertStringNotContainsString('Как выбрать оптимальную толщину профнастила для вашего забора: секреты прочности и эстетики.</strong>',
+            Page::where('source_key', 'sovet/kak-vybrat-optimalnuyu-tolshhinu-profnastila-dlya-vashego-zabora-sekrety-prochnosti-i-estetiki')->value('body'));
+
         // Заголовок без «крика»
         $this->assertSame('Забор из профнастила!', PetrovichArticles::title('ЗАБОР ИЗ ПРОФНАСТИЛА!!!'));
     }

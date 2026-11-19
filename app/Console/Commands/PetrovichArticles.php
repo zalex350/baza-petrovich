@@ -80,6 +80,8 @@ class PetrovichArticles extends Command
                 ? '<img src="'.e($urls[$m[1]]).'" alt="'.e($row['title']).'">'
                 : '', $row['html']);
 
+            $body = self::withoutRepeatedTitle($body, $row['title']);
+
             $page->forceFill([
                 'type' => Page::ARTICLE,
                 'title' => Str::limit(self::title($row['title']), 250, ''),
@@ -95,6 +97,18 @@ class PetrovichArticles extends Command
         $this->info("Статей: новых {$created}, обновлено {$updated}, уже были (не тронуты) {$kept}, фото скачано {$photos}");
 
         return self::SUCCESS;
+    }
+
+    /** Первый абзац, повторяющий заголовок (на старом сайте его дублировали жирным), — убирается */
+    public static function withoutRepeatedTitle(string $html, string $title): string
+    {
+        $norm = fn (string $s) => mb_strtolower(trim(preg_replace('/[^\p{L}\p{N}]+/u', ' ', html_entity_decode(strip_tags($s)))));
+
+        if (preg_match('#^\s*<(p|h2|h3|strong|b)>(.*?)</\1>#su', $html, $m) && $norm($m[2]) === $norm($title)) {
+            return ltrim(substr($html, strlen($m[0])));
+        }
+
+        return $html;
     }
 
     /** Заголовок без КРИКА: «ЗАБОР ИЗ ПРОФНАСТИЛА!!!» → «Забор из профнастила!» */
