@@ -72,6 +72,9 @@ class PetrovichArticles extends Command
                     if ($path) {
                         $urls[$i] = Storage::disk(ProductImage::disk())->url($path);
                         $photos++;
+                    } else {
+                        // Фото нет и на старом сайте (404) — в статье его не будет, без битой картинки
+                        unset($urls[$i]);
                     }
                 }
             }
@@ -86,7 +89,7 @@ class PetrovichArticles extends Command
                 'type' => Page::ARTICLE,
                 'title' => Str::limit(self::title($row['title']), 250, ''),
                 'body' => $body,
-                'image' => $urls[0] ?? null,
+                'image' => reset($urls) ?: null,
                 'seo_description' => $row['description'] ?? null,
                 'published_at' => $row['date'] ? Carbon::parse($row['date']) : now(),
             ])->save();
@@ -151,7 +154,7 @@ class PetrovichArticles extends Command
 
             return $images->store(new UploadedFile($tmp, basename(parse_url($url, PHP_URL_PATH) ?: 'photo.jpg'), null, null, true), $dir, 1600);
         } catch (Throwable $e) {
-            $this->warn("Фото {$url}: {$e->getMessage()}");
+            $this->warn("Фото {$url}: ".Str::limit($e->getMessage(), 80));
 
             return null;
         } finally {
