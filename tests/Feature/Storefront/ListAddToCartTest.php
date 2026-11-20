@@ -50,7 +50,7 @@ class ListAddToCartTest extends TestCase
             'stock' => 5,
             'category_id' => $this->category->id,
             'is_active' => true,
-            'is_published' => true,
+            'is_published' => true, 'is_hit' => true, // хит — чтобы товар был и в «Популярных» на главной
         ], $attributes));
     }
 

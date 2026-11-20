@@ -42,7 +42,7 @@ class ProductImageStorefrontTest extends TestCase
             'stock' => 5,
             'category_id' => $category->id,
             'is_active' => true,
-            'is_published' => true,
+            'is_published' => true, 'is_hit' => true, // хит — чтобы товар был и в «Популярных» на главной
         ]);
     }
 
@@ -133,7 +133,7 @@ class ProductImageStorefrontTest extends TestCase
         foreach (range(1, 5) as $i) {
             $product = Product::create([
                 'name' => "Grohe {$i}", 'sku' => "GR-1{$i}", 'price' => 10, 'stock' => 1,
-                'category_id' => $this->product->category_id, 'is_active' => true, 'is_published' => true,
+                'category_id' => $this->product->category_id, 'is_active' => true, 'is_published' => true, 'is_hit' => true, // хит — чтобы товар был и в «Популярных» на главной
             ]);
             $this->addImage($product, "p{$i}", main: true);
         }
