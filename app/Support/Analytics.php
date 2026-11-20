@@ -55,9 +55,11 @@ class Analytics
 
     public static function consentMode(): string
     {
-        $mode = Setting::value('analytics_consent') ?: 'notice';
+        // По умолчанию — согласие: Закон РБ № 99-З требует его для cookie аналитики и рекламы
+        // (данные уходят Google, Microsoft — в т.ч. в страны без надлежащей защиты)
+        $mode = Setting::value('analytics_consent') ?: 'required';
 
-        return array_key_exists($mode, Setting::CONSENT_MODES) ? $mode : 'notice';
+        return array_key_exists($mode, Setting::CONSENT_MODES) ? $mode : 'required';
     }
 
     /**

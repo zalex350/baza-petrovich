@@ -194,6 +194,8 @@ class CatalogHandler implements ExchangeHandler
         foreach (array_chunk($plan->creates, self::BATCH, true) as $chunk) {
             DB::transaction(function () use ($chunk) {
                 foreach ($chunk as $attributes) {
+                    // Адрес карточки (ЧПУ) — из наименования 1С; на сайте его можно поменять (старый — редирект)
+                    $attributes['slug'] ??= Product::uniqueSlug((string) ($attributes['name'] ?? $attributes['sku'] ?? ''));
                     (new Product)->forceFill($attributes)->save();
                 }
             });

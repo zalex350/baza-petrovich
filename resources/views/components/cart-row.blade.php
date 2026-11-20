@@ -68,7 +68,7 @@
 
             <div class="min-w-0 flex-1">
                 @if($product && ! $unavailable)
-                    <a href="{{ route('product.show', $product->id) }}" class="font-semibold leading-snug text-ink hover:text-link">{{ $item->title() }}</a>
+                    <a href="{{ $product->url() }}" class="font-semibold leading-snug text-ink hover:text-link">{{ $item->title() }}</a>
                 @else
                     <span class="font-semibold leading-snug text-ink-muted">{{ $item->title() }}</span>
                 @endif
@@ -120,7 +120,7 @@
 
             <div class="min-w-0">
                 @if($product && ! $unavailable)
-                    <a href="{{ route('product.show', $product->id) }}" class="font-semibold text-ink hover:text-link">{{ $item->title() }}</a>
+                    <a href="{{ $product->url() }}" class="font-semibold text-ink hover:text-link">{{ $item->title() }}</a>
                 @else
                     <span class="font-semibold text-ink-muted">{{ $item->title() }}</span>
                 @endif

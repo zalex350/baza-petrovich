@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use LogicException;
 
 /**
@@ -301,6 +302,37 @@ class Product extends Model
      * Название для сайта и админки: отображаемое → системное → «БРЕНД артикул» (без бренда — артикул).
      * Артикул — sku без префикса «БРЕНД-» (так sku собран в каталоге).
      */
+    /**
+     * Адрес карточки: /product/{slug} (ЧПУ), без slug — /product/{id}.
+     * Старый адрес /product/{id} у товара со slug отвечает 301 на ЧПУ (ProductController::show).
+     */
+    public function url(bool $absolute = true): string
+    {
+        return route('product.show', $this->slug ?: $this->id, $absolute);
+    }
+
+    /**
+     * Уникальный slug из текста (название, артикул): латиница, цифры, дефис; только из цифр — с префиксом
+     * (такой адрес совпал бы с id). $ignoreId — сам товар при пересохранении.
+     */
+    public static function uniqueSlug(string $text, ?int $ignoreId = null): string
+    {
+        $base = Str::limit(Str::slug($text) ?: 'tovar', 180, '');
+        $base = trim($base, '-') ?: 'tovar';
+
+        if (ctype_digit($base)) {
+            $base = 'tovar-'.$base;
+        }
+
+        $slug = $base;
+
+        for ($n = 2; static::withTrashed()->where('slug', $slug)->when($ignoreId, fn ($q) => $q->whereKeyNot($ignoreId))->exists(); $n++) {
+            $slug = $base.'-'.$n;
+        }
+
+        return $slug;
+    }
+
     public function title(): string
     {
         if (trim((string) $this->display_name) !== '') {

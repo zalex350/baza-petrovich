@@ -49,6 +49,7 @@
             <x-textarea name="comment" label="Комментарий" rows="3" maxlength="2000" :hint="$type === 'price' ? 'Например: нужное количество, длина, резка в размер.' : null" />
 
             <x-checkbox name="consent" label="Согласен на обработку персональных данных для ответа на заявку" :unchecked="false" required />
+            <x-legal-note />
 
             <x-button class="w-full sm:w-auto">Отправить заявку</x-button>
 

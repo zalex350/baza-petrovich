@@ -91,7 +91,7 @@ class AnalyticsTest extends TestCase
 
         $html = $this->get('/product/'.$this->product->id)
             ->assertSee('gtag/js?id=G-TEST1234', false)
-            ->assertSee('data-cookie-banner="notice"', false)
+            ->assertSee('data-cookie-banner="required"', false)
             ->getContent();
 
         preg_match('#<script type="application/json" data-track-event="view_item"\s*>(.*?)</script>#s', $html, $m);

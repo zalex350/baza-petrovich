@@ -120,6 +120,10 @@ class AdminProductController extends Controller
         $set = request()->has('attributes_sent') ? $this->attributes->fromRows((array) request('attributes', [])) : [];
 
         // Новый товар на сайте не виден до публикации — тексты пишутся сразу в товар
+        if (blank($data['slug'] ?? null)) {
+            $data['slug'] = Product::uniqueSlug((string) (($data['display_name'] ?? null) ?: ($data['name'] ?? $data['sku'] ?? '')));
+        }
+
         $product = Product::create($data);
 
         $this->attributes->sync($product, $set);
@@ -139,6 +143,16 @@ class AdminProductController extends Controller
             'success',
             $product->is_active ? 'Товар показан на сайте' : 'Товар скрыт с сайта'
         );
+    }
+
+    /**
+     * Все сгенерированные описания проверены — показывать на сайте (фильтр «Описание не одобрено»).
+     */
+    public function approveAllDescriptions()
+    {
+        $count = Product::where('description_generated', true)->update(['description_generated' => false]);
+
+        return redirect('/admin/products')->with('success', 'Описаний одобрено: '.$count);
     }
 
     /**
@@ -225,6 +239,11 @@ class AdminProductController extends Controller
             if (request()->has($field)) {
                 $direct[$field] = $data[$field] ?? null;
             }
+        }
+
+        // Адрес карточки не бывает пустым: стёрли — снова из названия (старый адрес — редирект, UrlChangeObserver)
+        if (request()->has('slug') && blank($direct['slug'] ?? null)) {
+            $direct['slug'] = Product::uniqueSlug($product->title(), $product->id);
         }
 
         $product->update($this->lockNewBadge($product, $direct));

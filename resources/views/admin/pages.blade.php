@@ -6,13 +6,19 @@
 
 <div class="flex flex-wrap items-center justify-between gap-3 mb-2">
     <h1 class="text-3xl font-bold">Страницы</h1>
-    <x-button href="/admin/page/create">Добавить страницу</x-button>
+    <x-button :href="'/admin/page/create?type='.$type">{{ ['page' => 'Добавить страницу', 'service' => 'Добавить услугу', 'article' => 'Добавить статью'][$type] }}</x-button>
 </div>
 
 <p class="text-sm text-ink-muted mb-6 max-w-3xl">
     Информационные страницы сайта. «Доставка и оплата», «О компании» и «Контакты» — в главном меню и подвале,
     их адрес не меняется и удалить их нельзя. Не заполненное отмечено [ЗАПОЛНИТЬ].
 </p>
+
+<x-tabs label="Тип страниц" :active="$type" :tabs="collect(\App\Models\Page::TYPES)->mapWithKeys(fn ($label, $key) => [$key => [
+    'label' => ['page' => 'Страницы', 'service' => 'Услуги', 'article' => 'Статьи'][$key],
+    'url' => '/admin/pages'.($key !== 'page' ? '?type='.$key : ''),
+    'count' => $counts[$key] ?? 0,
+]])->all()" />
 
 <x-table stack caption="Страницы">
     <x-slot:head>
@@ -40,5 +46,7 @@
         </tr>
     @endforeach
 </x-table>
+
+<div class="mt-4"><x-pagination :paginator="$pages" /></div>
 
 @endsection

@@ -10,9 +10,10 @@ use Illuminate\Console\Command;
 /**
  * Тексты для поиска и покупателей (database/data/petrovich/seo_content.php):
  * - разделам верхнего уровня — текст под списком и частые вопросы (только пустые; --force — перезаписать);
- * - --products: товарам без описания — короткое описание по шаблону (название, раздел, 3 характеристики,
- *   назначение раздела, доставка). Оно отмечается «сгенерировано» и на сайте не показывается, пока его не
- *   одобрят в админке (фильтр «Описание: не одобрено»); --approve — сразу показать на сайте.
+ * - --products: товарам без описания — описание из database/data/petrovich/product_descriptions.json
+ *   (ключ — source_key товара): тексты с наших сайтов (baza-petrovich.by, zabor-petrovich.by) — сразу на сайт,
+ *   написанные по характеристикам (source = generated) — на одобрение в админке (фильтр «Описание:
+ *   не одобрено»); нет в файле — короткое описание по шаблону, тоже на одобрение. --approve — всё сразу на сайт.
  */
 class PetrovichSeo extends Command
 {
@@ -85,12 +86,28 @@ class PetrovichSeo extends Command
         };
 
         $count = 0;
+        $file = database_path('data/petrovich/product_descriptions.json');
+        $prepared = is_file($file) ? (json_decode((string) file_get_contents($file), true) ?: []) : [];
 
         Product::query()
-            ->where(fn ($q) => $q->whereNull('description')->orWhere('description', ''))
+            // Без описания или с неодобренным сгенерированным (шаблон прошлого запуска) — его заменит текст из файла
+            ->where(fn ($q) => $q->whereNull('description')->orWhere('description', '')->orWhere('description_generated', true))
             ->with(['attributeValues.attribute'])
-            ->chunkById(200, function ($products) use (&$count, $categories, $root, $content, $approve) {
+            ->chunkById(200, function ($products) use (&$count, $categories, $root, $content, $approve, $prepared) {
                 foreach ($products as $product) {
+                    $ready = $prepared[$product->source_key] ?? null;
+
+                    if ($ready && filled($ready['html'] ?? null)) {
+                        // С наших сайтов — сразу на сайт; написанное по характеристикам — на одобрение
+                        $product->forceFill([
+                            'description' => trim($ready['html']),
+                            'description_generated' => ! $approve && ($ready['source'] ?? 'generated') === 'generated',
+                        ])->save();
+                        $count++;
+
+                        continue;
+                    }
+
                     $category = $categories->get($product->category_id);
                     $section = $root($product->category_id);
 

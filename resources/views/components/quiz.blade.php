@@ -70,6 +70,7 @@
                 <input type="checkbox" x-model="consent" class="mt-0.5 h-4 w-4 rounded border-line-strong text-primary focus:ring-primary">
                 <span>Согласен на обработку персональных данных для ответа на заявку</span>
             </label>
+            <x-legal-note class="sm:col-span-2" />
         </div>
 
         <p class="mt-3 text-sm text-tone-danger-text" x-show="error" x-text="error" role="alert"></p>

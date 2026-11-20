@@ -25,15 +25,27 @@ class ProductController extends Controller
     /** Ключевых характеристик под карточкой цены */
     public const KEY_ROWS = 4;
 
-    public function show($id)
+    /**
+     * $key — slug товара или id (старые ссылки, товары без slug). По id у товара со slug — 301 на ЧПУ:
+     * у карточки один адрес для поиска и рекламы.
+     */
+    public function show(string $key)
     {
-        $product = Product::with([
-            'images',
-            'category',
-        ])
+        $shown = fn () => Product::with(['images', 'category'])
             ->where('is_active', 1)
-            ->where('is_published', true)
-            ->findOrFail($id);
+            ->where('is_published', true);
+
+        $product = $shown()->where('slug', $key)->first();
+
+        if (! $product && ctype_digit($key)) {
+            $product = $shown()->findOrFail((int) $key);
+
+            if ($product->slug) {
+                return redirect()->to($product->url().(request()->getQueryString() ? '?'.request()->getQueryString() : ''), 301);
+            }
+        }
+
+        abort_unless($product, 404);
 
         // BR-082: сбой при загрузке характеристик не роняет карточку — блок не показывается
         rescue(
@@ -65,7 +77,7 @@ class ProductController extends Controller
             ->description($description)
             ->image($images[0] ?? null)
             ->type('product')
-            ->canonical('/product/'.$product->id)
+            ->canonical($product->url(false))
             ->breadcrumbs($breadcrumbs)
             ->schema(SeoSchema::product($product, Str::limit($text !== '' ? $text : $description, 1000, '…'), $images));
     }

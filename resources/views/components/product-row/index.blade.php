@@ -12,7 +12,7 @@
 
 @php
     $name = $product->title();
-    $url = route('product.show', $product->id);
+    $url = $product->url();
     $clientCode = client_code($product);
     $keyAttributes = $product->relationLoaded('keyAttributes')
         ? $product->getRelation('keyAttributes')->map->displayValue()->join(' · ')

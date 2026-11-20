@@ -220,4 +220,22 @@
     .prose-page pre {
         @apply overflow-x-auto rounded-control bg-field p-3 text-sm;
     }
+
+    /* Фото и таблицы в статьях */
+    .prose-page img {
+        @apply my-4 h-auto max-w-full rounded-control;
+    }
+
+    .prose-page figcaption {
+        @apply text-sm text-ink-muted;
+    }
+
+    .prose-page table {
+        @apply block w-full overflow-x-auto border-collapse text-sm;
+    }
+
+    .prose-page th,
+    .prose-page td {
+        @apply border border-line px-3 py-2 text-left align-top;
+    }
 }

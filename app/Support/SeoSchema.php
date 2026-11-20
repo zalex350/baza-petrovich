@@ -105,10 +105,10 @@ class SeoSchema
             'sku' => $product->article ?: $product->sku ?: (string) $product->id,
             'brand' => $product->brand ? ['@type' => 'Brand', 'name' => $product->brand] : null,
             'category' => $product->category?->name,
-            'url' => Seo::absolute('/product/'.$product->id),
+            'url' => Seo::absolute($product->url(false)),
             'offers' => $price !== null ? array_filter([
                 '@type' => 'Offer',
-                'url' => Seo::absolute('/product/'.$product->id),
+                'url' => Seo::absolute($product->url(false)),
                 'priceCurrency' => 'BYN',
                 'price' => number_format((float) $price, 2, '.', ''),
                 'availability' => $availability,

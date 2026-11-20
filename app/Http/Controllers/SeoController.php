@@ -88,7 +88,7 @@ class SeoController extends Controller
             ->chunk(500, function ($products) use (&$urls) {
                 foreach ($products as $product) {
                     $urls[] = [
-                        'loc' => '/product/'.$product->id,
+                        'loc' => $product->url(false),
                         'lastmod' => $product->updated_at?->toAtomString(),
                         'priority' => '0.7',
                         'changefreq' => 'weekly',
@@ -101,8 +101,20 @@ class SeoController extends Controller
             $urls[] = ['loc' => '/uslugi', 'priority' => '0.7', 'changefreq' => 'weekly'];
         }
 
+        if (Page::published()->articles()->exists()) {
+            $urls[] = ['loc' => '/stati', 'priority' => '0.6', 'changefreq' => 'weekly'];
+        }
+
         foreach (Page::published()->orderBy('sort_order')->get() as $page) {
-            $urls[] = ['loc' => $page->url(), 'lastmod' => $page->updated_at?->toAtomString(), 'priority' => $page->type === Page::SERVICE ? '0.7' : '0.5', 'changefreq' => 'monthly'];
+            $urls[] = [
+                'loc' => $page->url(),
+                'lastmod' => $page->updated_at?->toAtomString(),
+                'priority' => match ($page->type) {
+                    Page::SERVICE => '0.7', Page::ARTICLE => '0.6', default => '0.5'
+                },
+                'changefreq' => 'monthly',
+                'images' => $page->type === Page::ARTICLE && $page->imageUrl() ? [$page->imageUrl()] : [],
+            ];
         }
 
         if (Work::published()->exists()) {

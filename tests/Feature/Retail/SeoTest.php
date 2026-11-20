@@ -223,6 +223,39 @@ class SeoTest extends TestCase
         $this->assertTrue($product->description_generated, 'ждёт одобрения в админке');
     }
 
+    public function test_prepared_descriptions_from_file(): void
+    {
+        $own = Product::create(['name' => 'Пульт Transmitter 2 PRO', 'sku' => 'T2', 'price' => 30, 'stock' => 1, 'category_id' => $this->category->id, 'is_active' => true, 'is_published' => true]);
+        $own->forceFill(['source_key' => 'catalog/komplektuyushhie-dlya-vorot/avtomatika-dlya-otkatnyh-vorot/sliding-doorhan-rossiya/pult-upravleniya-transmitter-2-pro-doorhan-rossiya'])->save();
+
+        // Шаблонный черновик прошлого запуска — заменяется текстом из файла
+        $written = Product::create(['name' => 'CAME', 'sku' => 'CM', 'price' => 1, 'stock' => 1, 'category_id' => $this->category->id, 'is_active' => true, 'is_published' => true,
+            'description' => 'старый шаблон', 'description_generated' => true]);
+        $written->forceFill(['source_key' => 'catalog/komplektuyushhie-dlya-vorot/avtomatika-dlya-otkatnyh-vorot/came-italiya'])->save();
+
+        // Одобренное описание не трогается
+        $this->product->update(['description' => 'Своё описание']);
+
+        Artisan::call('petrovich:seo', ['--products' => true]);
+
+        $own->refresh();
+        $this->assertStringStartsWith('<p>', $own->description);
+        $this->assertFalse($own->description_generated, 'с нашего сайта — сразу на сайт');
+        $this->get($own->url())->assertSee('data-description', false);
+
+        $written->refresh();
+        $this->assertNotSame('старый шаблон', $written->description);
+        $this->assertTrue($written->description_generated, 'написанное заново — на одобрение');
+
+        $this->assertSame('Своё описание', $this->product->fresh()->description);
+
+        // Одобрить все разом
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin)->get('/admin/products?description=unapproved')->assertSee('data-approve-all', false);
+        $this->actingAs($admin)->post('/admin/products/approve-descriptions')->assertRedirect('/admin/products');
+        $this->assertFalse($written->fresh()->description_generated);
+    }
+
     /** JSON-LD объект страницы по @type */
     private function schema(string $html, string $type): array
     {

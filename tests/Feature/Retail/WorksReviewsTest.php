@@ -49,7 +49,8 @@ class WorksReviewsTest extends TestCase
         $this->get('/nashi-raboty')->assertOk()->assertSee('Забор из профнастила')->assertDontSee('Скрытый')->assertSee('д. Прудищи');
         $this->get('/nashi-raboty?tag=Заборы')->assertOk()->assertSee('Забор из профнастила');
         $this->get('/nashi-raboty/zabor')->assertOk()->assertSee('Под ключ')->assertSee('Всё отлично')->assertSee('data-photo-gallery', false);
-        $this->get('/nashi-raboty/hidden')->assertNotFound();
+        // Скрытый объект — 404, а старая ссылка на него ведёт в список (LegacyUrls)
+        $this->get('/nashi-raboty/hidden')->assertRedirect('/nashi-raboty');
         $this->get('/otzyvy')->assertOk()->assertSee('Заборы «под ключ»')->assertSee('Андрей')->assertSee('Яндекс Картах');
         $this->get('/')->assertOk()->assertSee('data-home-works', false)->assertSee('data-home-reviews', false);
         $this->get('/')->assertSee('href="/nashi-raboty"', false)->assertSee('href="/otzyvy"', false);

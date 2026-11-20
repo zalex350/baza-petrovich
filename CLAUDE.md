@@ -74,10 +74,14 @@ docker-compose exec php php artisan petrovich:category-photos [--force] # фот
 docker-compose exec php php artisan petrovich:works --images              # «Наши работы» и отзывы со старого сайта (повтор — без дублей)
 docker-compose exec php php artisan petrovich:quizzes                   # стартовые квизы (только если квизов нет)
 docker-compose exec php php artisan petrovich:icons [--force]           # иконки разделов: набор resources/icons/metal, правила — database/data/petrovich/category_icons.php
-docker-compose exec php php artisan petrovich:seo [--force] [--products] [--approve]  # тексты и FAQ разделов (seo_content.php); описания товаров без описания
+docker-compose exec php php artisan petrovich:seo [--force] [--products] [--approve]  # тексты и FAQ разделов (seo_content.php); --products — описания товаров (product_descriptions.json: с наших сайтов — сразу, generated — на одобрение)
+docker-compose exec php php artisan petrovich:articles [--images] [--force]  # статьи со старого сайта (articles.json, сбор — scraper/articles.py) → /stati
+docker-compose exec php php artisan petrovich:legal [--publish] [--force]   # юр. страницы (database/data/petrovich/legal/*.html; реквизиты — метки [[…]] из «Настроек», Page::fillTokens)
 ```
 
 **SEO и аналитика** — `docs/SEO_ANALYTICS.md`. На страницах витрины заголовок, описание, картинку и schema.org задаёт `seo()` (`App\Support\Seo`, в контроллере или `@php` шаблона), вывод — `partials/seo` в `layouts/app`; шаблоны разделов и товаров — `App\Support\SeoTemplates`. События аналитики: с сервера — `<x-track event="…" :params="…" />` (параметры считать только под `@if(\App\Support\Analytics::config())` — иначе лишние запросы), из JS — `window.track(event, params)`; товар в формате GA4 — `Analytics::item()`. Индексация — `SEO_INDEX` (стенд — `false`).
+
+**Адреса.** Ссылка на товар — только `$product->url()` (ЧПУ `/product/{slug}`, `/product/{id}` → 301). Несуществующий адрес (GET) разбирает `App\Support\LegacyUrls` (обработчик 404 в `bootstrap/app.php`): таблица `redirects` → правила старого сайта; смена slug товара, раздела, страницы, работы записывает редирект сама (`UrlChangeObserver`). «/» в конце адреса — 301 (`RemoveTrailingSlash`; тестовый клиент Laravel его срезает — проверять middleware напрямую).
 
 **Migrations:**
 ```bash

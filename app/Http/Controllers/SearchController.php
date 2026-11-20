@@ -145,7 +145,7 @@ class SearchController extends Controller
                 'price' => $withPrices && $p->price ? number_format($p->price, 2) : null,
                 'image' => $p->mainImage?->url('thumb') ?? ProductImage::placeholderUrl(),
                 'placeholder' => ProductImage::placeholderUrl(),
-                'url' => route('product.show', $p->id),
+                'url' => $p->url(),
             ]),
             'categories' => $categories->values()->map(fn ($c) => [
                 // С родителями: «Смесители / Для кухни» — одно «Для кухни» неоднозначно

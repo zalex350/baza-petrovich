@@ -8,12 +8,14 @@ use DOMNode;
 
 /**
  * Очистка HTML из редактора (Trix) перед выводом на сайте: остаются только разметка текста
- * (абзацы, заголовки, списки, жирный/курсив, цитата, ссылки), атрибуты — только href у ссылок
- * (http, https, mailto, tel или адрес сайта). Скрипты, стили, обработчики событий удаляются.
+ * (абзацы, заголовки, списки, жирный/курсив, цитата, ссылки, таблицы, картинки), атрибуты — только href
+ * у ссылок (http, https, mailto, tel или адрес сайта), src и alt у картинок (https или адрес сайта).
+ * Скрипты, стили, обработчики событий удаляются.
  */
 class Html
 {
-    private const TAGS = ['p', 'div', 'br', 'strong', 'b', 'em', 'i', 'u', 'del', 's', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'blockquote', 'pre'];
+    private const TAGS = ['p', 'div', 'br', 'strong', 'b', 'em', 'i', 'u', 'del', 's', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'blockquote', 'pre',
+        'img', 'figure', 'figcaption', 'table', 'thead', 'tbody', 'tr', 'th', 'td'];
 
     /** Удаляются вместе с содержимым */
     private const DROP = ['script', 'style', 'iframe', 'object', 'embed', 'template', 'noscript', 'svg', 'math', 'form'];
@@ -81,9 +83,26 @@ class Html
             }
 
             $href = $tag === 'a' ? trim($child->getAttribute('href')) : null;
+            $src = $tag === 'img' ? trim($child->getAttribute('src')) : null;
+            $alt = $tag === 'img' ? trim($child->getAttribute('alt')) : null;
 
             foreach (iterator_to_array($child->attributes) as $attribute) {
                 $child->removeAttribute($attribute->nodeName);
+            }
+
+            // Картинка — только с адресом https:// или сайта; без него удаляется
+            if ($tag === 'img') {
+                if (! preg_match('#^(https://|/(?!/))#i', (string) $src)) {
+                    $node->removeChild($child);
+
+                    continue;
+                }
+
+                $child->setAttribute('src', $src);
+                $child->setAttribute('alt', (string) $alt);
+                $child->setAttribute('loading', 'lazy');
+
+                continue;
             }
 
             if ($href !== null && self::safeUrl($href)) {

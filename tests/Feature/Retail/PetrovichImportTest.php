@@ -91,7 +91,9 @@ class PetrovichImportTest extends TestCase
             ->assertSee('data-category-description', false)
             ->assertSee('Металлопрокат в розницу');
 
-        $this->get("/product/{$truba->id}")
+        // Адрес — slug со старого сайта; /product/{id} ведёт на него
+        $this->get("/product/{$truba->id}")->assertRedirect($truba->url());
+        $this->get($truba->url())
             ->assertOk()
             ->assertSee('<strong>Труба</strong> для забора', false)
             ->assertSee('за м.п.');
@@ -101,7 +103,8 @@ class PetrovichImportTest extends TestCase
             ->assertOk()
             ->assertSee('Резка в размер заказчика')
             ->assertSee(route('lead.create', ['type' => 'service', 'subject' => 'Резка металла']), false);
-        $this->get('/uslugi/nope')->assertNotFound();
+        // Нет такой услуги (старая ссылка) — в список услуг (LegacyUrls)
+        $this->get('/uslugi/nope')->assertRedirect('/uslugi');
 
         $this->get(route('lead.create', ['type' => 'service', 'subject' => 'Резка металла']))->assertOk()->assertSee('Резка металла');
         $this->get('/request/unknown')->assertNotFound();

@@ -49,6 +49,12 @@
     @if($uncategorized || $unnamed || $unapproved)
         <x-badge tone="warning" size="md">{{ $uncategorized ? 'Без категории' : ($unnamed ? 'Без названия' : 'Описание не одобрено') }}: {{ $products->total() }}</x-badge>
         <x-button variant="link" size="sm" :href="$withSearch()">Показать все</x-button>
+        @if($unapproved && $products->total())
+            <x-confirm action="/admin/products/approve-descriptions" label="Одобрить все ({{ $products->total() }})" title="Одобрить все описания?"
+                confirm-label="Одобрить" trigger-variant="secondary" class="ml-auto" data-approve-all>
+                Описания {{ \App\Support\Plural::ru($products->total(), ['товара', 'товаров', 'товаров']) }} появятся на сайте. Перед этим просмотрите несколько — откройте товар и нажмите «Предпросмотр».
+            </x-confirm>
+        @endif
     @else
         @if($search !== '')
             <x-badge tone="info" size="md">Найдено: {{ $products->total() }}</x-badge>

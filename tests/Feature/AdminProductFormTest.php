@@ -150,7 +150,10 @@ class AdminProductFormTest extends TestCase
         $product = Product::where('sku', 'HG-100')->firstOrFail();
 
         $this->assertTrue((bool) $product->is_published);
-        $this->get("/product/{$product->id}")->assertOk();
+        // Новому товару — адрес из названия; старый вид /product/{id} ведёт на него
+        $this->assertNotEmpty($product->slug);
+        $this->get("/product/{$product->id}")->assertRedirect($product->url());
+        $this->get($product->url())->assertOk();
     }
 
     public function test_save_and_preview_on_create_opens_preview(): void
