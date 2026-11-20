@@ -32,6 +32,8 @@
         <x-input name="sort_order" type="number" label="Порядок" :value="$review->sort_order" hint="Меньше — выше" />
     </div>
 
+    <x-select name="source" label="Источник" placeholder="С сайта / вручную" :options="\App\Models\Review::SOURCES" :value="$review->source" hint="Google и Яндекс — со значком источника и первыми в списке." />
+
     <x-select name="work_id" label="Объект «Наши работы»" placeholder="Не связан" :options="$works" :value="$review->work_id" />
 
     <x-checkbox name="is_published" label="Опубликован" :checked="$review->is_published" />
