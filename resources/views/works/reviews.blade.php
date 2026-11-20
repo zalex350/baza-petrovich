@@ -1,9 +1,10 @@
-{{-- «Отзывы» (WorkController::reviews): по группам; ссылка на отзывы в Яндекс Картах (config shop.reviews_url) --}}
+{{-- «Отзывы» (WorkController::reviews): по группам (Google и Яндекс — первыми, сканы писем — в конце);
+     ссылки на отзывы в Яндекс Картах и Google (config shop.reviews_url, shop.google_reviews_url) --}}
 @extends('layouts.app')
 
 @section('title', 'Отзывы — '.config('shop.name'))
 
-@php(seo()->description('Отзывы покупателей металлобазы «'.\App\Support\Seo::siteName().'»: благодарственные письма и отзывы о материалах, доставке и монтаже.'))
+@php(seo()->description('Отзывы покупателей металлобазы «'.\App\Support\Seo::siteName().'»: отзывы в Google и Яндексе о заборах «под ключ», воротах, доставке металла и монтаже.'))
 
 @section('content')
 
@@ -15,6 +16,9 @@
         <p class="mt-1 max-w-2xl text-ink-muted">Что говорят клиенты о доставке металла и заборах «под ключ». По согласованию дадим телефоны клиентов — сможете уточнить сами.</p>
     </div>
     <div class="flex flex-wrap gap-3">
+        @if($google)
+            <x-button variant="secondary" :href="$google" target="_blank" rel="noopener" data-reviews-google>Отзывы в Google ↗</x-button>
+        @endif
         @if($yandex)
             <x-button variant="secondary" :href="$yandex" target="_blank" rel="noopener" data-reviews-yandex>Отзывы на Яндекс Картах ↗</x-button>
         @endif

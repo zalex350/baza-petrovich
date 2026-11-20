@@ -44,6 +44,7 @@ php artisan petrovich:works --images            # «Наши работы» (38 
 php artisan petrovich:quizzes                   # стартовые квизы: калькуляторы забора и ворот
 php artisan petrovich:seo [--products]          # тексты и «Частые вопросы» разделов; --products — описания 431 товара (product_descriptions.json)
 php artisan petrovich:articles --images         # 138 статей и советов со старого сайта в раздел «Статьи» (/stati)
+php artisan petrovich:reviews                   # 50 отзывов Google и Яндекса (со скриншотов zabor-petrovich.by) — первыми в «Отзывах»
 php artisan petrovich:legal                     # черновики: политика ПД, договор-оферта, обмен и возврат (/page/privacy, oferta, vozvrat)
 python scripts/category-photos.py               # обработка фото разделов в едином стиле: src/ + photos.json → {раздел}.jpg
 ```

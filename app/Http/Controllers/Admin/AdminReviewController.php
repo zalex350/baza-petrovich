@@ -103,6 +103,7 @@ class AdminReviewController extends Controller
             'author' => ['nullable', 'string', 'max:255'],
             'text' => ['nullable', 'string', 'max:5000'],
             'group' => ['nullable', 'string', 'max:100'],
+            'source' => ['nullable', 'in:'.implode(',', array_keys(Review::SOURCES))],
             'rating' => ['nullable', 'integer', 'min:1', 'max:5'],
             'work_id' => ['nullable', 'integer', 'exists:works,id'],
             'reviewed_on' => ['nullable', 'date'],

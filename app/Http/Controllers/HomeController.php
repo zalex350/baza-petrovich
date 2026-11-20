@@ -33,13 +33,15 @@ class HomeController extends Controller
             ->where('is_active', true)
             ->where('is_published', true);
 
+        // Первыми — товары, изменённые последними: только что отмеченный ХИТ / НОВИНКА / Акция — в начале
         $carousels = [
-            ['title' => 'Акции', 'url' => '/promo', 'products' => $shown()->where('is_promo', true)->latest()->orderByDesc('id')->take(self::CAROUSEL)->get()],
-            ['title' => 'Новинки', 'url' => '/new', 'products' => $shown()->where('is_new', true)->latest()->orderByDesc('id')->take(self::CAROUSEL)->get()],
-            ['title' => 'Хиты', 'url' => '/hits', 'products' => $shown()->where('is_hit', true)->latest()->orderByDesc('id')->take(self::CAROUSEL)->get()],
+            ['title' => 'Акции', 'url' => '/promo', 'products' => $shown()->where('is_promo', true)->orderByDesc('updated_at')->orderByDesc('id')->take(self::CAROUSEL)->get()],
+            ['title' => 'Новинки', 'url' => '/new', 'products' => $shown()->where('is_new', true)->orderByDesc('updated_at')->orderByDesc('id')->take(self::CAROUSEL)->get()],
+            ['title' => 'Хиты', 'url' => '/hits', 'products' => $shown()->where('is_hit', true)->orderByDesc('updated_at')->orderByDesc('id')->take(self::CAROUSEL)->get()],
         ];
 
-        $featuredProducts = $shown()->latest()->take(4)->get();
+        // «Популярные товары» — хиты (метка ХИТ в админке), последние отмеченные первыми; нет хитов — блока нет
+        $featuredProducts = $shown()->where('is_hit', true)->orderByDesc('updated_at')->orderByDesc('id')->take(4)->get();
 
         // Строки товаров (x-product-row): характеристики — из фильтров категории каждого товара
         $keyAttributes->load($featuredProducts);

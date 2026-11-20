@@ -16,6 +16,9 @@ return [
     // Отзывы о компании на картах (кнопка на /otzyvy); пусто — без кнопки
     'reviews_url' => env('SHOP_REVIEWS_URL', 'https://yandex.by/maps/org/std_petrovich/1726129679/'),
 
+    // Отзывы о компании в Google (карточка на Картах); пусто — без кнопки
+    'google_reviews_url' => env('SHOP_GOOGLE_REVIEWS_URL', 'https://www.google.com/maps?cid=1916009117643471160'),
+
     // Префикс номера заказа: BP-2026-000001
     'order_prefix' => env('SHOP_ORDER_PREFIX', 'BP'),
 

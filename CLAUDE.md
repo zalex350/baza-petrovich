@@ -76,6 +76,7 @@ docker-compose exec php php artisan petrovich:quizzes                   # ста
 docker-compose exec php php artisan petrovich:icons [--force]           # иконки разделов: набор resources/icons/metal, правила — database/data/petrovich/category_icons.php
 docker-compose exec php php artisan petrovich:seo [--force] [--products] [--approve]  # тексты и FAQ разделов (seo_content.php); --products — описания товаров (product_descriptions.json: с наших сайтов — сразу, generated — на одобрение)
 docker-compose exec php php artisan petrovich:articles [--images] [--force]  # статьи со старого сайта (articles.json, сбор — scraper/articles.py) → /stati
+docker-compose exec php php artisan petrovich:reviews [--force]               # 50 отзывов Google и Яндекса текстом (reviews_external.json, фото — review-photos/; со скриншотов zabor-petrovich.by)
 docker-compose exec php php artisan petrovich:legal [--publish] [--force]   # юр. страницы (database/data/petrovich/legal/*.html; реквизиты — метки [[…]] из «Настроек», Page::fillTokens)
 ```
 

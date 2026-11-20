@@ -45,6 +45,6 @@ class WorkController extends Controller
         $reviews = Review::published()->ordered()->with('work')->get();
         $groups = $reviews->groupBy(fn (Review $r) => $r->group ?: 'Отзывы клиентов');
 
-        return view('works.reviews', ['groups' => $groups, 'yandex' => config('shop.reviews_url')]);
+        return view('works.reviews', ['groups' => $groups, 'yandex' => config('shop.reviews_url'), 'google' => config('shop.google_reviews_url')]);
     }
 }

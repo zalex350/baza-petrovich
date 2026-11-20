@@ -169,11 +169,16 @@ class ImportPetrovich extends Command
             'vat_rate' => 20,
             'stock' => $row['status'] === 'out' ? 0 : 1,
             'category_id' => $this->categoryIds[$row['category']] ?? null,
-            'description' => $this->html($row['description'] ?? '') ?: null,
-            'is_hit' => (bool) ($row['hit'] ?? false),
+            // Описание со старого сайта — только если есть: повтор импорта не стирает тексты,
+            // добавленные позже (petrovich:seo --products, админка). Метки ХИТ со старого сайта не переносятся —
+            // хиты отмечают в админке
             'is_active' => true,
             'is_published' => true,
         ]);
+
+        if (($description = $this->html($row['description'] ?? '')) !== '') {
+            $product->description = $description;
+        }
 
         // Поля 1С (не в $fillable): единица, ключ импорта
         $product->forceFill([

@@ -15,6 +15,8 @@ use App\Services\ProductDrafts;
 use App\Services\Vat\VatCalculator;
 use App\Support\OrderQuantity;
 use Illuminate\Validation\Rule;
+use App\Services\CatalogMenu;
+use App\Support\Plural;
 
 /**
  * Товары в админке. Создание и редактирование — одна форма (admin/product_form):
@@ -40,6 +42,11 @@ class AdminProductController extends Controller
     /** Бейджи витрины: у существующего товара сохраняются сразу по галочке (badge) */
     private const BADGE_FIELDS = ['is_hit', 'is_new', 'is_promo'];
 
+    /** Фильтр списка по метке: параметр badge → поле, подпись */
+    public const BADGE_FILTERS = ['hit' => 'is_hit', 'new' => 'is_new', 'promo' => 'is_promo'];
+
+    public const BADGE_LABELS = ['hit' => 'Хиты', 'new' => 'Новинки', 'promo' => 'Акции'];
+
     /** Данные сайта, которые применяются сразу, без черновика (SRS §11.3: категория — сайта, не 1С) */
     private const DIRECT_SITE_FIELDS = ['slug', 'category_id', 'is_hit', 'is_new', 'is_promo', 'min_qty', 'qty_step', 'default_qty', 'discount_percent', 'discount_amount', 'seo_title', 'seo_description'];
 
@@ -55,6 +62,10 @@ class AdminProductController extends Controller
         $uncategorized = request('category') === 'none';
         $unnamed = request('name') === 'none';
         $unapproved = request('description') === 'unapproved';
+        $noDescription = request('description') === 'none';
+        // Метки витрины: hit | new | promo → поле товара
+        $badge = self::BADGE_FILTERS[(string) request('badge')] ?? null;
+        $empty = fn ($q) => $q->where(fn ($q) => $q->whereNull('description')->orWhere('description', ''));
         $search = mb_substr(trim((string) request('q')), 0, 100);
         $hiddenIds = Category::where('is_hidden', true)->pluck('id');
         $noCategory = fn ($q) => $q->where(fn ($q) => $q->whereNull('category_id')->orWhereIn('category_id', $hiddenIds));
@@ -68,6 +79,8 @@ class AdminProductController extends Controller
             ->when($uncategorized, $noCategory)
             ->when($unnamed, fn ($q) => $q->withoutName())
             ->when($unapproved, fn ($q) => $q->where('description_generated', true))
+            ->when($noDescription, $empty)
+            ->when($badge, fn ($q) => $q->where($badge, true))
             ->latest()
             ->paginate(50)
             ->withQueryString();
@@ -76,18 +89,21 @@ class AdminProductController extends Controller
         $uncategorizedCount = Product::query()->tap($matches)->tap($noCategory)->count();
         $unnamedCount = Product::query()->tap($matches)->withoutName()->count();
         $unapprovedCount = Product::query()->tap($matches)->where('description_generated', true)->count();
+        $noDescriptionCount = Product::query()->tap($matches)->tap($empty)->count();
+        $badgeCounts = collect(self::BADGE_FILTERS)->map(fn ($field) => Product::query()->tap($matches)->where($field, true)->count());
 
         // Активный фильтр — для скрытого поля формы поиска и ссылок «Показать все»
         $filter = array_filter([
             'category' => $uncategorized ? 'none' : null,
             'name' => $unnamed ? 'none' : null,
-            'description' => $unapproved ? 'unapproved' : null,
+            'description' => $unapproved ? 'unapproved' : ($noDescription ? 'none' : null),
+            'badge' => $badge ? array_search($badge, self::BADGE_FILTERS, true) : null,
         ]);
 
         // Черновики, созданные обменом номенклатуры («Новые из 1С»)
         $new1cCount = Product::whereNotNull('guid')->where('is_published', false)->count();
 
-        return view('admin.products', compact('products', 'uncategorized', 'uncategorizedCount', 'unnamed', 'unnamedCount', 'unapproved', 'unapprovedCount', 'search', 'filter', 'new1cCount'));
+        return view('admin.products', compact('products', 'uncategorized', 'uncategorizedCount', 'unnamed', 'unnamedCount', 'unapproved', 'unapprovedCount', 'noDescription', 'noDescriptionCount', 'badge', 'badgeCounts', 'search', 'filter', 'new1cCount'));
     }
 
     public function create()
@@ -143,6 +159,26 @@ class AdminProductController extends Controller
             'success',
             $product->is_active ? 'Товар показан на сайте' : 'Товар скрыт с сайта'
         );
+    }
+
+    /**
+     * Снять метку (ХИТ, НОВИНКА, Акция) со всех товаров — фильтр «Хиты» и т.п. в списке товаров.
+     */
+    public function clearBadge()
+    {
+        $key = (string) request('badge');
+        $field = self::BADGE_FILTERS[$key] ?? abort(422);
+
+        $data = [$field => false];
+        // «Новинка» снята вручную — автоматически не вернётся (как при снятии галочки)
+        if ($field === 'is_new') {
+            $data['is_new_locked'] = true;
+        }
+
+        $count = Product::where($field, true)->update($data);
+        CatalogMenu::flush();
+
+        return redirect('/admin/products')->with('success', self::BADGE_LABELS[$key].': метка снята у '.Plural::ru($count, ['товара', 'товаров', 'товаров']));
     }
 
     /**
