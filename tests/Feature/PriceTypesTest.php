@@ -15,6 +15,7 @@ use App\Services\Pricing\PriceContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use LogicException;
 use OpenSpout\Reader\XLSX\Reader;
+use Tests\Concerns\B2bPricing;
 use Tests\TestCase;
 
 /**
@@ -25,7 +26,7 @@ use Tests\TestCase;
  */
 class PriceTypesTest extends TestCase
 {
-    use \Tests\Concerns\B2bPricing;
+    use B2bPricing;
     use RefreshDatabase;
 
     private Category $category;
@@ -94,6 +95,7 @@ class PriceTypesTest extends TestCase
         $retail = $this->client('retail');
         $default = $this->client();
 
+        $both->update(['is_hit' => true]); // «Популярные товары» на главной — хиты
         $this->assertSame(130.0, (float) $this->actingAs($retail)->get('/')->getOriginalContent()->getData()['featuredProducts']->firstWhere('id', $both->id)->price);
 
         $html = $this->actingAs($retail)->get('/catalog/mixers')->assertOk()->getContent();

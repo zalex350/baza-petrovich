@@ -40,7 +40,8 @@ class HomeController extends Controller
             ['title' => 'Хиты', 'url' => '/hits', 'products' => $shown()->where('is_hit', true)->orderByDesc('updated_at')->orderByDesc('id')->take(self::CAROUSEL)->get()],
         ];
 
-        $featuredProducts = $shown()->latest()->take(4)->get();
+        // «Популярные товары» — хиты (метка ХИТ в админке), последние отмеченные первыми; нет хитов — блока нет
+        $featuredProducts = $shown()->where('is_hit', true)->orderByDesc('updated_at')->orderByDesc('id')->take(4)->get();
 
         // Строки товаров (x-product-row): характеристики — из фильтров категории каждого товара
         $keyAttributes->load($featuredProducts);

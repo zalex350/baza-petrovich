@@ -86,6 +86,18 @@ class HomePageTest extends TestCase
         $this->get('/')->assertSeeInOrder(['data-banner-slider', 'data-home-carousels', 'aria-label="Хиты"', 'data-home-popular'], false);
     }
 
+    public function test_popular_block_shows_only_hits(): void
+    {
+        $this->product(['name' => 'Обычный товар']);
+        $this->assertStringNotContainsString('data-home-popular', $this->get('/')->getContent(), 'хитов нет — блока нет');
+
+        $this->product(['name' => 'Товар-хит', 'is_hit' => true]);
+        $html = $this->get('/')->getContent();
+        $popular = substr($html, strpos($html, 'data-home-popular'));
+        $this->assertStringContainsString('Товар-хит', $popular);
+        $this->assertStringNotContainsString('Обычный товар', $popular);
+    }
+
     public function test_empty_catalog_has_no_empty_blocks(): void
     {
         $this->get('/')
