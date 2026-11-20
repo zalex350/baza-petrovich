@@ -203,6 +203,9 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         [AdminProductController::class, 'update']
     );
 
+    // Снять метку ХИТ / НОВИНКА / Акция со всех товаров
+    Route::post('/admin/products/clear-badge', [AdminProductController::class, 'clearBadge']);
+
     // Все сгенерированные описания — показать на сайте
     Route::post('/admin/products/approve-descriptions', [AdminProductController::class, 'approveAllDescriptions']);
 

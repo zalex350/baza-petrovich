@@ -44,7 +44,8 @@ class PetrovichImportTest extends TestCase
         $truba = Product::where('source_key', 'catalog/metalloprokat/profilnaya-truba/truba-20x20')->sole();
         $this->assertEquals(3.36, $truba->price);
         $this->assertSame('м.п.', $truba->unit);
-        $this->assertTrue($truba->is_hit);
+        // Метки ХИТ со старого сайта не переносятся — хиты отмечают в админке
+        $this->assertFalse($truba->is_hit);
         $this->assertSame(1, $truba->stock);
         $this->assertSame('profilnaya-truba', $truba->category->slug);
         $this->assertSame('metalloprokat', $truba->category->parent->slug);

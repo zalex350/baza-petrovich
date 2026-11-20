@@ -46,9 +46,17 @@
 {{-- Фильтры: без категории (служебная «Без категории» скрыта на сайте), без названия,
      описание не одобрено (сгенерированное, на сайте не показывается) --}}
 <div class="mb-4 flex flex-wrap items-center gap-2 text-sm" data-admin-product-filter>
-    @if($uncategorized || $unnamed || $unapproved)
-        <x-badge tone="warning" size="md">{{ $uncategorized ? 'Без категории' : ($unnamed ? 'Без названия' : 'Описание не одобрено') }}: {{ $products->total() }}</x-badge>
+    @if($uncategorized || $unnamed || $unapproved || $noDescription || $badge)
+        @php($badgeKey = $filter['badge'] ?? null)
+        <x-badge tone="warning" size="md">{{ $uncategorized ? 'Без категории' : ($unnamed ? 'Без названия' : ($unapproved ? 'Описание не одобрено' : ($noDescription ? 'Без описания' : \App\Http\Controllers\Admin\AdminProductController::BADGE_LABELS[$badgeKey]))) }}: {{ $products->total() }}</x-badge>
         <x-button variant="link" size="sm" :href="$withSearch()">Показать все</x-button>
+        @if($badgeKey && $products->total())
+            <x-confirm action="/admin/products/clear-badge" label="Снять метку со всех ({{ $products->total() }})" title="Снять метку со всех товаров?"
+                confirm-label="Снять" variant="danger" trigger-variant="secondary" class="ml-auto" data-clear-badge>
+                <x-slot:fields><input type="hidden" name="badge" value="{{ $badgeKey }}"></x-slot:fields>
+                Раздел «{{ \App\Http\Controllers\Admin\AdminProductController::BADGE_LABELS[$badgeKey] }}» на сайте опустеет — потом отметьте нужные товары заново.
+            </x-confirm>
+        @endif
         @if($unapproved && $products->total())
             <x-confirm action="/admin/products/approve-descriptions" label="Одобрить все ({{ $products->total() }})" title="Одобрить все описания?"
                 confirm-label="Одобрить" trigger-variant="secondary" class="ml-auto" data-approve-all>
@@ -68,6 +76,14 @@
         @if($unapprovedCount)
             <x-button variant="secondary" size="sm" :href="$withSearch(['description' => 'unapproved'])">Описание не одобрено ({{ $unapprovedCount }})</x-button>
         @endif
+        @if($noDescriptionCount)
+            <x-button variant="secondary" size="sm" :href="$withSearch(['description' => 'none'])">Без описания ({{ $noDescriptionCount }})</x-button>
+        @endif
+        @foreach(\App\Http\Controllers\Admin\AdminProductController::BADGE_LABELS as $key => $label)
+            @if($badgeCounts[$key])
+                <x-button variant="secondary" size="sm" :href="$withSearch(['badge' => $key])" data-badge-filter="{{ $key }}">{{ $label }} ({{ $badgeCounts[$key] }})</x-button>
+            @endif
+        @endforeach
     @endif
 </div>
 
